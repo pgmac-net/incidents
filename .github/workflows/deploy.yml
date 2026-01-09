@@ -5,8 +5,13 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
 jobs:
-  deploy:
+  build:
     runs-on: self-hosted
 
     steps:
@@ -32,6 +37,54 @@ jobs:
         run: |
           uv run mkdocs build --clean --strict
 
+      - name: Archive site
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          cd site
+          tar -czf ../site-${COMMIT_SHA}.tar.gz .
+          cd ..
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-build
+          path: site-*.tar.gz
+          retention-days: 30
+
+      - name: Generate attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: site-*.tar.gz
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-build
+
+      - name: Verify and extract site
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          echo "🔍 Verifying artifact..."
+          ARTIFACT_FILE="site-${COMMIT_SHA}.tar.gz"
+
+          if [ ! -f "$ARTIFACT_FILE" ]; then
+            echo "❌ Site artifact not found: $ARTIFACT_FILE"
+            exit 1
+          fi
+
+          echo "📂 Extracting site..."
+          mkdir -p site
+          tar -xzf "$ARTIFACT_FILE" -C site
+
+          echo "✅ Site extracted and ready for deployment"
+
       - name: Setup the SSH Key
         uses: webfactory/ssh-agent@v0.7.0
         with:
@@ -40,7 +93,7 @@ jobs:
       - name: Deploy to macro.int.pgmac.net
         run: |
           echo "📦 Deploying to macro.int.pgmac.net..."
-          scp -r site/* paul@macro.int.pgmac.net:/var/www/html/incidents/
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r site/* paul@macro.int.pgmac.net:/var/www/html/incidents/
           echo "✅ Deployment complete!"
 
       - name: Deployment summary
