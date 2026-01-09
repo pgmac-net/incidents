@@ -32,14 +32,10 @@ jobs:
         run: |
           uv run mkdocs build --clean --strict
 
-      - name: Setup SSH key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H macro.int.pgmac.net >> ~/.ssh/known_hosts
+      - name: Setup the SSH Key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PGMAC_SSH }}
 
       - name: Deploy to macro.int.pgmac.net
         run: |
