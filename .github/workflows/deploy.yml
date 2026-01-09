@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Install UV
         run: |
@@ -40,13 +40,8 @@ jobs:
       - name: Deploy to macro.int.pgmac.net
         run: |
           echo "📦 Deploying to macro.int.pgmac.net..."
-          scp -r site/* macro.int.pgmac.net:/var/www/html/incidents/
+          scp -r site/* paul@macro.int.pgmac.net:/var/www/html/incidents/
           echo "✅ Deployment complete!"
-
-      - name: Cleanup SSH key
-        if: always()
-        run: |
-          rm -f ~/.ssh/id_rsa
 
       - name: Deployment summary
         env:
