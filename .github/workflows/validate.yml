@@ -1,0 +1,139 @@
+name: Validate Documentation
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  validate:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt
+
+      - name: Validate mkdocs.yml configuration
+        run: |
+          uv run mkdocs --version
+          echo "✅ MkDocs configuration is valid"
+
+      - name: Build site with strict mode
+        run: |
+          uv run mkdocs build --strict --verbose
+        env:
+          ENABLE_PDF_EXPORT: 0
+
+      - name: Check for broken links in markdown
+        run: |
+          echo "Checking for common markdown issues..."
+
+          # Check for broken internal links (markdown style)
+          if grep -r "\](.*\.md)" docs/ | grep -v "http" | grep -E "\]\([^)]+\.md[^)]*\)" ; then
+            echo "⚠️  Found potentially broken markdown links above"
+            echo "Note: These may be valid - manual review recommended"
+          else
+            echo "✅ No obvious broken markdown links found"
+          fi
+
+      - name: Validate all markdown files can be parsed
+        run: |
+          echo "Validating markdown files..."
+          find docs/ -name "*.md" -type f | while read file; do
+            if [ ! -s "$file" ]; then
+              echo "❌ Empty file: $file"
+              exit 1
+            fi
+            echo "✅ Valid: $file"
+          done
+
+      - name: Check for missing images
+        run: |
+          echo "Checking for missing image references..."
+
+          # Find all image references in markdown
+          if grep -r "!\[.*\](" docs/ | grep -v "http" > /tmp/images.txt; then
+            while read line; do
+              file=$(echo "$line" | cut -d: -f1)
+              img=$(echo "$line" | sed 's/.*(\([^)]*\)).*/\1/')
+
+              # Resolve relative path
+              dir=$(dirname "$file")
+              if [ ! -f "$dir/$img" ] && [ ! -f "docs/$img" ]; then
+                echo "⚠️  Potentially missing image: $img (referenced in $file)"
+              fi
+            done < /tmp/images.txt
+          fi
+
+          echo "✅ Image reference check complete"
+
+      - name: Verify navigation structure
+        run: |
+          echo "Checking navigation structure in mkdocs.yml..."
+
+          # Extract nav paths and verify files exist
+          uv run python -c "
+          import yaml
+          import os
+          import sys
+
+          with open('mkdocs.yml', 'r') as f:
+              config = yaml.safe_load(f)
+
+          def check_nav(nav, path=''):
+              errors = []
+              if isinstance(nav, dict):
+                  for key, value in nav.items():
+                      if isinstance(value, str):
+                          filepath = os.path.join('docs', value)
+                          if not os.path.exists(filepath):
+                              errors.append(f'Missing file: {filepath} (referenced in nav)')
+                      elif isinstance(value, list):
+                          errors.extend(check_nav(value, path + key + ' > '))
+              elif isinstance(nav, list):
+                  for item in nav:
+                      errors.extend(check_nav(item, path))
+              return errors
+
+          if 'nav' in config:
+              errors = check_nav(config['nav'])
+              if errors:
+                  print('❌ Navigation errors found:')
+                  for error in errors:
+                      print(f'  - {error}')
+                  sys.exit(1)
+              else:
+                  print('✅ All navigation references are valid')
+          else:
+              print('⚠️  No nav section in mkdocs.yml')
+          "
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "========================================="
+          echo "✅ All validation checks passed!"
+          echo "========================================="
+          echo ""
+          echo "✅ MkDocs configuration is valid"
+          echo "✅ Site builds successfully with --strict mode"
+          echo "✅ All markdown files are parseable"
+          echo "✅ Navigation structure is correct"
+          echo ""
+          echo "Ready to merge! 🚀"

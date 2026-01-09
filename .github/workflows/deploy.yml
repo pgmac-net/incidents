@@ -1,0 +1,67 @@
+name: Deploy to macro.int.pgmac.net
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt
+
+      - name: Build site
+        run: |
+          uv run mkdocs build --clean --strict
+
+      - name: Setup SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H macro.int.pgmac.net >> ~/.ssh/known_hosts
+
+      - name: Deploy to macro.int.pgmac.net
+        run: |
+          echo "📦 Deploying to macro.int.pgmac.net..."
+          scp -r site/* macro.int.pgmac.net:/var/www/html/incidents/
+          echo "✅ Deployment complete!"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
+
+      - name: Deployment summary
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "========================================="
+          echo "✅ Site deployed successfully!"
+          echo "========================================="
+          echo ""
+          echo "🌐 Site URL: https://macro.int.pgmac.net/incidents/"
+          echo "📦 Deployed from: $COMMIT_SHA"
+          echo "👤 Deployed by: $ACTOR"
+          echo ""
