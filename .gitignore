@@ -1,0 +1,44 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# MkDocs build output
+site/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# UV lock file (optional - comment out if you want to commit it)
+# uv.lock
+
+# MkDocs cache
+.cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# Temporary files
+*.tmp
+*.bak
+*.log
