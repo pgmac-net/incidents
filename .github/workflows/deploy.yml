@@ -53,6 +53,7 @@ jobs:
           retention-days: 30
 
       - name: Generate attestation
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: site-*.tar.gz
@@ -67,11 +68,19 @@ jobs:
         with:
           name: site-build
 
-      - name: Verify and extract site
+      - name: Verify attestation
+        if: github.event.repository.visibility == 'public'
         env:
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          echo "🔍 Verifying artifact..."
+          echo "🔍 Verifying attestation for public repository..."
+          gh attestation verify "site-${COMMIT_SHA}.tar.gz" --owner ${{ github.repository_owner }}
+
+      - name: Extract site
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          echo "📂 Extracting site..."
           ARTIFACT_FILE="site-${COMMIT_SHA}.tar.gz"
 
           if [ ! -f "$ARTIFACT_FILE" ]; then
@@ -79,7 +88,6 @@ jobs:
             exit 1
           fi
 
-          echo "📂 Extracting site..."
           mkdir -p site
           tar -xzf "$ARTIFACT_FILE" -C site
 
