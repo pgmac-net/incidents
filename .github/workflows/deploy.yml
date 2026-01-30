@@ -117,3 +117,23 @@ jobs:
           echo "📦 Deployed from: $COMMIT_SHA"
           echo "👤 Deployed by: $ACTOR"
           echo ""
+
+  pages_deploy:
+    name: Deploy site to GitHub Pages
+    runs-on: self-hosted
+    needs: build
+
+    permissions:
+      pages: write
+      it-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: site-build
