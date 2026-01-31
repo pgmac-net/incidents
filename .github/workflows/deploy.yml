@@ -15,6 +15,7 @@ jobs:
     runs-on: self-hosted
     permissions:
       pages: write
+      contents: write
       id-token: write
       attestations: write
 
