@@ -16,6 +16,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      attestations: write
 
     environment:
       name: github-pages
