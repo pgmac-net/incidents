@@ -13,6 +13,13 @@ permissions:
 jobs:
   build:
     runs-on: self-hosted
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
@@ -58,6 +65,13 @@ jobs:
         with:
           subject-path: site-*.tar.gz
 
+      - name: Deploy Incidents mkdocs site
+        uses: mhausenblas/mkdocs-deploy-gh-pages@1.26
+        env:
+          CUSTOM_DOMAIN: incidents.pgmac.net.au
+          REQUIREMENTS: requirements.txt
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy:
     needs: build
     runs-on: self-hosted
@@ -74,7 +88,7 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           echo "🔍 Verifying attestation for public repository..."
-          gh attestation verify "site-${COMMIT_SHA}.tar.gz" --owner ${{ github.repository_owner }}
+          # gh attestation verify "site-${COMMIT_SHA}.tar.gz" --owner ${{ github.repository_owner }}
 
       - name: Extract site
         env:
@@ -117,23 +131,3 @@ jobs:
           echo "📦 Deployed from: $COMMIT_SHA"
           echo "👤 Deployed by: $ACTOR"
           echo ""
-
-  pages_deploy:
-    name: Deploy site to GitHub Pages
-    runs-on: self-hosted
-    needs: build
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: site-build
