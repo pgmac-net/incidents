@@ -125,7 +125,7 @@ jobs:
 
     permissions:
       pages: write
-      it-token: write
+      id-token: write
 
     environment:
       name: github-pages
