@@ -73,6 +73,7 @@ jobs:
           CUSTOM_DOMAIN: incidents.pgmac.net.au
           REQUIREMENTS: requirements.txt
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG_FILE: incidents-mkdoc.yml
 
   deploy:
     needs: build
