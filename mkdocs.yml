@@ -2,6 +2,9 @@ site_name: Post-Incident Reviews
 site_url: https://macro.int.pgmac.net/incidents/
 site_description: Internal post-incident review documentation
 site_author: pgmac
+docs_dir: docs/
+repo_name: pgmac-net/incidents
+repo_url: https://github.com/pgmac-net/incidents/
 
 theme:
   name: material
@@ -57,7 +60,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Incidents:
-    - 2026-01-06 Cluster Cascade Failure: incidents/2026-01-06-cluster-cascade-failure.md
+      - 2026-01-06 Cluster Cascade Failure: incidents/2026-01-06-cluster-cascade-failure.md
 
 extra:
   social:
