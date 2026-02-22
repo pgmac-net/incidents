@@ -15,6 +15,11 @@ Post-incident reviews are critical for:
 
 ### 2026
 
+- [2026-02-22 - Radarr Outage Due to OpenEBS Jiva Replica Divergence](incidents/2026-02-22-radarr-openebs-jiva-replica-divergence.md)
+  - **Severity**: High
+  - **Duration**: ~16h30m silent failure + ~47m active recovery (~20h47m total outage)
+  - **Summary**: Radarr became completely unavailable when all three OpenEBS Jiva storage replicas simultaneously entered CrashLoopBackOff following an ungraceful shutdown during an active rebuild, leaving the iSCSI-backed PVC unmountable due to ext4 journal corruption
+
 - [2026-01-06 - Cascading Kubernetes Cluster Failures](incidents/2026-01-06-cluster-cascade-failure.md)
   - **Severity**: Critical
   - **Duration**: ~8 hours (Phase 1-2) + 16.5 hours (Phase 3) + 12+ hours (Phase 5)
