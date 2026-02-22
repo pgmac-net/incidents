@@ -1,0 +1,1768 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Internal post-incident review documentation">
+      
+      
+        <meta name="author" content="pgmac">
+      
+      
+        <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/2026-02-22-radarr-openebs-jiva-replica-divergence/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence - Post-Incident Reviews</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#post-incident-review-radarr-outage-due-to-openebs-jiva-replica-divergence" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Post-Incident Reviews" class="md-header__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Post-Incident Reviews
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../2026-01-06-cluster-cascade-failure/" class="md-tabs__link">
+          
+  
+  
+  Incidents
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Post-Incident Reviews" class="md-nav__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Post-Incident Reviews
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incidents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Incidents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-01-06-cluster-cascade-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2026-01-06 Cluster Cascade Failure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-radarr-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did radarr become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-container-fail-to-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the container fail to launch?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-pvc-mount-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the PVC mount fail?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-ext4-filesystem-on-devsdi-become-inconsistent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ext4 filesystem on /dev/sdi become inconsistent?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-jiva-replica-pods-enter-crashloopbackoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three Jiva replica pods enter CrashLoopBackOff?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-replicas-end-up-with-checkpoints-that-didnt-match-the-controllers-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three replicas end up with checkpoints that didn't match the controller's chain?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-replicas-end-up-rebuilding-at-the-same-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three replicas end up rebuilding at the same time?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-a-prior-degraded-state-go-undetected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did a prior degraded state go undetected?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-radarr-pod-sit-in-containercreating-for-over-4-hours-without-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the radarr pod sit in ContainerCreating for over 4 hours without detection?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pvc-05e03b60-overseerr-config-and-pvc-f1888541-scotchcraft-minecraft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pvc-05e03b60 (overseerr-config) and pvc-f1888541 (scotchcraft-minecraft)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-argocd-syncwindow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create ArgoCD SyncWindow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-scale-down-all-jiva-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Scale Down All Jiva Deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-patch-volumemeta-on-k8s01-rep-3-the-authoritative-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Patch volume.meta on k8s01 (rep-3) — the Authoritative Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clear-image-data-on-k8s02-and-k8s03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clear Image Data on k8s02 and k8s03
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-scale-up-in-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Scale Up in Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-stop-radarr-to-clear-the-mount-race" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Stop Radarr to Clear the Mount Race
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-restore-radarr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Restore Radarr
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-remove-syncwindow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Remove SyncWindow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#service-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Service Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-metadata-post-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Metadata (Post-Recovery)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#replica-state-at-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replica State at Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-log-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Log Entries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-affected-pvcs-same-root-event" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other Affected PVCs (Same Root Event)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="post-incident-review-radarr-outage-due-to-openebs-jiva-replica-divergence">Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence<a class="headerlink" href="#post-incident-review-radarr-outage-due-to-openebs-jiva-replica-divergence" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-22
+<strong>Duration:</strong> ~16h30m silent failure + ~47m active recovery (22:25 AEST 2026-02-21 → 18:48 AEST 2026-02-22)
+<strong>Severity:</strong> High (single service outage — Radarr completely unavailable)
+<strong>Status:</strong> Resolved</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>Radarr became unavailable when its pod failed to start, remaining stuck in <code>ContainerCreating</code> for over 4.5 hours before investigation began. The pod could not start because its persistent volume (<code>radarr-config</code>) could not be mounted. The mount failure was caused by a corrupted ext4 filesystem on the iSCSI block device (<code>/dev/sdi</code>), which itself was caused by all three OpenEBS Jiva storage replicas simultaneously entering a <code>CrashLoopBackOff</code> state with diverged snapshot chains.</p>
+<p>The Jiva replicas failed because all three had been left in a <code>Rebuilding: true</code> state following an ungraceful shutdown at approximately 22:25 AEST on 2026-02-21 — roughly 16 hours before the pod failure was detected. Without a healthy replica to serve as a rebuild source, the Jiva controller could not serve a consistent iSCSI target. This left the filesystem journal dirty, which caused <code>fsck -a</code> (run automatically by kubelet before each mount attempt) to fail repeatedly.</p>
+<p>Two additional PVCs — <code>overseerr-config</code> and <code>scotchcraft-minecraft-datadir</code> — were found to have suffered the same underlying Jiva failure but self-recovered because at least one of their replicas remained in a healthy state. They had restart counts of 10-11 and 52-53 respectively indicating significant instability around the same event.</p>
+<p>Resolution required: scaling down all Jiva deployments, patching <code>volume.meta</code> on one replica to clear the <code>Rebuilding</code> flag, clearing the image data on the other two replicas so they rebuilt from the good source, scaling back up in sequence, and allowing the ext4 journal recovery to complete during the next successful mount.</p>
+<hr />
+<h2 id="timeline-aest-utc10">Timeline (AEST — UTC+10)<a class="headerlink" href="#timeline-aest-utc10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>2026-02-21 ~22:25</strong></td>
+<td><strong>ROOT EVENT</strong>: Ungraceful shutdown interrupts an in-progress Jiva rebuild across all 3 replicas. All nodes' <code>revision.counter</code> files share this timestamp.</td>
+</tr>
+<tr>
+<td>~22:25 onwards</td>
+<td>All 3 Jiva replicas for <code>radarr-config</code> enter CrashLoopBackOff. Jiva controller loses all healthy backends. iSCSI LUN (<code>/dev/sdi</code>) becomes unserviceable.</td>
+</tr>
+<tr>
+<td>~22:25 onwards</td>
+<td>Kubelet begins retrying PVC mount for radarr pod (not yet scheduled). Each retry runs <code>fsck -a /dev/sdi</code>, which fails with "can't read superblock".</td>
+</tr>
+<tr>
+<td><strong>2026-02-22 14:01</strong></td>
+<td>Radarr pod <code>radarr-cd6596b59-lbc2v</code> scheduled, enters <code>ContainerCreating</code>. PVC mount failing silently — pod status gives no indication of storage failure.</td>
+</tr>
+<tr>
+<td>14:01 → 18:05</td>
+<td>Pod remains in <code>ContainerCreating</code> for 4h4m with no alerting. <code>FailedMount</code> events accumulate in pod describe but are not visible without active investigation.</td>
+</tr>
+<tr>
+<td><strong>~18:05</strong></td>
+<td><strong>INCIDENT DETECTED</strong>: Manual investigation triggered. <code>kubectl describe pod</code> reveals repeated <code>FailedMount</code> events citing <code>can't read superblock on /dev/sdi</code> and <code>fsck found errors but could not correct them</code>.</td>
+</tr>
+<tr>
+<td>~18:08</td>
+<td>All 3 Jiva replica pods identified in CrashLoopBackOff: <code>rep-1</code> (k8s03), <code>rep-2</code> (k8s02), <code>rep-3</code> (k8s01). Controller running 2/2 but with zero healthy backends.</td>
+</tr>
+<tr>
+<td>~18:10</td>
+<td>Replica logs reveal fatal error: <code>"Current replica's checkpoint not present in rwReplica chain, Shutting down..."</code></td>
+</tr>
+<tr>
+<td>~18:12</td>
+<td>All 3 nodes' <code>volume.meta</code> inspected — all show <code>"Rebuilding":true</code> with identical <code>RevisionCounter: 2538385</code> but diverged <code>Parent</code> snapshot chains. Root cause confirmed.</td>
+</tr>
+<tr>
+<td>~18:15</td>
+<td><strong>RESOLUTION START</strong>: All 4 Jiva deployments (controller + 3 replicas) scaled to 0.</td>
+</tr>
+<tr>
+<td>~18:17</td>
+<td><code>volume.meta</code> on k8s01 (<code>rep-3</code>) patched: <code>"Rebuilding": false</code>. This replica designated as the authoritative source.</td>
+</tr>
+<tr>
+<td>~18:19</td>
+<td>All <code>.img</code> and <code>.img.meta</code> files moved to <code>.bak</code> directories on k8s02 and k8s03. <code>volume.meta</code> files also moved so those replicas start completely fresh.</td>
+</tr>
+<tr>
+<td>~18:21</td>
+<td>Jiva controller scaled back to 1. Becomes ready within 80 seconds.</td>
+</tr>
+<tr>
+<td>~18:22</td>
+<td><code>rep-3</code> (k8s01, the fixed replica) scaled to 1. Joins controller as RW replica.</td>
+</tr>
+<tr>
+<td>~18:24</td>
+<td><code>rep-1</code> and <code>rep-2</code> scaled to 1. Begin rebuilding from <code>rep-3</code>. Jiva correctly serialises — only one WO rebuild at a time.</td>
+</tr>
+<tr>
+<td>~18:29</td>
+<td>All 4 Jiva pods <code>Running</code>. Snapshot sync active on <code>rep-2</code>, <code>rep-1</code> queued.</td>
+</tr>
+<tr>
+<td>~18:30</td>
+<td>Old D-state <code>fsck.ext4</code> process (from prior kubelet retry) clears. <code>/dev/sdi</code> becomes free.</td>
+</tr>
+<tr>
+<td>~18:32</td>
+<td>Manual <code>fsck -y /dev/sdi</code> attempt fails — kubelet has already spawned a new <code>fsck -a</code> process, racing for the device.</td>
+</tr>
+<tr>
+<td>~18:37</td>
+<td>Radarr scaled to 0 to stop kubelet from competing for <code>/dev/sdi</code>.</td>
+</tr>
+<tr>
+<td>~18:40</td>
+<td>D-state <code>fsck -a</code> process clears. <code>dmesg</code> shows <code>EXT4-fs (sdi): recovery complete</code> — the kernel's ext4 journal recovery succeeded during a mount attempt after Jiva became healthy.</td>
+</tr>
+<tr>
+<td>~18:47</td>
+<td>Radarr scaled back to 1.</td>
+</tr>
+<tr>
+<td><strong>18:48:28</strong></td>
+<td><strong>INCIDENT RESOLVED</strong>: Radarr pod <code>radarr-cd6596b59-mlbs6</code> reaches <code>1/1 Running</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="root-causes">Root Causes<a class="headerlink" href="#root-causes" title="Permanent link">&para;</a></h2>
+<h3 id="the-infinite-hows-chain">The Infinite How's Chain<a class="headerlink" href="#the-infinite-hows-chain" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><em>"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause.</em></p>
+</blockquote>
+<hr />
+<h4 id="how-did-radarr-become-unavailable">How did radarr become unavailable?<a class="headerlink" href="#how-did-radarr-become-unavailable" title="Permanent link">&para;</a></h4>
+<p>The radarr pod entered <code>ContainerCreating</code> and never progressed. The startup probe (TCP socket on port 7878) could not succeed because the container itself never launched.</p>
+<h4 id="how-did-the-container-fail-to-launch">How did the container fail to launch?<a class="headerlink" href="#how-did-the-container-fail-to-launch" title="Permanent link">&para;</a></h4>
+<p>Kubelet was unable to mount the <code>radarr-config</code> PVC. Volume mounting is a prerequisite for container creation; without it, the pod is stuck in <code>ContainerCreating</code> indefinitely.</p>
+<h4 id="how-did-the-pvc-mount-fail">How did the PVC mount fail?<a class="headerlink" href="#how-did-the-pvc-mount-fail" title="Permanent link">&para;</a></h4>
+<p>Kubelet automatically runs <code>fsck</code> before mounting a block device-backed volume. The fsck reported:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/dev/sdi: can&#39;t read superblock
+</code></pre></div>
+<p>and later:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/dev/sdi: UNEXPECTED INCONSISTENCY; RUN fsck MANUALLY.
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>(i.e., without -a or -p options)
+</code></pre></div>
+<p>The auto-repair flag (<code>-a</code>) is insufficient for this class of journal inconsistency. Kubelet has no mechanism to escalate beyond <code>fsck -a</code>; it simply retries and logs <code>FailedMount</code>.</p>
+<h4 id="how-did-the-ext4-filesystem-on-devsdi-become-inconsistent">How did the ext4 filesystem on <code>/dev/sdi</code> become inconsistent?<a class="headerlink" href="#how-did-the-ext4-filesystem-on-devsdi-become-inconsistent" title="Permanent link">&para;</a></h4>
+<p><code>/dev/sdi</code> is the iSCSI block device provided by the OpenEBS Jiva controller for the <code>radarr-config</code> PVC. When all Jiva replica pods simultaneously entered <code>CrashLoopBackOff</code>, the controller had no healthy backends to service I/O. The iSCSI target remained presented to the host but writes timed out or returned errors. The last radarr write session left the ext4 journal in a dirty/uncommitted state — which <code>fsck -a</code> cannot repair because the journal's <code>needs_recovery</code> flag was inconsistent with the presence of journal data.</p>
+<h4 id="how-did-all-three-jiva-replica-pods-enter-crashloopbackoff">How did all three Jiva replica pods enter CrashLoopBackOff?<a class="headerlink" href="#how-did-all-three-jiva-replica-pods-enter-crashloopbackoff" title="Permanent link">&para;</a></h4>
+<p>Each replica's log contained:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>level=fatal msg=&quot;Failed to add replica to controller, err: Current replica&#39;s
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>checkpoint not present in rwReplica chain, Shutting down...&quot;
+</code></pre></div>
+<p>Jiva's safety mechanism: when a replica restarts, it contacts the controller and verifies that its latest snapshot checkpoint exists in the controller's canonical chain. If not, the replica refuses to join (to prevent serving stale or diverged data) and exits. With all three replicas failing this check, the controller has zero healthy backends.</p>
+<h4 id="how-did-all-three-replicas-end-up-with-checkpoints-that-didnt-match-the-controllers-chain">How did all three replicas end up with checkpoints that didn't match the controller's chain?<a class="headerlink" href="#how-did-all-three-replicas-end-up-with-checkpoints-that-didnt-match-the-controllers-chain" title="Permanent link">&para;</a></h4>
+<p>Inspection of each replica's <code>volume.meta</code> showed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;Rebuilding&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;Checkpoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;volume-snap-0fd00bc8-...&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;RevisionCounter&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2538385</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+</code></pre></div>
+<p>All three replicas had identical <code>RevisionCounter</code> values (<code>2538385</code>) and identical <code>Checkpoint</code> UUIDs — but each had a <strong>different <code>Parent</code> snapshot</strong> for its head image:</p>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Head Parent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>k8s01</td>
+<td><code>volume-snap-3d6f0344...</code></td>
+</tr>
+<tr>
+<td>k8s02</td>
+<td><code>volume-snap-b5c23a63...</code></td>
+</tr>
+<tr>
+<td>k8s03</td>
+<td><code>volume-snap-af55ce5c...</code></td>
+</tr>
+</tbody>
+</table>
+<p>All three were in <code>Rebuilding: true</code>. They had been simultaneously mid-rebuild when something caused a cluster-wide disruption. Each replica had snapshotted at the moment of trying to join (standard Jiva behaviour during rebuild) and those new snapshots were not present in any sibling's chain — causing the circular checkpoint mismatch.</p>
+<h4 id="how-did-all-three-replicas-end-up-rebuilding-at-the-same-time">How did all three replicas end up rebuilding at the same time?<a class="headerlink" href="#how-did-all-three-replicas-end-up-rebuilding-at-the-same-time" title="Permanent link">&para;</a></h4>
+<p>The <code>revision.counter</code> file on all three nodes bore the same timestamp: <strong>2026-02-21 22:25 AEST</strong>. Jiva writes the revision counter file atomically on clean shutdown. The identical timestamp is strong evidence that all three nodes experienced a simultaneous ungraceful shutdown at that moment — a power event, network partition, or host-level failure causing all three nodes to lose connectivity or restart at the same instant.</p>
+<p>OpenEBS Jiva only rebuilds one WO (write-only) replica at a time under normal operation. For all three to be in a rebuilding state simultaneously, the disruption must have occurred <strong>while a multi-replica rebuild was already in progress</strong> — meaning the system had already been in a partially degraded state before the 22:25 event.</p>
+<h4 id="how-did-a-prior-degraded-state-go-undetected">How did a prior degraded state go undetected?<a class="headerlink" href="#how-did-a-prior-degraded-state-go-undetected" title="Permanent link">&para;</a></h4>
+<p>There is no alerting on:</p>
+<ul>
+<li>Jiva replica <code>CrashLoopBackOff</code> or elevated restart counts</li>
+<li>Jiva replica <code>Rebuilding: true</code> flag persisting beyond a threshold</li>
+<li>PVC <code>FailedMount</code> events accumulating on pods</li>
+<li>Pods remaining in <code>ContainerCreating</code> beyond a time threshold</li>
+</ul>
+<p>The two other affected PVCs (<code>overseerr-config</code>, <code>scotchcraft-minecraft-datadir</code>) had accumulated 10-53 restarts respectively before self-recovering — also without triggering any alert.</p>
+<h4 id="how-did-the-radarr-pod-sit-in-containercreating-for-over-4-hours-without-detection">How did the radarr pod sit in <code>ContainerCreating</code> for over 4 hours without detection?<a class="headerlink" href="#how-did-the-radarr-pod-sit-in-containercreating-for-over-4-hours-without-detection" title="Permanent link">&para;</a></h4>
+<p>The pod status <code>ContainerCreating</code> is a normal transient state during startup. Kubernetes does not surface <code>FailedMount</code> events prominently in <code>kubectl get pods</code> output — they are only visible via <code>kubectl describe pod</code>. Without a dashboard widget or alert rule explicitly targeting pods stuck in <code>ContainerCreating</code> beyond a threshold (e.g., 5 minutes), the failure was invisible.</p>
+<hr />
+<h3 id="secondary-findings">Secondary Findings<a class="headerlink" href="#secondary-findings" title="Permanent link">&para;</a></h3>
+<h4 id="pvc-05e03b60-overseerr-config-and-pvc-f1888541-scotchcraft-minecraft">pvc-05e03b60 (overseerr-config) and pvc-f1888541 (scotchcraft-minecraft)<a class="headerlink" href="#pvc-05e03b60-overseerr-config-and-pvc-f1888541-scotchcraft-minecraft" title="Permanent link">&para;</a></h4>
+<p>Both PVCs were hit by the same underlying Feb 21 22:25 disruption. Both showed the same "checkpoint not present in rwReplica chain" fatal error in replica logs. Unlike radarr, at least one replica for each volume had remained in a healthy (non-Rebuilding) state before the disruption, allowing them to self-recover by electing one replica as RW and rebuilding the others from it. Recovery took 50-90 minutes and produced 10-53 container restarts per replica pod — indicating significant thrashing before convergence.</p>
+<hr />
+<h2 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h2>
+<h3 id="services-affected">Services Affected<a class="headerlink" href="#services-affected" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Radarr</strong> (<code>https://radarr.int.pgmac.net</code>): Completely unavailable. Pod stuck in <code>ContainerCreating</code>, no web UI, no API, no media management functionality.</li>
+<li><strong>Overseerr</strong> (<code>https://overseerr.int.pgmac.net</code>): Elevated Jiva replica instability but service remained available throughout.</li>
+<li><strong>Scotchcraft Minecraft</strong>: Elevated Jiva replica instability but service remained available throughout.</li>
+</ul>
+<h3 id="duration">Duration<a class="headerlink" href="#duration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Radarr total outage</strong>: ~20h47m (from 22:01 AEST 2026-02-21 to 18:48 AEST 2026-02-22)</li>
+<li>Silent failure period (undetected): ~16h04m (22:25 → ~14:01 — pod was not scheduled)</li>
+<li>Pod stuck in ContainerCreating (undetected): ~4h04m (14:01 → ~18:05)</li>
+<li>Active recovery: ~43m (~18:05 → 18:48)</li>
+<li><strong>Overseerr instability</strong>: ~6-8h duration, self-resolved, no user-visible outage confirmed</li>
+<li><strong>Minecraft instability</strong>: ~6-8h duration, self-resolved, no user-visible outage confirmed</li>
+</ul>
+<h3 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Storage</strong>: OpenEBS Jiva storage subsystem for 3 PVCs across 3 namespaces</li>
+<li><strong>User-facing</strong>: Media management (no new media could be tracked or imported via Radarr)</li>
+<li><strong>Monitoring</strong>: No detection for ~16h of silent failure</li>
+</ul>
+<hr />
+<h2 id="resolution-steps-taken">Resolution Steps Taken<a class="headerlink" href="#resolution-steps-taken" title="Permanent link">&para;</a></h2>
+<h3 id="1-create-argocd-syncwindow">1. Create ArgoCD SyncWindow<a class="headerlink" href="#1-create-argocd-syncwindow" title="Permanent link">&para;</a></h3>
+<p>Create a <code>dney</code> SyncWindow in ArgoCD on all applications to ensure ArgoCD does NOT attempt to auto-sync any changes during the restoration</p>
+<h3 id="2-scale-down-all-jiva-deployments">2. Scale Down All Jiva Deployments<a class="headerlink" href="#2-scale-down-all-jiva-deployments" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>openebs<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755-ctrl<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755-rep-1<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755-rep-2<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755-rep-3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--replicas<span class="o">=</span><span class="m">0</span>
+</code></pre></div>
+<h3 id="3-patch-volumemeta-on-k8s01-rep-3-the-authoritative-source">3. Patch volume.meta on k8s01 (rep-3) — the Authoritative Source<a class="headerlink" href="#3-patch-volumemeta-on-k8s01-rep-3-the-authoritative-source" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Backup first</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>sudo<span class="w"> </span>cp<span class="w"> </span>volume.meta<span class="w"> </span>volume.meta.bak
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Patch Rebuilding flag to false</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>sudo<span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s2">import json</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s2">path = &#39;/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-.../volume.meta&#39;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s2">with open(path) as f:</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s2">    data = json.load(f)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s2">data[&#39;Rebuilding&#39;] = False</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s2">with open(path, &#39;w&#39;) as f:</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s2">    json.dump(data, f, separators=(&#39;,&#39;, &#39;:&#39;))</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s2">&quot;</span>
+</code></pre></div>
+<h3 id="4-clear-image-data-on-k8s02-and-k8s03">4. Clear Image Data on k8s02 and k8s03<a class="headerlink" href="#4-clear-image-data-on-k8s02-and-k8s03" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># On k8s02 and k8s03 — move (not delete) all img files and volume.meta to backup</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-....bak
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>sudo<span class="w"> </span>mv<span class="w"> </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-.../*.img<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-....bak/
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>sudo<span class="w"> </span>mv<span class="w"> </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-.../*.img.meta<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-....bak/
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>sudo<span class="w"> </span>mv<span class="w"> </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-.../volume.meta<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-....bak/
+</code></pre></div>
+<h3 id="5-scale-up-in-sequence">5. Scale Up in Sequence<a class="headerlink" href="#5-scale-up-in-sequence" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Controller first</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>openebs<span class="w"> </span>pvc-a634b9a3-...-ctrl<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Wait for controller ready</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>openebs<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>-l<span class="w"> </span>openebs.io/persistent-volume<span class="o">=</span>pvc-a634b9a3-...,openebs.io/controller<span class="o">=</span>jiva-controller<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--timeout<span class="o">=</span>60s
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Good replica (k8s01, rep-3) next</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>openebs<span class="w"> </span>pvc-a634b9a3-...-rep-3<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># Allow rep-3 to establish as RW, then bring up the others</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>openebs<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span>pvc-a634b9a3-...-rep-1<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span>pvc-a634b9a3-...-rep-2<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">  </span>--replicas<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<h3 id="6-stop-radarr-to-clear-the-mount-race">6. Stop Radarr to Clear the Mount Race<a class="headerlink" href="#6-stop-radarr-to-clear-the-mount-race" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Radarr was generating competing fsck -a processes preventing manual fsck</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>media<span class="w"> </span>radarr<span class="w"> </span>--replicas<span class="o">=</span><span class="m">0</span>
+</code></pre></div>
+<p>At this point the kernel's ext4 journal recovery completed automatically during a mount attempt (<code>dmesg</code> showed <code>EXT4-fs (sdi): recovery complete</code> and <code>mounted filesystem with ordered data mode</code>), eliminating the need for a manual <code>fsck -y</code>.</p>
+<h3 id="7-restore-radarr">7. Restore Radarr<a class="headerlink" href="#7-restore-radarr" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>media<span class="w"> </span>radarr<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<h3 id="8-cleanup">8. Cleanup<a class="headerlink" href="#8-cleanup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Remove backup directories from all nodes</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ssh<span class="w"> </span>k8s01<span class="w"> </span><span class="s2">&quot;sudo rm -f .../volume.meta.bak&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>ssh<span class="w"> </span>k8s02<span class="w"> </span><span class="s2">&quot;sudo rm -rf ...pvc-a634b9a3-....bak&quot;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>ssh<span class="w"> </span>k8s03<span class="w"> </span><span class="s2">&quot;sudo rm -rf ...pvc-a634b9a3-....bak&quot;</span>
+</code></pre></div>
+<h3 id="9-remove-syncwindow">9. Remove SyncWindow<a class="headerlink" href="#9-remove-syncwindow" title="Permanent link">&para;</a></h3>
+<p>Remove the <code>deny</code> SyncWindow in ArgoCD to ensure normal/expected auto-sync operation continues</p>
+<hr />
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<h3 id="service-health">Service Health<a class="headerlink" href="#service-health" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Radarr: <code>1/1 Running</code>, stable for 8+ check intervals post-recovery</li>
+<li>✅ Overseerr: <code>1/1 Running</code>, no further replica restarts</li>
+<li>✅ Minecraft: <code>1/1 Running</code>, no further replica restarts</li>
+</ul>
+<h3 id="storage-health">Storage Health<a class="headerlink" href="#storage-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pvc-a634b9a3 (radarr-config):
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  ctrl:  2/2 Running
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  rep-1: 1/1 Running  (rebuilt from rep-3)
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  rep-2: 1/1 Running  (rebuilt from rep-3)
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  rep-3: 1/1 Running  (authoritative source)
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>pvc-05e03b60 (overseerr-config):
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>  All replicas: 1/1 Running, Rebuilding=false, shared Checkpoint ✅
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>pvc-f1888541 (minecraft-datadir):
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>  All replicas: 1/1 Running, Rebuilding=false, shared Checkpoint ✅
+</code></pre></div>
+<h3 id="volume-metadata-post-recovery">Volume Metadata (Post-Recovery)<a class="headerlink" href="#volume-metadata-post-recovery" title="Permanent link">&para;</a></h3>
+<p>All radarr-config replicas confirmed with:</p>
+<ul>
+<li><code>"Rebuilding": false</code></li>
+<li>Shared <code>Checkpoint</code> UUID across all 3 nodes</li>
+<li>Shared <code>Parent</code> snapshot reference</li>
+<li>Active sync converging <code>RevisionCounter</code> values</li>
+</ul>
+<hr />
+<h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Alert on pods stuck in ContainerCreating &gt; 5 minutes</strong> (Critical Priority)</li>
+<li>Current: No alerting; a pod can sit stuck indefinitely without detection</li>
+<li>Target: PagerDuty/Slack alert when any pod remains in <code>ContainerCreating</code> beyond 5 minutes</li>
+<li>Implementation: Prometheus <code>kube_pod_status_phase</code> + duration alert rule</li>
+<li>
+<p><strong>Rationale</strong>: 4+ hours elapsed before manual detection. This single alert would have reduced radarr's outage from hours to minutes.</p>
+</li>
+<li>
+<p><strong>Alert on Jiva replica CrashLoopBackOff</strong> (Critical Priority)</p>
+</li>
+<li>Current: No alerting on OpenEBS replica pod failures</li>
+<li>Target: Immediate alert when any Jiva replica pod enters <code>CrashLoopBackOff</code> or <code>Error</code></li>
+<li>Implementation: Prometheus <code>kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}</code> filtered to <code>openebs</code> namespace</li>
+<li>
+<p><strong>Rationale</strong>: All 3 replicas were in CrashLoopBackOff for ~16 hours before detection</p>
+</li>
+<li>
+<p><strong>Alert on Jiva replica restart count threshold</strong> (High Priority)</p>
+</li>
+<li>Current: No alerting; overseerr and minecraft accumulated 10-53 restarts silently</li>
+<li>Target: Alert when any Jiva replica pod exceeds 5 restarts within 30 minutes</li>
+<li>Implementation: <code>rate(kube_pod_container_status_restarts_total[30m]) &gt; 0.1</code> filtered to openebs namespace</li>
+<li>
+<p><strong>Rationale</strong>: The self-recovered PVCs showed the same failure pattern but slightly less severe — an early restart alert would flag the pattern before it becomes critical</p>
+</li>
+<li>
+<p><strong>Alert on FailedMount events</strong> (High Priority)</p>
+</li>
+<li>Current: <code>FailedMount</code> events are only visible via <code>kubectl describe</code>; no alerting</li>
+<li>Target: Alert when a pod generates more than 3 <code>FailedMount</code> events</li>
+<li>Implementation: Prometheus <code>kube_event_count{reason="FailedMount"}</code> alert rule</li>
+<li>
+<p><strong>Rationale</strong>: The mount failure was generating repeated events for hours with no visibility</p>
+</li>
+<li>
+<p><strong>Document OpenEBS Jiva replica divergence recovery runbook</strong> (High Priority)</p>
+</li>
+<li>Current: No documented procedure; recovery required real-time diagnosis</li>
+<li>Target: Step-by-step runbook covering: identify diverged replicas → patch volume.meta → clear image data on non-source replicas → scale up in sequence</li>
+<li>Location: <code>incidents/docs/runbooks/openebs-jiva-replica-recovery.md</code></li>
+<li>
+<p><strong>Rationale</strong>: Recovery took ~43 minutes of active work; a runbook would reduce this significantly and remove the knowledge dependency</p>
+</li>
+<li>
+<p><strong>Investigate and document the Feb 21 22:25 root event</strong> (High Priority)</p>
+</li>
+<li>Current: The simultaneous all-node disruption at 22:25 AEST is unexplained</li>
+<li>Target: Identify whether this was a power event, network partition, kernel bug, or other cause</li>
+<li>Actions:<ul>
+<li>Review UPS/PDU logs for that timeframe</li>
+<li>Review node-level system logs (<code>/var/log/syslog</code>) from all 3 nodes around 22:25</li>
+<li>Check Proxmox/hypervisor logs if nodes are VMs</li>
+</ul>
+</li>
+<li><strong>Rationale</strong>: The same unknown event also degraded overseerr and minecraft. If it recurs, all Jiva volumes are at risk of the same failure mode</li>
+</ol>
+<h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Jiva Rebuilding flag monitoring</strong> (Medium Priority)</li>
+<li>Add a periodic check (every 5 minutes) that inspects <code>volume.meta</code> on all Jiva replica nodes and alerts if <code>Rebuilding: true</code> persists beyond 30 minutes</li>
+<li>A replica stuck in Rebuilding for &gt;30 minutes indicates a stalled or failed rebuild that requires intervention</li>
+<li>
+<p>Implementation: CronJob running a script against node hostPaths, or custom Prometheus exporter</p>
+</li>
+<li>
+<p><strong>Jiva rebuild serialisation guard</strong> (Medium Priority)</p>
+</li>
+<li>When a cluster-wide disruption leaves all replicas in Rebuilding state simultaneously, Jiva has no self-healing path because no replica can establish as RW</li>
+<li>Investigate whether OpenEBS Jiva has a recovery mode or operator-level intervention hook that can be automated</li>
+<li>
+<p>Consider upgrading OpenEBS if newer versions have improved recovery handling for this scenario</p>
+</li>
+<li>
+<p><strong>Structured review of all Jiva volumes' health state</strong> (Medium Priority)</p>
+</li>
+<li>Run a periodic job that checks <code>volume.meta</code> on all Jiva replica hostPaths across all nodes</li>
+<li>Report: revision counter skew between replicas, Rebuilding flag, Dirty flag, snapshot chain depth</li>
+<li>
+<p>This would surface partial degradation (e.g., one of three replicas in an unhealthy state) before it becomes a full outage</p>
+</li>
+<li>
+<p><strong>Snapshot chain depth monitoring</strong> (Medium Priority)</p>
+<ul>
+<li>Referenced from the 2026-01-06 PIR: excessive snapshot accumulation caused Phase 2 storage issues in that incident</li>
+<li>The radarr-config PVC had 280+ snapshot files on k8s01 at recovery time, indicating the jiva-snapshot-cleanup cronjob may not be running effectively</li>
+<li>Verify snapshot cleanup cronjob is healthy and its threshold/frequency is appropriate (see 2026-01-06 action items)</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
+<h3 id="what-went-well">What Went Well<a class="headerlink" href="#what-went-well" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Thorough diagnostic approach</strong>: The full causal chain from "pod not starting" to "all replicas Rebuilding simultaneously" was traced in approximately 10 minutes using <code>kubectl describe</code>, pod logs, node SSH access, and <code>volume.meta</code> inspection</li>
+<li><strong>Careful recovery sequencing</strong>: Scaling down before making filesystem changes, choosing the source replica deliberately, moving (not deleting) backup data before confirming recovery — all prevented data loss</li>
+<li><strong>Self-healing worked for two of three affected PVCs</strong>: The overseerr and minecraft volumes recovered without intervention, demonstrating that Jiva's rebuild mechanism works correctly when at least one healthy replica survives</li>
+<li><strong>Backup before touching metadata</strong>: <code>volume.meta.bak</code> was created before patching, and image files were moved rather than deleted, preserving rollback options throughout</li>
+<li><strong>The kernel handled ext4 recovery</strong>: Once the Jiva backend was healthy, the kernel's built-in ext4 journal recovery resolved the filesystem corruption without requiring a separate manual <code>fsck</code> — simplifying the recovery</li>
+</ol>
+<h3 id="what-didnt-go-well">What Didn't Go Well<a class="headerlink" href="#what-didnt-go-well" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>16+ hours of silent failure</strong>: The root event occurred at 22:25 AEST; the incident was not detected until ~18:05 the next day — a detection gap of over 16 hours</li>
+<li><strong>ContainerCreating is invisible as an error state</strong>: The pod appeared "normal" to casual inspection; only <code>kubectl describe</code> revealed the FailedMount events</li>
+<li><strong>No Jiva health alerting whatsoever</strong>: Three separate PVCs experienced Jiva replica failures affecting 3 different services, all without any alert being generated</li>
+<li><strong>fsck -a race condition</strong>: Kubelet continuously spawning new <code>fsck -a</code> processes prevented manual <code>fsck -y</code> from acquiring the device, requiring the workaround of scaling radarr to 0</li>
+<li><strong>The underlying 22:25 disruption remains unexplained</strong>: The simultaneous all-replica crash is the true root cause, and without knowing what caused it, the risk of recurrence cannot be assessed or mitigated</li>
+<li><strong>Jiva has no self-healing path when all replicas diverge</strong>: The system had no ability to recover without manual metadata surgery — this is a fundamental architectural limitation</li>
+</ol>
+<h3 id="surprise-findings">Surprise Findings<a class="headerlink" href="#surprise-findings" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>All 3 replicas can simultaneously enter an unrecoverable state</strong>: The assumption that 3-replica Jiva provides resilience only holds if the disruption affects fewer than a quorum. A simultaneous all-node disruption during an active rebuild defeats this assumption entirely.</li>
+<li><strong>The Rebuilding flag persists across pod restarts</strong>: <code>volume.meta</code> is on the node's hostPath, not in the pod. Each time a replica pod restarted, it read <code>Rebuilding: true</code> and immediately failed. The CrashLoopBackOff was not a transient issue — it would never self-resolve.</li>
+<li><strong>The revision.counter timestamp as a forensic tool</strong>: The identical <code>Feb 21 22:25</code> mtime on all three nodes' <code>revision.counter</code> files provided precise timing of the root event without any application-level logging.</li>
+<li><strong>ext4 journal recovery as a "free" fix</strong>: The kernel handled the filesystem repair during the successful mount after Jiva was fixed, avoiding the need for manual <code>fsck -y</code>. The <code>can't read superblock</code> error from the earlier kubelet attempts was due to the total absence of Jiva backends, not permanent disk corruption.</li>
+<li><strong>Two other services were also impacted but self-recovered</strong>: Without checking all Jiva pod restart counts, the full blast radius of the Feb 21 event would have been unknown. The same root event caused instability across minecraft and overseerr.</li>
+</ol>
+<hr />
+<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Action</th>
+<th>Owner</th>
+<th>Due Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Critical</td>
+<td>Alert: pod stuck in ContainerCreating &gt; 5 minutes</td>
+<td>SRE</td>
+<td>2026-03-01</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>Alert: Jiva replica pod CrashLoopBackOff in openebs namespace</td>
+<td>SRE</td>
+<td>2026-03-01</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Alert: Jiva replica restart rate &gt; 5 in 30 minutes</td>
+<td>SRE</td>
+<td>2026-03-08</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Alert: FailedMount events &gt; 3 on any pod</td>
+<td>SRE</td>
+<td>2026-03-08</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Write OpenEBS Jiva replica recovery runbook</td>
+<td>SRE</td>
+<td>2026-03-08</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Investigate Feb 21 22:25 root event (UPS, PDU, hypervisor logs)</td>
+<td>SRE</td>
+<td>2026-03-01</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Implement Jiva Rebuilding flag monitor (cronjob/exporter)</td>
+<td>SRE</td>
+<td>2026-03-15</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Investigate Jiva upgrade path or automated rebuild recovery</td>
+<td>SRE</td>
+<td>2026-03-22</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Periodic Jiva volume health report (revision skew, chain depth)</td>
+<td>SRE</td>
+<td>2026-03-22</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Verify jiva-snapshot-cleanup cronjob health and thresholds</td>
+<td>SRE</td>
+<td>2026-03-01</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>Investigate ci namespace high-restart pods (dependency-track: 176 restarts)</td>
+<td>SRE</td>
+<td>2026-03-15</td>
+<td>Open</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>Investigate media namespace chronic restarters (metasearch: 34, linkace: 11)</td>
+<td>SRE</td>
+<td>2026-03-22</td>
+<td>Open</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cluster</strong>: pvek8s (microk8s on 3 nodes: k8s01/172.22.22.6, k8s02, k8s03/172.22.22.9)</li>
+<li><strong>Storage</strong>: OpenEBS Jiva 2.12.1 (<code>openebs-jiva-default</code> storage class)</li>
+<li><strong>Affected PVC</strong>: <code>radarr-config</code> (pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755), 5Gi RWO</li>
+<li><strong>iSCSI target</strong>: <code>iqn.2016-09.com.openebs.jiva:pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755</code> at <code>10.152.183.80:3260</code></li>
+<li><strong>Block device on k8s01</strong>: <code>/dev/sdi</code> (ext4 filesystem, 2G)</li>
+<li><strong>Replica hostPath</strong>: <code>/var/snap/microk8s/common/var/openebs/pvc-a634b9a3-fdaa-4b45-9dc3-2486e716d755/</code></li>
+</ul>
+<h3 id="replica-state-at-discovery">Replica State at Discovery<a class="headerlink" href="#replica-state-at-discovery" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Replica</th>
+<th>Revision Counter</th>
+<th>Head Image</th>
+<th>Rebuilding</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>k8s01</td>
+<td>rep-3</td>
+<td>2538385</td>
+<td>volume-head-280.img</td>
+<td>true</td>
+<td>CrashLoopBackOff</td>
+</tr>
+<tr>
+<td>k8s02</td>
+<td>rep-2</td>
+<td>2538385</td>
+<td>volume-head-376.img</td>
+<td>true</td>
+<td>CrashLoopBackOff</td>
+</tr>
+<tr>
+<td>k8s03</td>
+<td>rep-1</td>
+<td>2538385</td>
+<td>volume-head-378.img</td>
+<td>true</td>
+<td>CrashLoopBackOff</td>
+</tr>
+</tbody>
+</table>
+<p>All three had identical <code>Checkpoint: "volume-snap-0fd00bc8-aaa8-40d1-90c3-1971d4837540.img"</code> but different <code>Parent</code> snapshot references, confirming divergence during an interrupted multi-replica rebuild.</p>
+<h3 id="key-log-entries">Key Log Entries<a class="headerlink" href="#key-log-entries" title="Permanent link">&para;</a></h3>
+<p><strong>Jiva replica fatal error (all 3 replicas):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>level=fatal msg=&quot;Failed to add replica to controller, err: Current replica&#39;s
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>checkpoint not present in rwReplica chain, Shutting down...&quot;
+</code></pre></div>
+<p><strong>Kubelet mount failure (pod events):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Warning  FailedMount  kubelet  MountVolume.MountDevice failed for volume
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>&quot;pvc-a634b9a3-...&quot; : &#39;fsck&#39; found errors on device /dev/disk/by-path/...
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>but could not correct them:
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>/dev/sdi: recovering journal
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>/dev/sdi: Superblock needs_recovery flag is clear, but journal has data.
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>/dev/sdi: UNEXPECTED INCONSISTENCY; RUN fsck MANUALLY.
+</code></pre></div>
+<p><strong>ext4 recovery success (dmesg on k8s01):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>[...] EXT4-fs (sdi): recovery complete
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>[...] EXT4-fs (sdi): mounted filesystem with ordered data mode. Opts: (null)
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>[...] sd 10:0:0:0: [sdi] Synchronizing SCSI cache
+</code></pre></div>
+<h3 id="other-affected-pvcs-same-root-event">Other Affected PVCs (Same Root Event)<a class="headerlink" href="#other-affected-pvcs-same-root-event" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>PVC</th>
+<th>App</th>
+<th>Max Restarts</th>
+<th>Self-Recovered</th>
+<th>Outage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pvc-05e03b60 (overseerr-config)</td>
+<td>Overseerr</td>
+<td>11</td>
+<td>Yes</td>
+<td>None confirmed</td>
+</tr>
+<tr>
+<td>pvc-f1888541 (minecraft-datadir)</td>
+<td>Scotchcraft Minecraft</td>
+<td>53</td>
+<td>Yes</td>
+<td>None confirmed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Previous incident covering Jiva snapshot accumulation: <code>incidents/docs/incidents/2026-01-06-cluster-cascade-failure.md</code></li>
+<li>OpenEBS Jiva documentation: https://openebs.io/docs/user-guides/jiva</li>
+<li>OpenEBS Jiva volume.meta schema: internal replica metadata, not publicly documented</li>
+</ul>
+<hr />
+<h2 id="reviewers">Reviewers<a class="headerlink" href="#reviewers" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Prepared by</strong>: Claude (AI Assistant)</li>
+<li><strong>Date</strong>: 2026-02-22</li>
+<li><strong>Review Status</strong>: Draft — Pending human review</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/pgmac" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
