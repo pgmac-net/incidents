@@ -8,20 +8,14 @@ on:
 permissions:
   contents: read
   id-token: write
-  attestations: write
 
 jobs:
   build:
     runs-on: self-hosted
     permissions:
-      pages: write
       contents: write
       id-token: write
       attestations: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
