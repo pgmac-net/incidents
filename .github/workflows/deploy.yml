@@ -67,13 +67,19 @@ jobs:
         with:
           subject-path: site-*.tar.gz
 
-      - name: Deploy Incidents mkdocs site
-        uses: mhausenblas/mkdocs-deploy-gh-pages@1.26
+      - name: Build GitHub Pages site
+        run: |
+          uv run mkdocs build --config-file incidents-mkdoc.yml --clean --strict
+
+      - name: Commit and push docs/
         env:
-          CUSTOM_DOMAIN: incidents.pgmac.net.au
-          REQUIREMENTS: requirements.txt
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG_FILE: incidents-mkdoc.yml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+          git add docs/
+          git diff --staged --quiet || (git commit -m "chore: rebuild site [skip ci]" && git push origin main)
 
   deploy:
     needs: build

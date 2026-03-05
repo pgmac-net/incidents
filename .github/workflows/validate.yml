@@ -45,7 +45,7 @@ jobs:
           echo "Checking for common markdown issues..."
 
           # Check for broken internal links (markdown style)
-          if grep -r "\](.*\.md)" docs/ | grep -v "http" | grep -E "\]\([^)]+\.md[^)]*\)" ; then
+          if grep -r "\](.*\.md)" src/ | grep -v "http" | grep -E "\]\([^)]+\.md[^)]*\)" ; then
             echo "⚠️  Found potentially broken markdown links above"
             echo "Note: These may be valid - manual review recommended"
           else
@@ -55,7 +55,7 @@ jobs:
       - name: Validate all markdown files can be parsed
         run: |
           echo "Validating markdown files..."
-          find docs/ -name "*.md" -type f | while read file; do
+          find src/ -name "*.md" -type f | while read file; do
             if [ ! -s "$file" ]; then
               echo "❌ Empty file: $file"
               exit 1
@@ -68,14 +68,14 @@ jobs:
           echo "Checking for missing image references..."
 
           # Find all image references in markdown
-          if grep -r "!\[.*\](" docs/ | grep -v "http" > /tmp/images.txt; then
+          if grep -r "!\[.*\](" src/ | grep -v "http" > /tmp/images.txt; then
             while read line; do
               file=$(echo "$line" | cut -d: -f1)
               img=$(echo "$line" | sed 's/.*(\([^)]*\)).*/\1/')
 
               # Resolve relative path
               dir=$(dirname "$file")
-              if [ ! -f "$dir/$img" ] && [ ! -f "docs/$img" ]; then
+              if [ ! -f "$dir/$img" ] && [ ! -f "src/$img" ]; then
                 echo "⚠️  Potentially missing image: $img (referenced in $file)"
               fi
             done < /tmp/images.txt
@@ -101,7 +101,7 @@ jobs:
               if isinstance(nav, dict):
                   for key, value in nav.items():
                       if isinstance(value, str):
-                          filepath = os.path.join('docs', value)
+                          filepath = os.path.join('src', value)
                           if not os.path.exists(filepath):
                               errors.append(f'Missing file: {filepath} (referenced in nav)')
                       elif isinstance(value, list):
