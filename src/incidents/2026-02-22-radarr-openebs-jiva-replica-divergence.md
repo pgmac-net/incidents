@@ -21,30 +21,30 @@ Resolution required: scaling down all Jiva deployments, patching `volume.meta` o
 
 ## Timeline (AEST — UTC+10)
 
-| Time | Event |
-|------|-------|
-| **2026-02-21 ~22:25** | **ROOT EVENT**: Ungraceful shutdown interrupts an in-progress Jiva rebuild across all 3 replicas. All nodes' `revision.counter` files share this timestamp. |
-| ~22:25 onwards | All 3 Jiva replicas for `radarr-config` enter CrashLoopBackOff. Jiva controller loses all healthy backends. iSCSI LUN (`/dev/sdi`) becomes unserviceable. |
-| ~22:25 onwards | Kubelet begins retrying PVC mount for radarr pod (not yet scheduled). Each retry runs `fsck -a /dev/sdi`, which fails with "can't read superblock". |
-| **2026-02-22 14:01** | Radarr pod `radarr-cd6596b59-lbc2v` scheduled, enters `ContainerCreating`. PVC mount failing silently — pod status gives no indication of storage failure. |
-| 14:01 → 18:05 | Pod remains in `ContainerCreating` for 4h4m with no alerting. `FailedMount` events accumulate in pod describe but are not visible without active investigation. |
-| **~18:05** | **INCIDENT DETECTED**: Manual investigation triggered. `kubectl describe pod` reveals repeated `FailedMount` events citing `can't read superblock on /dev/sdi` and `fsck found errors but could not correct them`. |
-| ~18:08 | All 3 Jiva replica pods identified in CrashLoopBackOff: `rep-1` (k8s03), `rep-2` (k8s02), `rep-3` (k8s01). Controller running 2/2 but with zero healthy backends. |
-| ~18:10 | Replica logs reveal fatal error: `"Current replica's checkpoint not present in rwReplica chain, Shutting down..."` |
-| ~18:12 | All 3 nodes' `volume.meta` inspected — all show `"Rebuilding":true` with identical `RevisionCounter: 2538385` but diverged `Parent` snapshot chains. Root cause confirmed. |
-| ~18:15 | **RESOLUTION START**: All 4 Jiva deployments (controller + 3 replicas) scaled to 0. |
-| ~18:17 | `volume.meta` on k8s01 (`rep-3`) patched: `"Rebuilding": false`. This replica designated as the authoritative source. |
-| ~18:19 | All `.img` and `.img.meta` files moved to `.bak` directories on k8s02 and k8s03. `volume.meta` files also moved so those replicas start completely fresh. |
-| ~18:21 | Jiva controller scaled back to 1. Becomes ready within 80 seconds. |
-| ~18:22 | `rep-3` (k8s01, the fixed replica) scaled to 1. Joins controller as RW replica. |
-| ~18:24 | `rep-1` and `rep-2` scaled to 1. Begin rebuilding from `rep-3`. Jiva correctly serialises — only one WO rebuild at a time. |
-| ~18:29 | All 4 Jiva pods `Running`. Snapshot sync active on `rep-2`, `rep-1` queued. |
-| ~18:30 | Old D-state `fsck.ext4` process (from prior kubelet retry) clears. `/dev/sdi` becomes free. |
-| ~18:32 | Manual `fsck -y /dev/sdi` attempt fails — kubelet has already spawned a new `fsck -a` process, racing for the device. |
-| ~18:37 | Radarr scaled to 0 to stop kubelet from competing for `/dev/sdi`. |
-| ~18:40 | D-state `fsck -a` process clears. `dmesg` shows `EXT4-fs (sdi): recovery complete` — the kernel's ext4 journal recovery succeeded during a mount attempt after Jiva became healthy. |
-| ~18:47 | Radarr scaled back to 1. |
-| **18:48:28** | **INCIDENT RESOLVED**: Radarr pod `radarr-cd6596b59-mlbs6` reaches `1/1 Running`. |
+| Time                  | Event                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **2026-02-21 ~22:25** | **ROOT EVENT**: Ungraceful shutdown interrupts an in-progress Jiva rebuild across all 3 replicas. All nodes' `revision.counter` files share this timestamp.                                                        |
+| ~22:25 onwards        | All 3 Jiva replicas for `radarr-config` enter CrashLoopBackOff. Jiva controller loses all healthy backends. iSCSI LUN (`/dev/sdi`) becomes unserviceable.                                                          |
+| ~22:25 onwards        | Kubelet begins retrying PVC mount for radarr pod (not yet scheduled). Each retry runs `fsck -a /dev/sdi`, which fails with "can't read superblock".                                                                |
+| **2026-02-22 14:01**  | Radarr pod `radarr-cd6596b59-lbc2v` scheduled, enters `ContainerCreating`. PVC mount failing silently — pod status gives no indication of storage failure.                                                         |
+| 14:01 → 18:05         | Pod remains in `ContainerCreating` for 4h4m with no alerting. `FailedMount` events accumulate in pod describe but are not visible without active investigation.                                                    |
+| **~18:05**            | **INCIDENT DETECTED**: Manual investigation triggered. `kubectl describe pod` reveals repeated `FailedMount` events citing `can't read superblock on /dev/sdi` and `fsck found errors but could not correct them`. |
+| ~18:08                | All 3 Jiva replica pods identified in CrashLoopBackOff: `rep-1` (k8s03), `rep-2` (k8s02), `rep-3` (k8s01). Controller running 2/2 but with zero healthy backends.                                                  |
+| ~18:10                | Replica logs reveal fatal error: `"Current replica's checkpoint not present in rwReplica chain, Shutting down..."`                                                                                                 |
+| ~18:12                | All 3 nodes' `volume.meta` inspected — all show `"Rebuilding":true` with identical `RevisionCounter: 2538385` but diverged `Parent` snapshot chains. Root cause confirmed.                                         |
+| ~18:15                | **RESOLUTION START**: All 4 Jiva deployments (controller + 3 replicas) scaled to 0.                                                                                                                                |
+| ~18:17                | `volume.meta` on k8s01 (`rep-3`) patched: `"Rebuilding": false`. This replica designated as the authoritative source.                                                                                              |
+| ~18:19                | All `.img` and `.img.meta` files moved to `.bak` directories on k8s02 and k8s03. `volume.meta` files also moved so those replicas start completely fresh.                                                          |
+| ~18:21                | Jiva controller scaled back to 1. Becomes ready within 80 seconds.                                                                                                                                                 |
+| ~18:22                | `rep-3` (k8s01, the fixed replica) scaled to 1. Joins controller as RW replica.                                                                                                                                    |
+| ~18:24                | `rep-1` and `rep-2` scaled to 1. Begin rebuilding from `rep-3`. Jiva correctly serialises — only one WO rebuild at a time.                                                                                         |
+| ~18:29                | All 4 Jiva pods `Running`. Snapshot sync active on `rep-2`, `rep-1` queued.                                                                                                                                        |
+| ~18:30                | Old D-state `fsck.ext4` process (from prior kubelet retry) clears. `/dev/sdi` becomes free.                                                                                                                        |
+| ~18:32                | Manual `fsck -y /dev/sdi` attempt fails — kubelet has already spawned a new `fsck -a` process, racing for the device.                                                                                              |
+| ~18:37                | Radarr scaled to 0 to stop kubelet from competing for `/dev/sdi`.                                                                                                                                                  |
+| ~18:40                | D-state `fsck -a` process clears. `dmesg` shows `EXT4-fs (sdi): recovery complete` — the kernel's ext4 journal recovery succeeded during a mount attempt after Jiva became healthy.                                |
+| ~18:47                | Radarr scaled back to 1.                                                                                                                                                                                           |
+| **18:48:28**          | **INCIDENT RESOLVED**: Radarr pod `radarr-cd6596b59-mlbs6` reaches `1/1 Running`.                                                                                                                                  |
 
 ---
 
@@ -52,7 +52,7 @@ Resolution required: scaling down all Jiva deployments, patching `volume.meta` o
 
 ### The Infinite How's Chain
 
-> *"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause.*
+> _"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause._
 
 ---
 
@@ -101,13 +101,17 @@ Jiva's safety mechanism: when a replica restarts, it contacts the controller and
 Inspection of each replica's `volume.meta` showed:
 
 ```json
-{ "Rebuilding": true, "Checkpoint": "volume-snap-0fd00bc8-...", "RevisionCounter": 2538385 }
+{
+  "Rebuilding": true,
+  "Checkpoint": "volume-snap-0fd00bc8-...",
+  "RevisionCounter": 2538385
+}
 ```
 
 All three replicas had identical `RevisionCounter` values (`2538385`) and identical `Checkpoint` UUIDs — but each had a **different `Parent` snapshot** for its head image:
 
-| Node | Head Parent |
-|------|-------------|
+| Node  | Head Parent               |
+| ----- | ------------------------- |
 | k8s01 | `volume-snap-3d6f0344...` |
 | k8s02 | `volume-snap-b5c23a63...` |
 | k8s03 | `volume-snap-af55ce5c...` |
@@ -123,6 +127,7 @@ OpenEBS Jiva only rebuilds one WO (write-only) replica at a time under normal op
 #### How did a prior degraded state go undetected?
 
 There is no alerting on:
+
 - Jiva replica `CrashLoopBackOff` or elevated restart counts
 - Jiva replica `Rebuilding: true` flag persisting beyond a threshold
 - PVC `FailedMount` events accumulating on pods
@@ -171,7 +176,11 @@ Both PVCs were hit by the same underlying Feb 21 22:25 disruption. Both showed t
 
 ## Resolution Steps Taken
 
-### 1. Scale Down All Jiva Deployments
+### 1. Create ArgoCD SyncWindow
+
+Create a `dney` SyncWindow in ArgoCD on all applications to ensure ArgoCD does NOT attempt to auto-sync any changes during the restoration
+
+### 2. Scale Down All Jiva Deployments
 
 ```bash
 kubectl scale deployment -n openebs \
@@ -182,7 +191,7 @@ kubectl scale deployment -n openebs \
   --replicas=0
 ```
 
-### 2. Patch volume.meta on k8s01 (rep-3) — the Authoritative Source
+### 3. Patch volume.meta on k8s01 (rep-3) — the Authoritative Source
 
 ```bash
 # Backup first
@@ -200,7 +209,7 @@ with open(path, 'w') as f:
 "
 ```
 
-### 3. Clear Image Data on k8s02 and k8s03
+### 4. Clear Image Data on k8s02 and k8s03
 
 ```bash
 # On k8s02 and k8s03 — move (not delete) all img files and volume.meta to backup
@@ -213,7 +222,7 @@ sudo mv /var/snap/microk8s/common/var/openebs/pvc-a634b9a3-.../volume.meta \
         /var/snap/microk8s/common/var/openebs/pvc-a634b9a3-....bak/
 ```
 
-### 4. Scale Up in Sequence
+### 5. Scale Up in Sequence
 
 ```bash
 # Controller first
@@ -234,7 +243,7 @@ kubectl scale deployment -n openebs \
   --replicas=1
 ```
 
-### 5. Stop Radarr to Clear the Mount Race
+### 6. Stop Radarr to Clear the Mount Race
 
 ```bash
 # Radarr was generating competing fsck -a processes preventing manual fsck
@@ -243,13 +252,13 @@ kubectl scale deployment -n media radarr --replicas=0
 
 At this point the kernel's ext4 journal recovery completed automatically during a mount attempt (`dmesg` showed `EXT4-fs (sdi): recovery complete` and `mounted filesystem with ordered data mode`), eliminating the need for a manual `fsck -y`.
 
-### 6. Restore Radarr
+### 7. Restore Radarr
 
 ```bash
 kubectl scale deployment -n media radarr --replicas=1
 ```
 
-### 7. Cleanup
+### 8. Cleanup
 
 ```bash
 # Remove backup directories from all nodes
@@ -257,6 +266,10 @@ ssh k8s01 "sudo rm -f .../volume.meta.bak"
 ssh k8s02 "sudo rm -rf ...pvc-a634b9a3-....bak"
 ssh k8s03 "sudo rm -rf ...pvc-a634b9a3-....bak"
 ```
+
+### 9. Remove SyncWindow
+
+Remove the `deny` SyncWindow in ArgoCD to ensure normal/expected auto-sync operation continues
 
 ---
 
@@ -287,6 +300,7 @@ pvc-f1888541 (minecraft-datadir):
 ### Volume Metadata (Post-Recovery)
 
 All radarr-config replicas confirmed with:
+
 - `"Rebuilding": false`
 - Shared `Checkpoint` UUID across all 3 nodes
 - Shared `Parent` snapshot reference
@@ -392,20 +406,20 @@ All radarr-config replicas confirmed with:
 
 ## Action Items
 
-| Priority | Action | Owner | Due Date | Status |
-|----------|--------|-------|----------|--------|
-| Critical | Alert: pod stuck in ContainerCreating > 5 minutes | SRE | 2026-03-01 | Open |
-| Critical | Alert: Jiva replica pod CrashLoopBackOff in openebs namespace | SRE | 2026-03-01 | Open |
-| High | Alert: Jiva replica restart rate > 5 in 30 minutes | SRE | 2026-03-08 | Open |
-| High | Alert: FailedMount events > 3 on any pod | SRE | 2026-03-08 | Open |
-| High | Write OpenEBS Jiva replica recovery runbook | SRE | 2026-03-08 | Open |
-| High | Investigate Feb 21 22:25 root event (UPS, PDU, hypervisor logs) | SRE | 2026-03-01 | Open |
-| Medium | Implement Jiva Rebuilding flag monitor (cronjob/exporter) | SRE | 2026-03-15 | Open |
-| Medium | Investigate Jiva upgrade path or automated rebuild recovery | SRE | 2026-03-22 | Open |
-| Medium | Periodic Jiva volume health report (revision skew, chain depth) | SRE | 2026-03-22 | Open |
-| Medium | Verify jiva-snapshot-cleanup cronjob health and thresholds | SRE | 2026-03-01 | Open |
-| Low | Investigate ci namespace high-restart pods (dependency-track: 176 restarts) | SRE | 2026-03-15 | Open |
-| Low | Investigate media namespace chronic restarters (metasearch: 34, linkace: 11) | SRE | 2026-03-22 | Open |
+| Priority | Action                                                                       | Owner | Due Date   | Status |
+| -------- | ---------------------------------------------------------------------------- | ----- | ---------- | ------ |
+| Critical | Alert: pod stuck in ContainerCreating > 5 minutes                            | SRE   | 2026-03-01 | Open   |
+| Critical | Alert: Jiva replica pod CrashLoopBackOff in openebs namespace                | SRE   | 2026-03-01 | Open   |
+| High     | Alert: Jiva replica restart rate > 5 in 30 minutes                           | SRE   | 2026-03-08 | Open   |
+| High     | Alert: FailedMount events > 3 on any pod                                     | SRE   | 2026-03-08 | Open   |
+| High     | Write OpenEBS Jiva replica recovery runbook                                  | SRE   | 2026-03-08 | Open   |
+| High     | Investigate Feb 21 22:25 root event (UPS, PDU, hypervisor logs)              | SRE   | 2026-03-01 | Open   |
+| Medium   | Implement Jiva Rebuilding flag monitor (cronjob/exporter)                    | SRE   | 2026-03-15 | Open   |
+| Medium   | Investigate Jiva upgrade path or automated rebuild recovery                  | SRE   | 2026-03-22 | Open   |
+| Medium   | Periodic Jiva volume health report (revision skew, chain depth)              | SRE   | 2026-03-22 | Open   |
+| Medium   | Verify jiva-snapshot-cleanup cronjob health and thresholds                   | SRE   | 2026-03-01 | Open   |
+| Low      | Investigate ci namespace high-restart pods (dependency-track: 176 restarts)  | SRE   | 2026-03-15 | Open   |
+| Low      | Investigate media namespace chronic restarters (metasearch: 34, linkace: 11) | SRE   | 2026-03-22 | Open   |
 
 ---
 
@@ -422,23 +436,25 @@ All radarr-config replicas confirmed with:
 
 ### Replica State at Discovery
 
-| Node | Replica | Revision Counter | Head Image | Rebuilding | Status |
-|------|---------|-----------------|------------|------------|--------|
-| k8s01 | rep-3 | 2538385 | volume-head-280.img | true | CrashLoopBackOff |
-| k8s02 | rep-2 | 2538385 | volume-head-376.img | true | CrashLoopBackOff |
-| k8s03 | rep-1 | 2538385 | volume-head-378.img | true | CrashLoopBackOff |
+| Node  | Replica | Revision Counter | Head Image          | Rebuilding | Status           |
+| ----- | ------- | ---------------- | ------------------- | ---------- | ---------------- |
+| k8s01 | rep-3   | 2538385          | volume-head-280.img | true       | CrashLoopBackOff |
+| k8s02 | rep-2   | 2538385          | volume-head-376.img | true       | CrashLoopBackOff |
+| k8s03 | rep-1   | 2538385          | volume-head-378.img | true       | CrashLoopBackOff |
 
 All three had identical `Checkpoint: "volume-snap-0fd00bc8-aaa8-40d1-90c3-1971d4837540.img"` but different `Parent` snapshot references, confirming divergence during an interrupted multi-replica rebuild.
 
 ### Key Log Entries
 
 **Jiva replica fatal error (all 3 replicas):**
+
 ```
 level=fatal msg="Failed to add replica to controller, err: Current replica's
 checkpoint not present in rwReplica chain, Shutting down..."
 ```
 
 **Kubelet mount failure (pod events):**
+
 ```
 Warning  FailedMount  kubelet  MountVolume.MountDevice failed for volume
 "pvc-a634b9a3-..." : 'fsck' found errors on device /dev/disk/by-path/...
@@ -449,6 +465,7 @@ but could not correct them:
 ```
 
 **ext4 recovery success (dmesg on k8s01):**
+
 ```
 [...] EXT4-fs (sdi): recovery complete
 [...] EXT4-fs (sdi): mounted filesystem with ordered data mode. Opts: (null)
@@ -457,10 +474,10 @@ but could not correct them:
 
 ### Other Affected PVCs (Same Root Event)
 
-| PVC | App | Max Restarts | Self-Recovered | Outage |
-|-----|-----|-------------|----------------|--------|
-| pvc-05e03b60 (overseerr-config) | Overseerr | 11 | Yes | None confirmed |
-| pvc-f1888541 (minecraft-datadir) | Scotchcraft Minecraft | 53 | Yes | None confirmed |
+| PVC                              | App                   | Max Restarts | Self-Recovered | Outage         |
+| -------------------------------- | --------------------- | ------------ | -------------- | -------------- |
+| pvc-05e03b60 (overseerr-config)  | Overseerr             | 11           | Yes            | None confirmed |
+| pvc-f1888541 (minecraft-datadir) | Scotchcraft Minecraft | 53           | Yes            | None confirmed |
 
 ---
 
