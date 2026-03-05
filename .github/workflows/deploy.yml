@@ -70,6 +70,8 @@ jobs:
       - name: Build GitHub Pages site
         run: |
           uv run mkdocs build --config-file incidents-mkdoc.yml --clean --strict
+          touch docs/.nojekyll
+          echo "incidents.pgmac.net.au" > docs/CNAME
 
       - name: Commit and push docs/
         env:
