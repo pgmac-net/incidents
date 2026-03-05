@@ -18,6 +18,7 @@ theme:
     - search.highlight
     - content.code.copy
     - content.code.annotate
+    - navigation.indexes
   palette:
     # Light mode
     - media: "(prefers-color-scheme: light)"
@@ -37,6 +38,9 @@ theme:
         name: Switch to light mode
   icon:
     repo: fontawesome/brands/github
+
+hooks:
+  - hooks.py
 
 plugins:
   - search
