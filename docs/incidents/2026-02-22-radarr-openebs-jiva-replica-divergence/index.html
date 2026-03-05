@@ -15,6 +15,8 @@
         <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/2026-02-22-radarr-openebs-jiva-replica-divergence/">
       
       
+        <link rel="prev" href="../2026-01-06-cluster-cascade-failure/">
+      
       
       
         
@@ -229,7 +231,7 @@
   
     
   
-  Home
+  Post-Incident Reviews
 
       </a>
     </li>
@@ -240,10 +242,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../2026-01-06-cluster-cascade-failure/" class="md-tabs__link">
           
   
@@ -315,7 +319,7 @@
   <span class="md-ellipsis">
     
   
-    Home
+    Post-Incident Reviews
   
 
     
@@ -332,28 +336,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -371,7 +378,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -396,7 +403,7 @@
   <span class="md-ellipsis">
     
   
-    2026-01-06 Cluster Cascade Failure
+    Post Incident Review: Cascading Kubernetes Cluster Failures
   
 
     
@@ -405,6 +412,663 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-radarr-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did radarr become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-container-fail-to-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the container fail to launch?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-pvc-mount-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the PVC mount fail?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-ext4-filesystem-on-devsdi-become-inconsistent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ext4 filesystem on /dev/sdi become inconsistent?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-jiva-replica-pods-enter-crashloopbackoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three Jiva replica pods enter CrashLoopBackOff?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-replicas-end-up-with-checkpoints-that-didnt-match-the-controllers-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three replicas end up with checkpoints that didn't match the controller's chain?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-all-three-replicas-end-up-rebuilding-at-the-same-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did all three replicas end up rebuilding at the same time?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-a-prior-degraded-state-go-undetected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did a prior degraded state go undetected?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-radarr-pod-sit-in-containercreating-for-over-4-hours-without-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the radarr pod sit in ContainerCreating for over 4 hours without detection?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pvc-05e03b60-overseerr-config-and-pvc-f1888541-scotchcraft-minecraft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pvc-05e03b60 (overseerr-config) and pvc-f1888541 (scotchcraft-minecraft)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-argocd-syncwindow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create ArgoCD SyncWindow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-scale-down-all-jiva-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Scale Down All Jiva Deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-patch-volumemeta-on-k8s01-rep-3-the-authoritative-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Patch volume.meta on k8s01 (rep-3) — the Authoritative Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clear-image-data-on-k8s02-and-k8s03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clear Image Data on k8s02 and k8s03
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-scale-up-in-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Scale Up in Sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-stop-radarr-to-clear-the-mount-race" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Stop Radarr to Clear the Mount Race
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-restore-radarr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Restore Radarr
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-remove-syncwindow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Remove SyncWindow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#service-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Service Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-metadata-post-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Metadata (Post-Recovery)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#replica-state-at-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replica State at Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-log-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Log Entries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-affected-pvcs-same-root-event" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other Affected PVCs (Same Root Event)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
