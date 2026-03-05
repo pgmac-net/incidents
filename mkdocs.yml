@@ -2,7 +2,7 @@ site_name: Post-Incident Reviews
 site_url: https://macro.int.pgmac.net/incidents/
 site_description: Internal post-incident review documentation
 site_author: pgmac
-docs_dir: docs/
+docs_dir: src/
 repo_name: pgmac-net/incidents
 repo_url: https://github.com/pgmac-net/incidents/
 
