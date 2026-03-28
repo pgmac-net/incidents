@@ -20,4 +20,8 @@
          <loc>https://incidents.pgmac.net.au/incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall/</loc>
          <lastmod>2026-03-28</lastmod>
     </url>
+    <url>
+         <loc>https://incidents.pgmac.net.au/incidents/2026-03-28-radarr-jiva-replica-divergence-second/</loc>
+         <lastmod>2026-03-28</lastmod>
+    </url>
 </urlset>
