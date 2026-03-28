@@ -1,0 +1,2491 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Internal post-incident review documentation">
+      
+      
+        <meta name="author" content="pgmac">
+      
+      
+        <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall/">
+      
+      
+        <link rel="prev" href="../2026-02-22-radarr-openebs-jiva-replica-divergence/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation - Post-Incident Reviews</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#post-incident-review-arc-github-actions-runner-pods-stuck-pending-kubelet-sync-loop-stall-and-multi-node-degradation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Post-Incident Reviews" class="md-header__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Post-Incident Reviews
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Post-Incident Reviews
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Incidents
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Post-Incident Reviews" class="md-nav__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Post-Incident Reviews
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post-Incident Reviews
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incidents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Incidents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-01-06-cluster-cascade-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Cascading Kubernetes Cluster Failures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-github-actions-cicd-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did GitHub Actions CI/CD become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-arc-pods-get-stuck-in-pending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ARC pods get stuck in Pending?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-k8s02-reach-disk-exhaustion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did k8s02 reach disk exhaustion?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-kubelet-find-zero-images-eligible-for-gc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the kubelet find zero images eligible for GC?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-ghost-container-on-k8s01-end-up-blocking-the-kubelet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ghost container on k8s01 end up blocking the kubelet?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-this-ghost-container-block-processing-of-the-new-listener-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did this ghost container block processing of the new listener pod?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-force-deleting-a-running-pod-leave-an-orphaned-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did force-deleting a Running pod leave an orphaned container?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-wazuh-audit-webhook-compound-the-incident" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the Wazuh audit webhook compound the incident?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#k8s02-calico-networking-failure-investigator-introduced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s02 Calico networking failure (investigator-introduced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s03-pleg-recurrence-investigator-introduced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s03 PLEG recurrence (investigator-introduced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-root-cause-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Root Cause Identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-node-stabilisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Node Stabilisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-arc-controller-deployment-stabilisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: ARC Controller Deployment Stabilisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-ghost-container-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Ghost Container Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-audit-webhook-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Audit Webhook Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-cluster-restoration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Cluster Restoration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arc-stack-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARC Stack Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-webhook-silenced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Webhook Silenced
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodes-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nodes at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#affected-pods-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Affected Pods at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-diskpressure-false-while-image-gc-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On "DiskPressure: False" While Image GC Fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-kubelet-in-memory-state-vs-containerd-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On Kubelet In-Memory State vs Containerd State
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-github-actions-cicd-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did GitHub Actions CI/CD become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-arc-pods-get-stuck-in-pending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ARC pods get stuck in Pending?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-k8s02-reach-disk-exhaustion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did k8s02 reach disk exhaustion?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-kubelet-find-zero-images-eligible-for-gc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the kubelet find zero images eligible for GC?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-ghost-container-on-k8s01-end-up-blocking-the-kubelet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the ghost container on k8s01 end up blocking the kubelet?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-this-ghost-container-block-processing-of-the-new-listener-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did this ghost container block processing of the new listener pod?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-force-deleting-a-running-pod-leave-an-orphaned-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did force-deleting a Running pod leave an orphaned container?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-wazuh-audit-webhook-compound-the-incident" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the Wazuh audit webhook compound the incident?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#k8s02-calico-networking-failure-investigator-introduced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s02 Calico networking failure (investigator-introduced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s03-pleg-recurrence-investigator-introduced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s03 PLEG recurrence (investigator-introduced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-root-cause-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Root Cause Identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-node-stabilisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Node Stabilisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-arc-controller-deployment-stabilisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: ARC Controller Deployment Stabilisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-ghost-container-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Ghost Container Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-audit-webhook-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Audit Webhook Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-cluster-restoration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Cluster Restoration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arc-stack-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARC Stack Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audit-webhook-silenced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Webhook Silenced
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodes-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nodes at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#affected-pods-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Affected Pods at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-diskpressure-false-while-image-gc-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On "DiskPressure: False" While Image GC Fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-kubelet-in-memory-state-vs-containerd-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On Kubelet In-Memory State vs Containerd State
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="post-incident-review-arc-github-actions-runner-pods-stuck-pending-kubelet-sync-loop-stall-and-multi-node-degradation">Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation<a class="headerlink" href="#post-incident-review-arc-github-actions-runner-pods-stuck-pending-kubelet-sync-loop-stall-and-multi-node-degradation" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-03-28
+<strong>Duration:</strong> ~7h40m (07:07 AEST → 14:47 AEST)
+<strong>Severity:</strong> High (GitHub Actions CI/CD completely unavailable — all self-hosted runners unable to start)
+<strong>Status:</strong> Resolved</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>Five GitHub Actions Runner Controller (ARC) pods entered <code>Pending</code> state and remained there for over 7 hours. The ARC stack — two runner pods, two listener pods, and one controller pod — was completely stalled, rendering all self-hosted CI/CD workflows inoperable.</p>
+<p>The incident had a layered root cause. The initial trigger was <strong>disk exhaustion on k8s02</strong>, which prevented the containerd image GC from freeing space and caused image pulls to fail. Investigation and recovery attempts introduced secondary failures: <strong>Calico networking disruption on k8s02</strong>, <strong>recurring PLEG desync on k8s03</strong>, and critically — a <strong>ghost container on k8s01</strong> that stalled the kubelet's pod sync loop. The ghost container was an orphaned containerd record left behind after a force-delete of the ARC controller pod while it was actively running. This orphaned container caused the kubelet to error every 60 seconds in <code>manager.go</code>, blocking it from processing new pod assignments for ~15 minutes until identified and cleared.</p>
+<p>Final resolution required:</p>
+<ol>
+<li>Deleting the ghost container from containerd's <code>k8s.io</code> namespace on k8s01</li>
+<li>Restarting kubelite on k8s01 to flush orphaned in-memory pod state</li>
+<li>Patching the ARC controller deployment with a <code>nodeSelector</code> for k8s01 (the only fully stable node)</li>
+<li>Disabling the Wazuh audit webhook, which had been returning 500 errors on every API server event across all three nodes</li>
+<li>Uncordoning k8s02 and k8s03 after node-level stabilisation</li>
+</ol>
+<hr />
+<h2 id="timeline-aest-utc10">Timeline (AEST — UTC+10)<a class="headerlink" href="#timeline-aest-utc10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>~07:07</strong></td>
+<td><strong>ROOT EVENT</strong>: 5 ARC pods enter <code>Pending</code> state. <code>FreeDiskSpaceFailed</code> begins firing on k8s02 — kubelet unable to free 16.2 GiB, 0 bytes eligible (all images in use).</td>
+</tr>
+<tr>
+<td>~07:07</td>
+<td><code>self-hosted-754b578d-listener</code> and <code>self-hosted-8ds97-runner-5zs9b</code> scheduled to k8s03 but never reach <code>ContainerCreating</code>. Three runner pods (<code>g7d9b</code>, <code>jjw6x</code>, <code>mg5q4</code>) remain unscheduled.</td>
+</tr>
+<tr>
+<td>~07:10</td>
+<td>k8s02 kubelet last Ready transition — <code>KubeletReady</code> event posted.</td>
+</tr>
+<tr>
+<td>~07:10 → 10:39</td>
+<td><code>FreeDiskSpaceFailed</code> continues firing on k8s02 every ~5 minutes (x36 occurrences). No alerting triggers.</td>
+</tr>
+<tr>
+<td><strong>~10:39</strong></td>
+<td>Analysis begins. Error detective identifies disk exhaustion on k8s02 as primary cause, PLEG issues on k8s03 as secondary.</td>
+</tr>
+<tr>
+<td>Investigation</td>
+<td>k8s03 PLEG fixed: containerd restarted, then kubelite restarted on k8s03.</td>
+</tr>
+<tr>
+<td>Investigation</td>
+<td>k8s02 Calico networking broken (new pods unable to reach API server). Calico-node pod restarted on k8s02. k8s02 cordoned to prevent further scheduling.</td>
+</tr>
+<tr>
+<td>Investigation</td>
+<td>k8s01 controller-manager informer stale (RS not created). kubelite restarted on k8s01, triggering fresh informer resync → RS <code>74ddc5d4df</code> created.</td>
+</tr>
+<tr>
+<td>Investigation</td>
+<td>ARC controller pod <code>74ddc5d4df-5jtvj</code> Running, creates listener pod, watch stream breaks. Controller pod force-deleted.</td>
+</tr>
+<tr>
+<td><strong>~14:02 UTC</strong></td>
+<td>New controller pod <code>74ddc5d4df-zqr78</code> starts on k8s01 (1/1 Running). Listener pod <code>self-hosted-754b578d-listener</code> scheduled to k8s01, enters <code>Pending</code>. No <code>ContainerCreating</code> event for 9+ minutes.</td>
+</tr>
+<tr>
+<td>~14:04 UTC</td>
+<td>Kubelet on k8s01 logging <code>manager.go:1116: Failed to create existing container: task 621a9a... not found</code> every 60 seconds — ghost container from force-deleted pod <code>33695e61</code>.</td>
+</tr>
+<tr>
+<td>~14:11 UTC</td>
+<td>Ghost container (<code>621a9a644b80...</code>) confirmed in containerd <code>k8s.io</code> namespace with no running task. Deleted: <code>microk8s ctr --namespace k8s.io containers rm 621a9a...</code>. Ghost container errors stop.</td>
+</tr>
+<tr>
+<td>~14:12 UTC</td>
+<td>Listener pod still Pending — kubelet silent (no logs about the pod). Kubelet's internal state still holds orphaned pod <code>33695e61</code>.</td>
+</tr>
+<tr>
+<td>~14:17 UTC</td>
+<td>Listener pod force-deleted and recreated by ARC controller. Still Pending — confirms kubelet sync loop is blocked by orphaned pod state, not just the container record.</td>
+</tr>
+<tr>
+<td><strong>~14:20 UTC</strong></td>
+<td>kubelite restarted on k8s01 to flush orphaned in-memory pod state.</td>
+</tr>
+<tr>
+<td><strong>~14:20 UTC</strong></td>
+<td>Listener pod <code>self-hosted-754b578d-listener</code> reaches <code>ContainerCreating</code> and starts: <strong>1/1 Running</strong> at 10.1.74.140.</td>
+</tr>
+<tr>
+<td>~14:21 UTC</td>
+<td>Listener logs show active job completions from pgmac-net/ansible workflows (<code>vuln</code>, <code>iac</code>).</td>
+</tr>
+<tr>
+<td>~14:25 UTC</td>
+<td>Stale RS pod <code>66cf67ccbf-lw86v</code> confirmed gone. arc-runners namespace empty (runner <code>5zs9b</code> completed normally).</td>
+</tr>
+<tr>
+<td>~14:30 UTC</td>
+<td>Wazuh audit webhook (<code>--audit-webhook-config-file</code>, <code>--audit-webhook-batch-max-size</code>) removed from kube-apiserver args on all three nodes. kubelite restarted sequentially (k8s01 → k8s02 → k8s03).</td>
+</tr>
+<tr>
+<td><strong>~14:47 UTC</strong></td>
+<td>k8s02 and k8s03 uncordoned. All three nodes Ready, no scheduling restrictions. <strong>Incident resolved.</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="root-causes">Root Causes<a class="headerlink" href="#root-causes" title="Permanent link">&para;</a></h2>
+<h3 id="the-infinite-hows-chain">The Infinite How's Chain<a class="headerlink" href="#the-infinite-hows-chain" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><em>"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause.</em></p>
+</blockquote>
+<h4 id="how-did-github-actions-cicd-become-unavailable">How did GitHub Actions CI/CD become unavailable?<a class="headerlink" href="#how-did-github-actions-cicd-become-unavailable" title="Permanent link">&para;</a></h4>
+<p>The ARC listener pod and all runner pods were stuck in <code>Pending</code> for 7+ hours. Without a running listener, the ARC controller cannot register runners with GitHub or dispatch JIT tokens. No jobs could execute.</p>
+<h4 id="how-did-the-arc-pods-get-stuck-in-pending">How did the ARC pods get stuck in Pending?<a class="headerlink" href="#how-did-the-arc-pods-get-stuck-in-pending" title="Permanent link">&para;</a></h4>
+<p>Three separate node-level failure modes converged:</p>
+<ul>
+<li><strong>k8s02</strong>: Disk exhaustion — containerd image store full, kubelet image GC unable to free any bytes (all images referenced by running pods). Image pulls for new pods failed silently.</li>
+<li><strong>k8s03</strong>: PLEG desync — containerd and kubelite fell out of sync after multiple restarts during investigation. The kubelet could not receive container lifecycle events, preventing pods from progressing.</li>
+<li><strong>k8s01</strong>: Ghost container in kubelet sync loop — the kubelet's <code>manager.go</code> sync goroutine errored every 60 seconds attempting to reconcile an orphaned container record, blocking pod processing.</li>
+</ul>
+<h4 id="how-did-k8s02-reach-disk-exhaustion">How did k8s02 reach disk exhaustion?<a class="headerlink" href="#how-did-k8s02-reach-disk-exhaustion" title="Permanent link">&para;</a></h4>
+<p>The containerd image store accumulated images over time without effective garbage collection. At 85% disk usage (63G used of 78G), the kubelet's image GC high-threshold was breached. The GC attempted to free 16.2 GiB but found zero eligible images — all 187 images were actively referenced by running pods (openebs replica controllers, vaultwarden, and other long-running workloads). No alert fired; the first indication was <code>FreeDiskSpaceFailed</code> events in the Kubernetes event stream, only visible via active investigation.</p>
+<h4 id="how-did-the-kubelet-find-zero-images-eligible-for-gc">How did the kubelet find zero images eligible for GC?<a class="headerlink" href="#how-did-the-kubelet-find-zero-images-eligible-for-gc" title="Permanent link">&para;</a></h4>
+<p>OpenEBS Jiva uses a hub-and-spoke model: each PVC has a controller pod and 3 replica pods, each holding a copy of the storage volume. On k8s02 this meant ~20+ openebs pods, each referencing its own image. These pods run continuously and are never evicted. Over time, as new images were pulled for ephemeral ARC runner workloads (<code>docker:dind</code>, <code>ghcr.io/actions/actions-runner</code>), the store filled with images that could not be reclaimed without stopping openebs pods — which would degrade PVC availability.</p>
+<h4 id="how-did-the-ghost-container-on-k8s01-end-up-blocking-the-kubelet">How did the ghost container on k8s01 end up blocking the kubelet?<a class="headerlink" href="#how-did-the-ghost-container-on-k8s01-end-up-blocking-the-kubelet" title="Permanent link">&para;</a></h4>
+<p>During recovery, the ARC controller pod <code>74ddc5d4df-5jtvj</code> was force-deleted (<code>--grace-period=0 --force</code>) while it was in <code>Running</code> state (1/1 Ready). Force-deleting a Running pod removes the pod object from etcd immediately, but containerd on the host node still holds an active container record for the pod's container. When kubelite was subsequently restarted on k8s01, the kubelet read containerd's state and found the orphaned container <code>621a9a644b80...</code> (associated with cgroup path <code>/kubepods/besteffort/pod33695e61-f79a-4447-b42f-551ef9f58db6/</code>). It tried to reconcile this container via <code>manager.go:EnsureContainerState()</code>, but the runc task was gone — yielding <code>task 621a9a... not found</code> every 60 seconds.</p>
+<h4 id="how-did-this-ghost-container-block-processing-of-the-new-listener-pod">How did this ghost container block processing of the new listener pod?<a class="headerlink" href="#how-did-this-ghost-container-block-processing-of-the-new-listener-pod" title="Permanent link">&para;</a></h4>
+<p>The kubelet's container manager sync loop runs per-pod. For the orphaned pod <code>33695e61</code>, the sync goroutine errored and retried indefinitely on its 60-second cycle. While the error itself did not lock the entire kubelet, it consumed the sync goroutine for that pod. More critically, after deleting the container record from containerd (<code>microk8s ctr --namespace k8s.io containers rm</code>), the kubelet's in-memory state still held pod <code>33695e61</code>. The kubelet had no mechanism to reconcile "container deleted from containerd but pod still in memory" without restarting, and this in-memory stale state prevented it from processing new pod assignments received via its API server watch stream.</p>
+<h4 id="how-did-force-deleting-a-running-pod-leave-an-orphaned-container">How did force-deleting a Running pod leave an orphaned container?<a class="headerlink" href="#how-did-force-deleting-a-running-pod-leave-an-orphaned-container" title="Permanent link">&para;</a></h4>
+<p>Force-deletion bypasses the graceful termination lifecycle. Normally, when a pod is deleted, the API server sets a <code>deletionTimestamp</code>, the kubelet receives the update, sends <code>SIGTERM</code> to containers, waits for <code>terminationGracePeriodSeconds</code>, then removes the pod from containerd and reports back to the API server to finalise deletion. With <code>--grace-period=0 --force</code>, the pod object is removed from etcd immediately, and the kubelet never receives the graceful termination signal. If the kubelet is restarted before it can complete cleanup of the old pod, the container record persists in containerd indefinitely.</p>
+<h4 id="how-did-the-wazuh-audit-webhook-compound-the-incident">How did the Wazuh audit webhook compound the incident?<a class="headerlink" href="#how-did-the-wazuh-audit-webhook-compound-the-incident" title="Permanent link">&para;</a></h4>
+<p>The Wazuh webhook (<code>172.22.22.57:8080</code>) was configured with <code>--audit-webhook-batch-max-size=1</code> (synchronous-like delivery) on all three API servers. The Wazuh service was returning HTTP 500 for all requests. Every API server event — including each <code>kubectl get pods</code> during investigation — triggered a webhook delivery attempt, a 500 response, and an error log entry. This flooded the kubelite logs, obscuring genuine error signals (ghost container errors, PLEG warnings) and significantly increased diagnostic noise throughout the incident.</p>
+<h3 id="secondary-findings">Secondary Findings<a class="headerlink" href="#secondary-findings" title="Permanent link">&para;</a></h3>
+<h4 id="k8s02-calico-networking-failure-investigator-introduced">k8s02 Calico networking failure (investigator-introduced)<a class="headerlink" href="#k8s02-calico-networking-failure-investigator-introduced" title="Permanent link">&para;</a></h4>
+<p>During investigation, multiple kubelite restarts on k8s02 caused the calico-node pod (<code>calico-node-898mx</code>) to lose its network programming state. New pods on k8s02 could not reach the Kubernetes API server (10.152.183.1) or other nodes. This was not present at incident start — it was introduced by iterative restarts. Fixed by deleting the calico-node pod and allowing it to reschedule fresh.</p>
+<h4 id="k8s03-pleg-recurrence-investigator-introduced">k8s03 PLEG recurrence (investigator-introduced)<a class="headerlink" href="#k8s03-pleg-recurrence-investigator-introduced" title="Permanent link">&para;</a></h4>
+<p>k8s03 experienced PLEG desync multiple times during investigation, each time requiring a sequential restart of containerd followed by kubelite. The PLEG desync was triggered by kubelite restarts that left containerd and the kubelet's container view out of sync. Cordoning k8s03 between fixes and uncordoning only once stable stopped the recurrence.</p>
+<hr />
+<h2 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h2>
+<h3 id="services-affected">Services Affected<a class="headerlink" href="#services-affected" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Impact</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub Actions self-hosted runners (<code>pgmac-net</code> org)</td>
+<td>Complete unavailability — no CI/CD jobs could execute</td>
+<td>~7h40m</td>
+</tr>
+<tr>
+<td>ARC listener</td>
+<td>Unable to communicate with GitHub Actions API</td>
+<td>~7h40m</td>
+</tr>
+<tr>
+<td>ARC controller</td>
+<td>Unable to dispatch JIT tokens / register runners</td>
+<td>Partial — controller eventually Running but unable to complete setup</td>
+</tr>
+<tr>
+<td>Wazuh audit log delivery</td>
+<td>All audit events silently dropped (500 responses)</td>
+<td>Pre-existing, unrelated duration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duration">Duration<a class="headerlink" href="#duration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Silent failure period</strong>: ~07:07 → ~10:39 AEST (~3h32m) — no alerting, incident discovered manually</li>
+<li><strong>Active investigation and recovery</strong>: ~10:39 AEST → ~14:47 AEST (~4h8m)</li>
+<li><strong>Total incident duration</strong>: ~7h40m</li>
+</ul>
+<h3 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h3>
+<ul>
+<li>3-node microk8s HA cluster <code>pvek8s</code></li>
+<li>ARC stack (<code>arc-systems</code>, <code>arc-runners</code> namespaces)</li>
+<li>No persistent storage impacted</li>
+<li>No user-facing homelab services affected (openebs volumes, vaultwarden, etc. unaffected)</li>
+</ul>
+<hr />
+<h2 id="resolution-steps-taken">Resolution Steps Taken<a class="headerlink" href="#resolution-steps-taken" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-root-cause-identification">Phase 1: Root Cause Identification<a class="headerlink" href="#phase-1-root-cause-identification" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Error detective analysis</strong> of cluster events, pod states, and node conditions identified:</li>
+<li><code>FreeDiskSpaceFailed</code> on k8s02 (x36, recurring every ~5 min)</li>
+<li>Pods scheduled to k8s03 (<code>runner-5zs9b</code>, listener) with <code>PodScheduled: True</code> but no IP</li>
+<li>Three runner pods with <code>Node: &lt;none&gt;</code> (never scheduled)</li>
+<li>No <code>FailedScheduling</code> events, no image pull errors, no PVC issues</li>
+<li>All nodes reporting <code>DiskPressure: False</code> (kubelet threshold not yet breached, misleading)</li>
+</ol>
+<h3 id="phase-2-node-stabilisation">Phase 2: Node Stabilisation<a class="headerlink" href="#phase-2-node-stabilisation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>k8s03 PLEG fix</strong>: Restarted containerd then kubelite on k8s03 in sequence.</p>
+</li>
+<li>
+<p><strong>k8s02 Calico fix</strong>: Deleted <code>calico-node-898mx</code> pod on k8s02; replacement pod <code>calico-node-l496l</code> started 1/1 Ready. k8s02 cordoned to prevent further scheduling while disk remains full.</p>
+</li>
+<li>
+<p><strong>k8s01 controller-manager resync</strong>: Restarted kubelite on k8s01. Controller-manager informer refreshed; RS <code>74ddc5d4df</code> created; ARC controller pod scheduled and reached Running.</p>
+</li>
+</ol>
+<h3 id="phase-3-arc-controller-deployment-stabilisation">Phase 3: ARC Controller Deployment Stabilisation<a class="headerlink" href="#phase-3-arc-controller-deployment-stabilisation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Patched ARC controller deployment</strong> with <code>nodeSelector</code> for k8s01 (only fully stable node):
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>--context<span class="w"> </span>pvek8s<span class="w"> </span>patch<span class="w"> </span>deployment<span class="w"> </span>gharc-controller-gha-rs-controller<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-n<span class="w"> </span>arc-systems<span class="w"> </span>--type<span class="o">=</span>merge<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-p<span class="w"> </span><span class="s1">&#39;{&quot;spec&quot;:{&quot;template&quot;:{&quot;spec&quot;:{&quot;nodeSelector&quot;:{&quot;kubernetes.io/hostname&quot;:&quot;k8s01&quot;}}}}}&#39;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Force-deleted stale controller pod</strong> <code>5jtvj</code> after its watch stream broke post-listener-creation.</p>
+</li>
+</ol>
+<h3 id="phase-4-ghost-container-removal">Phase 4: Ghost Container Removal<a class="headerlink" href="#phase-4-ghost-container-removal" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Identified ghost container</strong> in kubelet logs — <code>manager.go:1116</code> error every 60s:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Failed to create existing container:
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>/kubepods/besteffort/pod33695e61-.../621a9a644b80...: task 621a9a... not found
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Confirmed container in containerd</strong> <code>k8s.io</code> namespace with no running task:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span>k8s01<span class="w"> </span><span class="s1">&#39;sudo microk8s ctr --namespace k8s.io containers ls | grep 621a9a&#39;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Deleted ghost container</strong>:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ssh<span class="w"> </span>k8s01<span class="w"> </span><span class="s1">&#39;sudo microk8s ctr --namespace k8s.io containers rm \</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s1">  621a9a644b80c35958dbb7f70d661d345fde64fcc0a325b603d8e5f74968aca3&#39;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Confirmed ghost errors stopped</strong> in kubelite logs.</p>
+</li>
+<li>
+<p><strong>Restarted kubelite on k8s01</strong> to flush orphaned pod <code>33695e61</code> from in-memory state (container deletion alone was insufficient — kubelet's in-memory state still blocked new pod processing):
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ssh<span class="w"> </span>k8s01<span class="w"> </span><span class="s1">&#39;sudo systemctl restart snap.microk8s.daemon-kubelite&#39;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Listener pod</strong> transitioned to <code>ContainerCreating</code> and reached <code>1/1 Running</code> within 45 seconds of restart.</p>
+</li>
+</ol>
+<h3 id="phase-5-audit-webhook-removal">Phase 5: Audit Webhook Removal<a class="headerlink" href="#phase-5-audit-webhook-removal" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Removed Wazuh audit webhook config</strong> from all three nodes:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">for</span><span class="w"> </span>node<span class="w"> </span><span class="k">in</span><span class="w"> </span>k8s01<span class="w"> </span>k8s02<span class="w"> </span>k8s03<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>ssh<span class="w"> </span><span class="nv">$node</span><span class="w"> </span><span class="s1">&#39;sudo sed -i &quot;/--audit-webhook-config-file\|--audit-webhook-batch-max-size/d&quot; \</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s1">    /var/snap/microk8s/current/args/kube-apiserver&#39;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">done</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Restarted kubelite sequentially</strong> (k8s01 → k8s02 → k8s03, 30s between each) to reload API server config.</p>
+</li>
+</ol>
+<h3 id="phase-6-cluster-restoration">Phase 6: Cluster Restoration<a class="headerlink" href="#phase-6-cluster-restoration" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Uncordoned k8s03</strong> (PLEG stable, no errors in 5-minute window).</p>
+</li>
+<li>
+<p><strong>Uncordoned k8s02</strong> (Calico networking restored; disk at 85% — flagged for separate cleanup).</p>
+</li>
+</ol>
+<hr />
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<h3 id="arc-stack-health">ARC Stack Health<a class="headerlink" href="#arc-stack-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>NAME                                                  READY   STATUS    RESTARTS   AGE
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>gharc-controller-gha-rs-controller-74ddc5d4df-zqr78   1/1     Running   0          25m
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>self-hosted-754b578d-listener                         1/1     Running   0          9m47s
+</code></pre></div>
+<p>Listener logs confirmed active job processing:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Job completed message received. {&quot;JobID&quot;: &quot;077390cb-...&quot;, &quot;Result&quot;: &quot;succeeded&quot;, &quot;RunnerName&quot;: &quot;self-hosted-8ds97-runner-rqrwc&quot;}
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Job completed message received. {&quot;JobID&quot;: &quot;8666b680-...&quot;, &quot;Result&quot;: &quot;succeeded&quot;, &quot;RunnerName&quot;: &quot;self-hosted-8ds97-runner-qnvwv&quot;}
+</code></pre></div></p>
+<h3 id="node-health">Node Health<a class="headerlink" href="#node-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>NAME    STATUS   ROLES    AGE      VERSION
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>k8s01   Ready    &lt;none&gt;   4y219d   v1.34.5
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>k8s02   Ready    &lt;none&gt;   4y219d   v1.34.5
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>k8s03   Ready    &lt;none&gt;   4y219d   v1.34.5
+</code></pre></div>
+<h3 id="audit-webhook-silenced">Audit Webhook Silenced<a class="headerlink" href="#audit-webhook-silenced" title="Permanent link">&para;</a></h3>
+<p>Post-restart kubelite logs: no <code>Error in audit plugin 'webhook'</code> entries observed.</p>
+<hr />
+<h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>k8s02 disk cleanup</strong> (High Priority)</li>
+<li>k8s02 remains at 85% disk utilisation (63G used, 12G free). Kubelet image GC will continue to fail.</li>
+<li>Action: Drain openebs replica pods temporarily, run <code>microk8s ctr --namespace k8s.io images prune</code>, allow pods to reschedule.</li>
+<li>
+<p>Risk if ignored: As ephemeral runner images accumulate, k8s02 will reach 100% and new pods will fail to pull images.</p>
+</li>
+<li>
+<p><strong>Avoid force-deleting Running pods</strong> (High Priority)</p>
+</li>
+<li><code>kubectl delete pod --force --grace-period=0</code> on a Running pod leaves orphaned container records in containerd if kubelite is restarted before cleanup completes.</li>
+<li>Action: Prefer graceful deletion (<code>kubectl delete pod</code>). Only use force-delete for pods that are already in <code>Terminating</code> or <code>Unknown</code> state.</li>
+<li>
+<p>If force-delete is necessary on a Running pod, immediately check containerd state: <code>microk8s ctr --namespace k8s.io containers ls</code> and clean up any orphaned records before restarting kubelite.</p>
+</li>
+<li>
+<p><strong>Disk pressure alerting</strong> (High Priority)</p>
+</li>
+<li>No alert fired during 3h32m of silent <code>FreeDiskSpaceFailed</code> events.</li>
+<li>Action: Deploy Prometheus node-exporter with alert rule for <code>node_filesystem_avail_bytes / node_filesystem_size_bytes &lt; 0.20</code> on all nodes.</li>
+<li>
+<p>Add dedicated alert for kubelet <code>imageGCFailed</code> condition.</p>
+</li>
+<li>
+<p><strong>Kubelet imageGC threshold tuning</strong> (Medium Priority)</p>
+</li>
+<li>Default thresholds (85% high, 80% low) are too close to k8s02's baseline usage given openebs pod density.</li>
+<li>Action: Lower thresholds in <code>/var/snap/microk8s/current/args/kubelet</code>:
+     <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>--image-gc-high-threshold=75
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>--image-gc-low-threshold=70
+</code></pre></div></li>
+<li>Alternatively, migrate openebs images to a dedicated node to reduce image density on k8s02.</li>
+</ol>
+<h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Ephemeral runner image cleanup</strong> (Medium Priority)</li>
+<li>ARC ephemeral runners pull <code>docker:dind</code> and <code>ghcr.io/actions/actions-runner</code> on every scale event. These images accumulate layers.</li>
+<li>Action: Deploy a CronJob to periodically prune ARC-related images on all nodes:
+     <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>rm<span class="w"> </span><span class="k">$(</span>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>ls<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;actions-runner\|docker.*dind&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+</code></pre></div></li>
+<li>
+<p>Schedule: weekly, with a check that no runner pods are active before pruning.</p>
+</li>
+<li>
+<p><strong>Structured node restart procedure</strong> (High Priority)</p>
+</li>
+<li>Multiple investigator-introduced failures (Calico networking on k8s02, PLEG on k8s03) resulted from uncoordinated kubelite restarts without verifying containerd state first.</li>
+<li>
+<p>Action: Document and follow a node restart runbook:</p>
+<ol>
+<li>Cordon node before restarting kubelite</li>
+<li>Restart containerd first, wait for all containerd tasks to show RUNNING</li>
+<li>Restart kubelite</li>
+<li>Verify all pods on node reach Ready before uncordoning</li>
+<li>Check <code>microk8s ctr --namespace k8s.io containers ls</code> for orphaned records</li>
+</ol>
+</li>
+<li>
+<p><strong>Wazuh audit webhook monitoring</strong> (Medium Priority)</p>
+</li>
+<li>The webhook was silently dropping 100% of audit events via 500 responses. No alert existed.</li>
+<li>Action: Add health check for Wazuh webhook endpoint. If endpoint returns non-2xx, alert immediately — audit logging is a security control.</li>
+<li>
+<p>If Wazuh webhook is re-enabled: set <code>--audit-webhook-batch-max-size</code> to a higher value (e.g. 100) and use async mode to prevent blocking API server event processing.</p>
+</li>
+<li>
+<p><strong>ARC controller node affinity</strong> (Low Priority)</p>
+</li>
+<li>The <code>nodeSelector</code> applied during this incident (<code>kubernetes.io/hostname: k8s01</code>) is a workaround, not a solution. It creates a single point of failure for CI/CD.</li>
+<li>Action: Replace nodeSelector with node affinity + anti-affinity rules that prefer stable nodes and spread across the cluster. Add pod disruption budgets for ARC controller.</li>
+<li>
+<p>Commit the nodeSelector patch to ArgoCD GitOps manifests (current patch is applied directly to the cluster, not via ArgoCD).</p>
+</li>
+<li>
+<p><strong>PLEG monitoring</strong> (Medium Priority)</p>
+</li>
+<li>k8s03 experienced PLEG desync multiple times, each requiring manual intervention.</li>
+<li>
+<p>Action: Add alert for <code>kubelet_pleg_relist_duration_seconds</code> exceeding 5 seconds, or for kubelet log pattern <code>PLEG is not healthy</code>.</p>
+</li>
+<li>
+<p><strong>Runbook: Ghost container cleanup</strong> (High Priority)</p>
+<ul>
+<li>No documented procedure existed for identifying and removing orphaned containerd containers that block kubelet sync loops.</li>
+<li>Action: Add runbook entry:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Identify ghost containers (in k8s.io namespace, task not found)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>containers<span class="w"> </span>ls
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>tasks<span class="w"> </span>ls
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Compare — any container ID without a matching task is a ghost</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Remove:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>containers<span class="w"> </span>rm<span class="w"> </span>&lt;container-id&gt;
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># If kubelet still stuck, restart kubelite</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>snap.microk8s.daemon-kubelite
+</code></pre></div></li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
+<h3 id="what-went-well">What Went Well<a class="headerlink" href="#what-went-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Root cause was eventually found</strong>: Despite multiple red herrings and investigator-introduced failures, the ghost container blocking the kubelet sync loop was identified through careful log analysis.</li>
+<li><strong>No data loss</strong>: Persistent storage (openebs volumes) was unaffected throughout. No application data was at risk.</li>
+<li><strong>ArgoCD preserved deployment intent</strong>: The ARC controller deployment in ArgoCD maintained the desired state. The <code>nodeSelector</code> workaround was applied directly to the cluster; ArgoCD drift will surface it for review.</li>
+<li><strong>Cluster HA held</strong>: The 3-node dqlite Raft cluster maintained quorum throughout sequential API server restarts.</li>
+</ul>
+<h3 id="what-didnt-go-well">What Didn't Go Well<a class="headerlink" href="#what-didnt-go-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>No alerting for 3h32m</strong>: The <code>FreeDiskSpaceFailed</code> events fired 36 times before anyone looked. A disk alert would have reduced incident duration by hours.</li>
+<li><strong>Force-delete on a Running pod introduced a new failure mode</strong>: Using <code>--force --grace-period=0</code> on a Running pod should be a last resort. It was used too early in the recovery process, introducing the ghost container that became the hardest problem to diagnose.</li>
+<li><strong>Iterative restarts without a checklist caused regression</strong>: Restarting kubelite on k8s02 and k8s03 multiple times without first verifying containerd state resulted in Calico networking failure and repeated PLEG desyncs. Each "fix" introduced a new problem.</li>
+<li><strong>Wazuh webhook noise obscured diagnostics</strong>: The flood of 500-error audit log lines made it significantly harder to identify the ghost container errors in the kubelite logs. A better filtering strategy (or disabling the webhook at incident start) would have shortened diagnosis time.</li>
+<li><strong>nodeSelector change not committed to GitOps</strong>: The deployment patch was applied directly with <code>kubectl patch</code>. ArgoCD will eventually drift-detect this and may revert it if auto-sync is enabled.</li>
+</ul>
+<h3 id="surprise-findings">Surprise Findings<a class="headerlink" href="#surprise-findings" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>DiskPressure: False</code> is misleading</strong>: k8s02 reported <code>DiskPressure: False</code> even while <code>FreeDiskSpaceFailed</code> was firing repeatedly. The kubelet's eviction threshold (default 10% free) was not yet breached, but the image GC threshold (default 85%) was. These are separate systems — a node can be failing to GC images while still reporting healthy to the scheduler.</li>
+<li><strong>Ghost container had wrong image label</strong>: The orphaned container <code>621a9a...</code> showed <code>docker.io/tautulli/tautulli:v2.16.1</code> as its image in <code>microk8s ctr containers ls</code>. This was unexpected (the ARC controller pod uses <code>gha-runner-scale-set-controller</code>). This may indicate image metadata is stored by hash rather than by original image reference, or a coincidental ID collision.</li>
+<li><strong>Container deletion alone was insufficient</strong>: Removing the ghost container from containerd stopped the 60-second error loop, but the kubelet's in-memory pod state (<code>pod33695e61</code>) still blocked new pod processing. A kubelite restart was required in addition to the containerd cleanup.</li>
+</ul>
+<hr />
+<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Priority</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Clean k8s02 disk (drain openebs replicas + image prune)</td>
+<td>High</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Add disk utilisation alert (&gt;80% on any node)</td>
+<td>High</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add kubelet imageGCFailed alert</td>
+<td>High</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Document ghost container cleanup runbook</td>
+<td>High</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Add node restart checklist to runbooks</td>
+<td>High</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Commit ARC controller nodeSelector to ArgoCD manifests</td>
+<td>Medium</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Tune kubelet imageGC thresholds on all nodes (75%/70%)</td>
+<td>Medium</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Deploy ephemeral runner image prune CronJob</td>
+<td>Medium</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Add PLEG health alert</td>
+<td>Medium</td>
+<td>@pgmac</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Add Wazuh webhook health check / re-enable with async config</td>
+<td>Medium</td>
+<td>@pgmac</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cluster:</strong> <code>pvek8s</code> (microk8s HA, 3 nodes)</li>
+<li><strong>Kubernetes version:</strong> v1.34.5</li>
+<li><strong>Container runtime:</strong> containerd 1.7.28</li>
+<li><strong>ARC version:</strong> 0.13.0</li>
+<li><strong>Scale-set:</strong> <code>self-hosted</code> (org: <code>pgmac-net</code>)</li>
+<li><strong>Storage backend:</strong> OpenEBS Jiva (PVCs) + dqlite (etcd replacement)</li>
+</ul>
+<h3 id="nodes-at-incident-start">Nodes at Incident Start<a class="headerlink" href="#nodes-at-incident-start" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>IP</th>
+<th>CPU Req</th>
+<th>Mem Req</th>
+<th>Pods</th>
+<th>Issues</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>k8s01</td>
+<td>172.22.22.6</td>
+<td>32%</td>
+<td>31%</td>
+<td>~?</td>
+<td>Controller-manager informer stale</td>
+</tr>
+<tr>
+<td>k8s02</td>
+<td>172.22.22.8</td>
+<td>34%</td>
+<td>9%</td>
+<td>72</td>
+<td>Disk 85% full, image GC failing</td>
+</tr>
+<tr>
+<td>k8s03</td>
+<td>172.22.22.9</td>
+<td>13%</td>
+<td>1%</td>
+<td>28</td>
+<td>PLEG desync</td>
+</tr>
+</tbody>
+</table>
+<h3 id="affected-pods-at-incident-start">Affected Pods at Incident Start<a class="headerlink" href="#affected-pods-at-incident-start" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Pod</th>
+<th>Node</th>
+<th>Status</th>
+<th>Root Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>arc-runners</td>
+<td>self-hosted-8ds97-runner-5zs9b</td>
+<td>k8s03</td>
+<td>Pending (Scheduled)</td>
+<td>PLEG on k8s03</td>
+</tr>
+<tr>
+<td>arc-runners</td>
+<td>self-hosted-8ds97-runner-g7d9b</td>
+<td>None</td>
+<td>Pending (Unscheduled)</td>
+<td>Listener stuck; JIT token unavailable</td>
+</tr>
+<tr>
+<td>arc-runners</td>
+<td>self-hosted-8ds97-runner-jjw6x</td>
+<td>None</td>
+<td>Pending (Unscheduled)</td>
+<td>Listener stuck; JIT token unavailable</td>
+</tr>
+<tr>
+<td>arc-runners</td>
+<td>self-hosted-8ds97-runner-mg5q4</td>
+<td>None</td>
+<td>Pending (Unscheduled)</td>
+<td>Listener stuck; JIT token unavailable</td>
+</tr>
+<tr>
+<td>arc-systems</td>
+<td>self-hosted-754b578d-listener</td>
+<td>k8s03</td>
+<td>Pending (Scheduled)</td>
+<td>PLEG on k8s03</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-error-signatures">Key Error Signatures<a class="headerlink" href="#key-error-signatures" title="Permanent link">&para;</a></h3>
+<p><strong>k8s02 — Image GC failure (recurring every ~5 min):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>E kubelet.go:1611 &quot;Image garbage collection failed multiple times in a row&quot;
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>err=&quot;Failed to garbage collect required amount of images.
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Attempted to free 16430601830 bytes, but only found 0 bytes eligible to free.&quot;
+</code></pre></div></p>
+<p><strong>k8s01 — Ghost container sync loop (every 60s):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>E manager.go:1116 Failed to create existing container:
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>/kubepods/besteffort/pod33695e61-f79a-4447-b42f-551ef9f58db6/621a9a644b80c35958dbb7f70d661d345fde64fcc0a325b603d8e5f74968aca3:
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>task 621a9a644b80c35958dbb7f70d661d345fde64fcc0a325b603d8e5f74968aca3 not found
+</code></pre></div></p>
+<p><strong>All nodes — Wazuh webhook (every ~20s):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>E metrics.go:110 Error in audit plugin &#39;webhook&#39; affecting 1 audit events:
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>an error on the server (&quot;500 Internal Server Error&quot;) has prevented the request from succeeding
+</code></pre></div></p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Related incident (previous cascade failure, ARC orphaned pods): <code>incidents/src/incidents/2026-01-06-cluster-cascade-failure.md</code></li>
+<li>ARC (GitHub Actions Runner Controller) v0.13.0: https://github.com/actions/actions-runner-controller</li>
+<li>microk8s kubelite: https://microk8s.io/docs/high-availability</li>
+<li>Kubernetes kubelet image GC: https://kubernetes.io/docs/concepts/architecture/garbage-collection/#container-image-garbage-collection</li>
+</ul>
+<hr />
+<h2 id="reviewers">Reviewers<a class="headerlink" href="#reviewers" title="Permanent link">&para;</a></h2>
+<ul>
+<li>@pgmac</li>
+</ul>
+<hr />
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<h3 id="on-diskpressure-false-while-image-gc-fails">On "DiskPressure: False" While Image GC Fails<a class="headerlink" href="#on-diskpressure-false-while-image-gc-fails" title="Permanent link">&para;</a></h3>
+<p>The kubelet has two separate disk pressure systems:</p>
+<ol>
+<li><strong>Node condition <code>DiskPressure</code></strong> — driven by eviction thresholds (<code>--eviction-hard=imagefs.available&lt;10%</code>). This affects scheduling and appears in <code>kubectl get nodes</code>. Not breached here.</li>
+<li><strong>Image GC</strong> — driven by <code>imageGCHighThresholdPercent</code> (default 85%) and <code>imageGCLowThresholdPercent</code> (default 80%). This runs independently and can fail without setting <code>DiskPressure: True</code>.</li>
+</ol>
+<p>This means a node can appear healthy to the scheduler while its image store is full and image pulls are failing. Do not rely on <code>kubectl get nodes</code> conditions alone to assess whether a node can accept new pods that require image pulls.</p>
+<h3 id="on-kubelet-in-memory-state-vs-containerd-state">On Kubelet In-Memory State vs Containerd State<a class="headerlink" href="#on-kubelet-in-memory-state-vs-containerd-state" title="Permanent link">&para;</a></h3>
+<p>When a pod is force-deleted, two separate state stores become inconsistent:</p>
+<ol>
+<li><strong>etcd/apiserver</strong> — pod record removed immediately</li>
+<li><strong>containerd</strong> — container records persist until kubelet cleans them up</li>
+<li><strong>kubelet in-memory</strong> — pod tracked in <code>podManager</code> and <code>statusManager</code> until explicitly cleared</li>
+</ol>
+<p>Deleting the containerd container record (step 3) resolves the per-container error, but the kubelet's in-memory pod map still holds the orphaned pod entry. This stale entry can interfere with processing of new pod assignments on the same goroutine. A kubelite restart is the cleanest way to flush it.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/pgmac" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "navigation.indexes"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
