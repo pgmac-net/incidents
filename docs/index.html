@@ -385,6 +385,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pgmac-net-service-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PGMac . Net Service Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recent-incidents" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -717,6 +728,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pgmac-net-service-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PGMac . Net Service Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recent-incidents" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -807,10 +829,36 @@
 <li><strong>Improving systems</strong> - Identifying architectural and operational improvements</li>
 <li><strong>Knowledge sharing</strong> - Building team expertise and institutional memory</li>
 </ul>
+<h2 id="pgmac-net-service-status">PGMac . Net Service Status<a class="headerlink" href="#pgmac-net-service-status" title="Permanent link">&para;</a></h2>
+<p>These documents are an artefact to give clarity and detail on incidents discovered and communicated through my <a href="https://statuspage.pgmac.net.au/">Nagios Status Page</a></p>
 <h2 id="recent-incidents">Recent Incidents<a class="headerlink" href="#recent-incidents" title="Permanent link">&para;</a></h2>
 <h3 id="2026">2026<a class="headerlink" href="#2026" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="incidents/2026-02-22-radarr-openebs-jiva-replica-divergence/">2026-02-22 - Radarr Outage Due to OpenEBS Jiva Replica Divergence</a></li>
+<li><a href="incidents/2026-03-30-sonarr-iscsi-hairpin-containercreating/">2026-03-30 - Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03</a></li>
+<li><strong>Severity</strong>: P2</li>
+<li><strong>Duration</strong>: Unknown silent failure + ~45m active investigation and recovery</li>
+<li>
+<p><strong>Summary</strong>: Sonarr became stuck in ContainerCreating on k8s03 because microk8s Calico does not support hairpin NAT for host-namespace iSCSI clients — the kubelet's iSCSI connection to the Jiva controller ClusterIP was looped back to the same node and dropped at the PDU receive stage. Resolution required cordoning k8s03 and force-deleting the pod so it rescheduled to a different node.</p>
+</li>
+<li>
+<p><a href="incidents/2026-03-28-radarr-jiva-replica-divergence-second/">2026-03-28 - Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)</a></p>
+</li>
+<li><strong>Severity</strong>: High</li>
+<li><strong>Duration</strong>: ~30h silent failure + ~50m active recovery</li>
+<li>
+<p><strong>Summary</strong>: Second occurrence of all three OpenEBS Jiva replicas entering CrashLoopBackOff with diverged snapshot chains, rendering the radarr-config PVC unmountable. Unlike the February incident, no single authoritative replica existed, requiring all data directories to be wiped (total data loss). Recovery was further complicated by a ghost RW replica entry in the controller API and a stale iSCSI session on k8s03.</p>
+</li>
+<li>
+<p><a href="incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall/">2026-03-28 - ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall</a></p>
+</li>
+<li><strong>Severity</strong>: High</li>
+<li><strong>Duration</strong>: ~7h40m</li>
+<li>
+<p><strong>Summary</strong>: Five ARC runner pods remained Pending for over 7 hours due to a layered failure: disk exhaustion on k8s02 triggered image pull failures, recovery attempts caused Calico disruption and PLEG desync, and a ghost containerd record on k8s01 (orphaned from a force-deleted pod) stalled the kubelet sync loop every 60 seconds. Resolution required clearing the ghost container, restarting kubelite, pinning the ARC controller to k8s01, and disabling a Wazuh webhook returning 500 errors on every API server event.</p>
+</li>
+<li>
+<p><a href="incidents/2026-02-22-radarr-openebs-jiva-replica-divergence/">2026-02-22 - Radarr Outage Due to OpenEBS Jiva Replica Divergence</a></p>
+</li>
 <li><strong>Severity</strong>: High</li>
 <li><strong>Duration</strong>: ~16h30m silent failure + ~47m active recovery (~20h47m total outage)</li>
 <li>
