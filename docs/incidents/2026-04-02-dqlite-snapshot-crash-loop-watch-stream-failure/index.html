@@ -1,0 +1,2613 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Internal post-incident review documentation">
+      
+      
+        <meta name="author" content="pgmac">
+      
+      
+        <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/">
+      
+      
+        <link rel="prev" href="../2026-03-30-sonarr-iscsi-hairpin-containercreating/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure - Post-Incident Reviews</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#post-incident-review-dqlite-snapshot-bloat-kube-apiserver-instability-controller-crash-loop-cascade-and-watch-stream-failure" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Post-Incident Reviews" class="md-header__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Post-Incident Reviews
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Post-Incident Reviews
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Incidents
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Post-Incident Reviews" class="md-nav__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Post-Incident Reviews
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post-Incident Reviews
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incidents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Incidents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-01-06-cluster-cascade-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Cascading Kubernetes Cluster Failures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-28-arc-pods-pending-kubelet-sync-stall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-28-radarr-jiva-replica-divergence-second/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-30-sonarr-iscsi-hairpin-containercreating/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-awx-and-github-actions-cicd-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did AWX and GitHub Actions CI/CD become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-controller-pods-enter-crash-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the controller pods enter crash-loop?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-kube-apiserver-intermittently-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the kube-apiserver intermittently unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-dqlite-reach-215-mb-snapshots-every-2-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did dqlite reach 215 MB snapshots every 2 minutes?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-6071-ipam-handles-accumulate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did 6,071 IPAM handles accumulate?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-calico-kube-controllers-end-up-with-only-the-node-controller-enabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did calico-kube-controllers end up with only the node controller enabled?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-broken-watch-stream-occur-secondary-root-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the broken watch stream occur (secondary root cause)?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gcriokubebuilder-registry-deprecation-operational-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gcr.io/kubebuilder registry deprecation (operational gap)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-flag-incompatibility-with-summerwind-arc-v0276" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary flag incompatibility with summerwind ARC v0.27.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline-dqlite-vacuum-not-viable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline dqlite VACUUM not viable
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-ipam-handle-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: IPAM Handle Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-leader-election-fixes-gitops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Leader Election Fixes (GitOps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-watch-stream-diagnosis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Watch Stream Diagnosis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-root-fix-monthly-maintenance-playbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Root Fix — Monthly Maintenance Playbook
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-gh-arc-flag-incompatibility-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: gh-arc Flag Incompatibility Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-awx-operator-manual-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: awx-operator Manual Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#argocd-application-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgoCD Application Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cluster-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipam-handles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPAM Handles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-object-creation-post-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Object Creation (post-fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#crash-looping-pods-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Crash-Looping Pods at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-dqlite-snapshot-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On dqlite Snapshot Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-kube-apiserver-watch-stream-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On kube-apiserver Watch Stream Failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-calico-ipam-handle-accumulation-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On Calico IPAM Handle Accumulation Rate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-did-awx-and-github-actions-cicd-become-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did AWX and GitHub Actions CI/CD become unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-controller-pods-enter-crash-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the controller pods enter crash-loop?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-kube-apiserver-intermittently-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the kube-apiserver intermittently unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-dqlite-reach-215-mb-snapshots-every-2-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did dqlite reach 215 MB snapshots every 2 minutes?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-6071-ipam-handles-accumulate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did 6,071 IPAM handles accumulate?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-calico-kube-controllers-end-up-with-only-the-node-controller-enabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did calico-kube-controllers end up with only the node controller enabled?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-broken-watch-stream-occur-secondary-root-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the broken watch stream occur (secondary root cause)?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Findings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secondary Findings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gcriokubebuilder-registry-deprecation-operational-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gcr.io/kubebuilder registry deprecation (operational gap)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-flag-incompatibility-with-summerwind-arc-v0276" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary flag incompatibility with summerwind ARC v0.27.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline-dqlite-vacuum-not-viable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline dqlite VACUUM not viable
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-ipam-handle-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: IPAM Handle Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-leader-election-fixes-gitops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Leader Election Fixes (GitOps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-watch-stream-diagnosis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Watch Stream Diagnosis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-root-fix-monthly-maintenance-playbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Root Fix — Monthly Maintenance Playbook
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-gh-arc-flag-incompatibility-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: gh-arc Flag Incompatibility Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-awx-operator-manual-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: awx-operator Manual Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#argocd-application-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgoCD Application Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cluster-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipam-handles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPAM Handles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-object-creation-post-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Object Creation (post-fix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#crash-looping-pods-at-incident-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Crash-Looping Pods at Incident Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#on-dqlite-snapshot-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On dqlite Snapshot Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-kube-apiserver-watch-stream-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On kube-apiserver Watch Stream Failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-calico-ipam-handle-accumulation-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On Calico IPAM Handle Accumulation Rate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="post-incident-review-dqlite-snapshot-bloat-kube-apiserver-instability-controller-crash-loop-cascade-and-watch-stream-failure">Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure<a class="headerlink" href="#post-incident-review-dqlite-snapshot-bloat-kube-apiserver-instability-controller-crash-loop-cascade-and-watch-stream-failure" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-01 to 2026-04-02
+<strong>Duration:</strong> ~36h (discovery 2026-04-01 ~09:00 AEST → full resolution 2026-04-02 ~18:00 AEST)
+<strong>Severity:</strong> High (5 controllers crash-looping; all new pod creation silently stalled for several hours; AWX and GitHub Actions CI/CD degraded)
+<strong>Status:</strong> Resolved</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>Five long-running controller pods entered crash-loop or sustained-restart cycles and were unable to stabilise. Separately, a silent failure emerged where no new Kubernetes objects (Pods, ReplicaSets, Deployments) could be created or scheduled across the entire cluster for several hours — discovered only when the AWX operator deployment failed to roll out after a GitOps fix was applied.</p>
+<p>The root of both failures was a single configuration gap: <strong>Calico's IPAM GC controller was never enabled</strong>, causing stale IPAM handles to accumulate over years to 6,071 entries. Each handle is a dqlite row; at this scale, dqlite snapshots grew to 215 MB and fired every ~2 minutes. These frequent large snapshots caused kube-apiserver to be unresponsive for 10–30 seconds at a time, which exceeded the default <code>renewDeadline</code> (10s) for Kubernetes leader election. Controllers lost their leases and restarted in a loop. Multiple kubelite restarts performed during investigation eventually corrupted the kube-apiserver's watch stream, causing all informer caches across controllers and the scheduler to stop receiving <code>ADD</code> events for new objects. Resolution required the monthly dqlite VACUUM maintenance playbook to compact the database and a rolling kubelite restart to flush the broken streams.</p>
+<hr />
+<h2 id="timeline-aest-utc10">Timeline (AEST — UTC+10)<a class="headerlink" href="#timeline-aest-utc10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>2026-04-01 ~09:00</strong></td>
+<td>Investigation begins. 5 pods identified as crash-looping: <code>awx-operator-controller-manager</code>, <code>gh-arc-actions-runner-controller</code>, <code>openebs-localpv-provisioner</code>, <code>hostpath-provisioner</code>, <code>csi-nfs-controller</code>. Restart counts 400–700+.</td>
+</tr>
+<tr>
+<td>~09:30</td>
+<td>Disk pressure on k8s02 identified: 71% full, DiskPressure condition recently True. dqlite snapshot directory contains 550 MB of recent snapshots, newest every ~2 min.</td>
+</tr>
+<tr>
+<td>~10:00</td>
+<td><code>kubectl get ipamhandles --no-headers \| wc -l</code> → <strong>6,071</strong>. Calico-kube-controllers has <code>ENABLED_CONTROLLERS=node</code> only — no IPAM GC. This is the source of the snapshot bloat.</td>
+</tr>
+<tr>
+<td>~10:30</td>
+<td>Deleted 5,472 orphaned IPAM handles (599 remain, all with live allocations).</td>
+</tr>
+<tr>
+<td>~11:00</td>
+<td>dqlite restarted on k8s01, k8s02, k8s03 (rolling). Snapshot size unchanged at 215 MB — compaction requires WAL tombstones to expire.</td>
+</tr>
+<tr>
+<td>~11:30</td>
+<td>kubelite restarted on k8s02 to clear kube-controller-manager backoff. k8s02 DiskPressure clears. Disk at 71%, 22G free.</td>
+</tr>
+<tr>
+<td>~12:00</td>
+<td>ArgoCD fix committed: <code>awx.yaml</code> updated with correct <code>kube-rbac-proxy</code> image (<code>registry.k8s.io</code> not deprecated <code>gcr.io</code>) and <code>--leader-elect-lease-duration=60s --leader-elect-renew-deadline=40s</code> for awx-manager. <code>csi-nfs-controller</code> patched directly with <code>--leader-election-lease-duration=60s</code>.</td>
+</tr>
+<tr>
+<td>~13:00</td>
+<td>ArgoCD sync applies updated <code>awx</code> Application. New Deployment created but pods never start — controller-manager (on k8s03) stops processing new generations. observedGeneration lags behind generation.</td>
+</tr>
+<tr>
+<td>~13:30</td>
+<td>kubelite restarted on k8s03 (controller-manager leader). Controllers still not processing new objects.</td>
+</tr>
+<tr>
+<td>~14:00</td>
+<td>kubelite restarted on k8s01. Still no RS creation for new Deployments.</td>
+</tr>
+<tr>
+<td>~15:00</td>
+<td>kubelite restarted on k8s02. Test Deployment in <code>default</code> namespace also stuck (gen=1, obs=empty). Scheduler not scheduling manually created test pods. Cluster-wide watch stream failure confirmed.</td>
+</tr>
+<tr>
+<td>~16:00</td>
+<td>Second kubelite restart on k8s03. No improvement. Root cause identified: broken informer cache, not a per-controller issue.</td>
+</tr>
+<tr>
+<td><strong>2026-04-02 ~14:00</strong></td>
+<td>User runs <code>ansible-playbook microk8s-monthly-maintenance.yml</code> — performs dqlite VACUUM (compacts database) + rolling kubelite restart. Watch stream restored. All controllers and scheduler resume processing new objects.</td>
+</tr>
+<tr>
+<td>~14:30</td>
+<td>awx-operator Deployment rolls out successfully. Pod <code>2/2 Running</code>. ArgoCD: <code>awx</code> Synced/Healthy.</td>
+</tr>
+<tr>
+<td>~15:00</td>
+<td>gh-arc crash-loops with <code>flag provided but not defined: -lease-duration</code> — summerwind/actions-runner-controller:v0.27.6 binary does not support the flag. Patched to remove unsupported flags. <code>ignoreDifferences</code> removed from <code>gh-arc.yaml</code> (commit 9f42566).</td>
+</tr>
+<tr>
+<td>~15:30</td>
+<td><code>gh-arc-actions-runner-controller</code>: 2/2 Running, 0 restarts. ArgoCD: <code>gh-arc</code> Synced/Healthy.</td>
+</tr>
+<tr>
+<td><strong>~18:00</strong></td>
+<td>All 5 crash-looping controllers stabilised. Incident resolved.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="root-causes">Root Causes<a class="headerlink" href="#root-causes" title="Permanent link">&para;</a></h2>
+<h3 id="the-infinite-hows-chain">The Infinite How's Chain<a class="headerlink" href="#the-infinite-hows-chain" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><em>"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause.</em></p>
+</blockquote>
+<h4 id="how-did-awx-and-github-actions-cicd-become-unavailable">How did AWX and GitHub Actions CI/CD become unavailable?<a class="headerlink" href="#how-did-awx-and-github-actions-cicd-become-unavailable" title="Permanent link">&para;</a></h4>
+<p>The <code>awx-operator-controller-manager</code> and <code>gh-arc-actions-runner-controller</code> pods were crash-looping with hundreds of restarts. Controllers that crash-loop cannot manage their operands: AWX was unable to reconcile its deployment, and the ARC controller was unable to manage runner replicas.</p>
+<h4 id="how-did-the-controller-pods-enter-crash-loop">How did the controller pods enter crash-loop?<a class="headerlink" href="#how-did-the-controller-pods-enter-crash-loop" title="Permanent link">&para;</a></h4>
+<p>Kubernetes uses a leader election lease mechanism (implemented via <code>Lease</code> resources in the <code>kube-system</code> namespace) to ensure only one replica of each controller is active. Leader election has two critical parameters:
+- <code>leaseDuration</code> (default: 15s) — how long a leader holds the lease
+- <code>renewDeadline</code> (default: 10s) — the leader must renew before this deadline or lose the lease</p>
+<p>The kube-apiserver was intermittently unavailable for 10–30 second windows. When a controller could not renew its lease within 10 seconds, it logged <code>failed to renew lease</code>, exited, and was restarted by Kubernetes. This repeated continuously.</p>
+<h4 id="how-was-the-kube-apiserver-intermittently-unavailable">How was the kube-apiserver intermittently unavailable?<a class="headerlink" href="#how-was-the-kube-apiserver-intermittently-unavailable" title="Permanent link">&para;</a></h4>
+<p>dqlite (MicroK8s's embedded etcd replacement) was producing 215 MB snapshots every ~2 minutes. During snapshot creation, the dqlite WAL is checkpointed and the write lock is held for several seconds. kube-apiserver uses dqlite for all reads and writes; during the lock contention window, API requests blocked and timed out.</p>
+<h4 id="how-did-dqlite-reach-215-mb-snapshots-every-2-minutes">How did dqlite reach 215 MB snapshots every 2 minutes?<a class="headerlink" href="#how-did-dqlite-reach-215-mb-snapshots-every-2-minutes" title="Permanent link">&para;</a></h4>
+<p>A dqlite snapshot captures the entire database state. The snapshot size is directly proportional to database size. The dqlite database had grown to hundreds of MB because it contained 6,071 Calico IPAM handle records — each representing a claimed IP block. Normal snapshot thresholds (512 trailing WAL entries) were reached frequently due to ongoing write traffic from the crash-looping controllers, triggering frequent large snapshots.</p>
+<h4 id="how-did-6071-ipam-handles-accumulate">How did 6,071 IPAM handles accumulate?<a class="headerlink" href="#how-did-6071-ipam-handles-accumulate" title="Permanent link">&para;</a></h4>
+<p>Calico creates an IPAM handle record for every pod that is ever assigned an IP address. Handles are supposed to be deleted when pods are deleted and their IPs released. The IPAM garbage collection controller — part of <code>calico-kube-controllers</code> — is responsible for cleaning up orphaned handles. However, <code>calico-kube-controllers</code> in this cluster was deployed with <code>ENABLED_CONTROLLERS=node</code> only, which enables only the node controller. The IPAM controller was never included, so orphaned handles from years of pod churn accumulated without ever being cleaned up.</p>
+<h4 id="how-did-calico-kube-controllers-end-up-with-only-the-node-controller-enabled">How did <code>calico-kube-controllers</code> end up with only the node controller enabled?<a class="headerlink" href="#how-did-calico-kube-controllers-end-up-with-only-the-node-controller-enabled" title="Permanent link">&para;</a></h4>
+<p>This was the original deployment configuration when Calico was installed on this cluster (running Calico v3.13.2, released ~2021). The IPAM controller is not enabled by default in all versions and configurations; it must be explicitly included in <code>ENABLED_CONTROLLERS</code>. This default was never reviewed or corrected after initial deployment, and no monitoring existed to alert on IPAM handle growth.</p>
+<h4 id="how-did-the-broken-watch-stream-occur-secondary-root-cause">How did the broken watch stream occur (secondary root cause)?<a class="headerlink" href="#how-did-the-broken-watch-stream-occur-secondary-root-cause" title="Permanent link">&para;</a></h4>
+<p>During investigation, kubelite was restarted on all three nodes multiple times in an attempt to clear individual controller backlogs. Each kubelite restart causes kube-apiserver to re-establish its dqlite connection and re-initialise its watch stream to all controllers. Under sustained dqlite snapshot pressure (215 MB every 2 min), some watch stream re-establishments failed silently — the stream appeared connected but <code>ADD</code> events for new objects were not delivered to any informer cache. This is a known failure mode in etcd/dqlite clients under connection churn: the watch stream reconnects but the resume token is lost or rejected, causing the client to miss events that occurred during reconnection. The result: all controllers and the scheduler received updates for existing objects but never saw new ones. New Deployments were processed by the API server but no controller ever created a ReplicaSet; new Pods were created but the scheduler never saw them.</p>
+<h3 id="secondary-findings">Secondary Findings<a class="headerlink" href="#secondary-findings" title="Permanent link">&para;</a></h3>
+<h4 id="gcriokubebuilder-registry-deprecation-operational-gap">gcr.io/kubebuilder registry deprecation (operational gap)<a class="headerlink" href="#gcriokubebuilder-registry-deprecation-operational-gap" title="Permanent link">&para;</a></h4>
+<p>The <code>awx-operator</code> kube-rbac-proxy container was referencing <code>gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0</code>. Google Container Registry (<code>gcr.io/kubebuilder</code>) was deprecated in March 2025 and images are no longer pulled. The correct registry is <code>registry.k8s.io/kubebuilder</code>. This caused <code>ImagePullBackOff</code> on the awx-operator pod even after the leader election fix was applied, requiring an additional fix pass. No monitoring existed for image pull failures in non-running controllers.</p>
+<h4 id="binary-flag-incompatibility-with-summerwind-arc-v0276">Binary flag incompatibility with summerwind ARC v0.27.6<a class="headerlink" href="#binary-flag-incompatibility-with-summerwind-arc-v0276" title="Permanent link">&para;</a></h4>
+<p>The <code>summerwind/actions-runner-controller:v0.27.6</code> binary does not implement <code>--lease-duration</code>, <code>--renew-deadline</code>, or <code>--retry-period</code> flags. These flags were patched onto the <code>gh-arc-actions-runner-controller</code> Deployment during investigation as a leader election fix, but the process started with <code>flag provided but not defined: -lease-duration</code> and crashed immediately. The fix was to remove the unsupported flags; the underlying leader election issue was resolved by the dqlite VACUUM (snapshot size reduction), not by the flags. The version of summerwind ARC in use (v0.27.6) is very old and does not support modern leader election tuning.</p>
+<h4 id="offline-dqlite-vacuum-not-viable">Offline dqlite VACUUM not viable<a class="headerlink" href="#offline-dqlite-vacuum-not-viable" title="Permanent link">&para;</a></h4>
+<p>An attempt was made to vacuum dqlite snapshots offline by: stopping all dqlite services, LZ4-decompressing each node's latest snapshot, running <code>sqlite3 VACUUM</code>, recompressing, then restarting. The cluster hung for 8 minutes after restart. Root cause: each node's dqlite snapshot was at a different Raft log index. Independent vacuums produced binary-incompatible SQLite page layouts. Raft could not reconcile the divergent snapshots. The cluster recovered only after reverting to the original (unvacuumed) snapshots. <strong>Safe vacuum requires the online <code>microk8s dbctl</code> method or the monthly maintenance playbook</strong> (which uses cowsql's online VACUUM via kubeconfig connection).</p>
+<hr />
+<h2 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h2>
+<h3 id="services-affected">Services Affected<a class="headerlink" href="#services-affected" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Impact</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWX Ansible automation</td>
+<td>Operator crash-looping; AWX unable to reconcile; automation tasks degraded</td>
+<td>~36h</td>
+</tr>
+<tr>
+<td>GitHub Actions self-hosted runners</td>
+<td>ARC controller crash-looping; runner dispatch degraded</td>
+<td>~36h</td>
+</tr>
+<tr>
+<td>OpenEBS LocalPV provisioner</td>
+<td>Crash-looping; new LocalPV PVC provisioning unavailable</td>
+<td>~36h</td>
+</tr>
+<tr>
+<td>Hostpath provisioner</td>
+<td>Crash-looping; new hostpath PVC provisioning unavailable</td>
+<td>~36h</td>
+</tr>
+<tr>
+<td>CSI NFS controller</td>
+<td>Crash-looping; new NFS PVC provisioning unavailable</td>
+<td>~36h</td>
+</tr>
+<tr>
+<td>All new pod/deployment creation (cluster-wide)</td>
+<td>Silent failure — new objects processed by API server but ignored by controllers and scheduler</td>
+<td>~4–6h</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duration">Duration<a class="headerlink" href="#duration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Silent failure period</strong> (crash-looping): ~2026-04-01 09:00 → ~2026-04-02 14:00 (~29h) — pods crash-looping with no alerting</li>
+<li><strong>Active watch stream failure</strong>: ~2026-04-01 15:00 → ~2026-04-02 14:00 (~23h)</li>
+<li><strong>Active investigation and recovery</strong>: ~2026-04-01 09:00 → ~2026-04-02 18:00 (~33h)</li>
+<li><strong>Total incident duration</strong>: ~36h</li>
+</ul>
+<h3 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h3>
+<ul>
+<li>3-node microk8s HA cluster <code>pvek8s</code></li>
+<li>5 crash-looping controller pods (awx-operator, gh-arc, openebs-localpv, hostpath-provisioner, csi-nfs-controller)</li>
+<li>Cluster-wide new-object creation stalled for ~4–6h</li>
+<li>No persistent storage data loss</li>
+<li>No user-facing services disrupted (vaultwarden, media, finance apps unaffected — all running on existing pods)</li>
+</ul>
+<hr />
+<h2 id="resolution-steps-taken">Resolution Steps Taken<a class="headerlink" href="#resolution-steps-taken" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-ipam-handle-cleanup">Phase 1: IPAM Handle Cleanup<a class="headerlink" href="#phase-1-ipam-handle-cleanup" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Counted IPAM handles</strong>: <code>kubectl get ipamhandles --no-headers | wc -l</code> → 6,071</p>
+</li>
+<li>
+<p><strong>Identified orphaned handles</strong> (no corresponding running pod):
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Get all live pod IPs</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-A<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{range .items[*]}{.status.podIP}{&quot;\n&quot;}{end}&#39;</span><span class="w"> </span>&gt;<span class="w"> </span>/tmp/live_ips.txt
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Cross-reference with IPAM handles</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ipamhandles<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.items[] | select(.metadata.name | test(&quot;^ipip&quot;)) | .metadata.name&#39;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Deleted 5,472 orphaned handles</strong>:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Bulk delete handles with no live allocation</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>calicoctl<span class="w"> </span>get<span class="w"> </span>ipamhandle<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.items[] | select(.spec.block | length == 0) | .metadata.name&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>-I<span class="o">{}</span><span class="w"> </span>calicoctl<span class="w"> </span>delete<span class="w"> </span>ipamhandle<span class="w"> </span><span class="o">{}</span>
+</code></pre></div>
+    599 handles remained (all with live allocations).</p>
+</li>
+<li>
+<p><strong>Restarted dqlite</strong> on all three nodes (rolling, serial):
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">for</span><span class="w"> </span>node<span class="w"> </span><span class="k">in</span><span class="w"> </span>k8s01<span class="w"> </span>k8s02<span class="w"> </span>k8s03<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>ssh<span class="w"> </span><span class="nv">$node</span><span class="w"> </span><span class="s1">&#39;sudo systemctl restart snap.microk8s.daemon-k8s-dqlite&#39;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>sleep<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">done</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Restarted kubelite on k8s02</strong> to clear controller-manager backoff.</p>
+</li>
+</ol>
+<h3 id="phase-2-leader-election-fixes-gitops">Phase 2: Leader Election Fixes (GitOps)<a class="headerlink" href="#phase-2-leader-election-fixes-gitops" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Updated <code>awx.yaml</code></strong> (commit de4b157):</li>
+<li>Fixed kube-rbac-proxy image: <code>gcr.io/kubebuilder</code> → <code>registry.k8s.io/kubebuilder</code></li>
+<li>
+<p>Added <code>--leader-elect-lease-duration=60s --leader-elect-renew-deadline=40s</code> to awx-manager args</p>
+</li>
+<li>
+<p><strong>Patched <code>csi-nfs-controller</code></strong> directly (via kubectl) with <code>--leader-election-lease-duration=60s</code>.</p>
+</li>
+<li>
+<p><strong>Committed ArgoCD sync</strong> for <code>ci-tools</code> app-of-apps; ArgoCD applied updated Application manifests.</p>
+</li>
+</ol>
+<h3 id="phase-3-watch-stream-diagnosis">Phase 3: Watch Stream Diagnosis<a class="headerlink" href="#phase-3-watch-stream-diagnosis" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Confirmed cluster-wide watch stream failure</strong> by:</li>
+<li>Creating test Deployment in <code>default</code> namespace → no RS created (gen=1, obs=empty)</li>
+<li>Creating test Pod directly → pod remained Pending indefinitely (scheduler silent)</li>
+<li>
+<p>Confirming Deployment controller on k8s03 had not processed any new generations for hours</p>
+</li>
+<li>
+<p><strong>Multiple kubelite restarts</strong> (k8s03, k8s01, k8s02, k8s03 again) — each restored some function temporarily but did not fix the root stream issue under continued dqlite snapshot pressure.</p>
+</li>
+</ol>
+<h3 id="phase-4-root-fix-monthly-maintenance-playbook">Phase 4: Root Fix — Monthly Maintenance Playbook<a class="headerlink" href="#phase-4-root-fix-monthly-maintenance-playbook" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>User ran</strong> <code>ansible-playbook -i inventory/hosts.ini microk8s-monthly-maintenance.yml</code>:</p>
+<ul>
+<li>dqlite VACUUM via cowsql (online, safe — no Raft disruption)</li>
+<li>Rolling kubelite restart (serial: 1, with health checks between nodes)</li>
+</ul>
+</li>
+<li>
+<p><strong>Result</strong>: dqlite snapshot size reduced. Rolling kubelite restart flushed all broken informer caches and re-established watch streams cleanly (no dqlite lock contention during restart).</p>
+</li>
+<li>
+<p><strong>All controllers resumed</strong> processing within 2 minutes of final kubelite restart.</p>
+</li>
+</ol>
+<h3 id="phase-5-gh-arc-flag-incompatibility-fix">Phase 5: gh-arc Flag Incompatibility Fix<a class="headerlink" href="#phase-5-gh-arc-flag-incompatibility-fix" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Identified binary incompatibility</strong>: <code>gh-arc-actions-runner-controller</code> crash-looped with <code>flag provided but not defined: -lease-duration</code>.</p>
+</li>
+<li>
+<p><strong>Removed unsupported flags</strong> from the Deployment:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>patch<span class="w"> </span>deployment<span class="w"> </span>gh-arc-actions-runner-controller<span class="w"> </span>-n<span class="w"> </span>ci<span class="w"> </span>--type<span class="o">=</span>json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-p<span class="w"> </span><span class="s1">&#39;[{&quot;op&quot;:&quot;remove&quot;,&quot;path&quot;:&quot;/spec/template/spec/containers/0/args/X&quot;}]&#39;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># (repeated for --lease-duration, --renew-deadline, --retry-period)</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Removed <code>ignoreDifferences</code></strong> from <code>gh-arc.yaml</code> (commit 9f42566) — the flag protection was no longer needed since the flags were invalid.</p>
+</li>
+</ol>
+<h3 id="phase-6-awx-operator-manual-recovery">Phase 6: awx-operator Manual Recovery<a class="headerlink" href="#phase-6-awx-operator-manual-recovery" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Deployment controller stuck</strong> with <code>observedGeneration</code> lagging — caused by the watch stream failure period. Resolved after maintenance playbook restored the watch stream.</p>
+</li>
+<li>
+<p><strong>awx-operator pod</strong> <code>awx-operator-controller-manager</code> reached 2/2 Running. ArgoCD: <code>awx</code> Synced/Healthy.</p>
+</li>
+</ol>
+<hr />
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<h3 id="controller-health">Controller Health<a class="headerlink" href="#controller-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>NAME                                          READY   STATUS    RESTARTS   AGE
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>awx-operator-controller-manager-xxx           2/2     Running   0          2h
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>gh-arc-actions-runner-controller-xxx          2/2     Running   0          1h
+</code></pre></div>
+<h3 id="argocd-application-status">ArgoCD Application Status<a class="headerlink" href="#argocd-application-status" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>NAME       SYNC STATUS   HEALTH STATUS
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>ci-tools   Synced        Healthy
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>awx        Synced        Healthy
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>gh-arc     Synced        Healthy
+</code></pre></div>
+<h3 id="cluster-health">Cluster Health<a class="headerlink" href="#cluster-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>NAME    STATUS   ROLES    AGE      VERSION
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>k8s01   Ready    &lt;none&gt;   4y220d   v1.34.5
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>k8s02   Ready    &lt;none&gt;   4y220d   v1.34.5
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>k8s03   Ready    &lt;none&gt;   4y220d   v1.34.5
+</code></pre></div>
+<h3 id="ipam-handles">IPAM Handles<a class="headerlink" href="#ipam-handles" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ipamhandles<span class="w"> </span>--no-headers<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># → 599 (down from 6,071; all with live allocations)</span>
+</code></pre></div>
+<h3 id="new-object-creation-post-fix">New Object Creation (post-fix)<a class="headerlink" href="#new-object-creation-post-fix" title="Permanent link">&para;</a></h3>
+<p>Test Deployment created in <code>default</code> namespace reached <code>1/1 Running</code> within 30 seconds of the maintenance playbook completing.</p>
+<hr />
+<h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Enable Calico IPAM GC controller</strong> (Critical)</li>
+<li><code>calico-kube-controllers</code> currently has <code>ENABLED_CONTROLLERS=node</code> only. IPAM handles will re-accumulate at the same rate as before.</li>
+<li>Action: Add <code>workloadendpoint</code> and <code>ipam</code> to <code>ENABLED_CONTROLLERS</code> in calico-kube-controllers deployment. This enables automatic cleanup of orphaned handles.</li>
+<li>If on Calico ≥ v3.20: also use <code>calicoctl ipam check --fix</code> to perform one-time cleanup.</li>
+<li>Risk if ignored: 6,071 handles will re-accumulate within months; incident will recur.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-118/enable-calico-ipam-gc-controller-to-prevent-handle-accumulation">PGM-118</a></strong></p>
+</li>
+<li>
+<p><strong>Upgrade Calico from v3.13.2 to current (v3.29+)</strong> (High)</p>
+</li>
+<li>v3.13.2 is ~4 years old. Modern Calico includes improved IPAM GC, better eBPF support, and security fixes.</li>
+<li>Action: Plan and execute Calico upgrade via rolling node procedure. Test with <code>calico-node</code> pod health checks between nodes.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-119/upgrade-calico-from-v3132-to-v329">PGM-119</a></strong></p>
+</li>
+<li>
+<p><strong>Add monitoring for IPAM handle count</strong> (High)</p>
+</li>
+<li>No alert existed for IPAM handle accumulation.</li>
+<li>Action: Add Prometheus alert: <code>count(calico_ipam_allocated_ips) &gt; 1000</code> → warning; <code>&gt; 3000</code> → critical.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-120/add-prometheus-alert-for-calico-ipam-handle-count">PGM-120</a></strong></p>
+</li>
+<li>
+<p><strong>Add monitoring for dqlite snapshot frequency and size</strong> (High)</p>
+</li>
+<li>Frequent large snapshots are a leading indicator of database bloat. No alert fired during 36h of snapshot storms.</li>
+<li>Action: Add alert on dqlite snapshot file age (<code>find /var/snap/microk8s/current/var/kubernetes/backend -name 'snapshot-*' -newer snapshot-${N-1}</code> rate &gt; 1/5min) and size (&gt; 50 MB per snapshot).</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-121/add-alert-for-dqlite-snapshot-storm-rate-and-size">PGM-121</a></strong></p>
+</li>
+<li>
+<p><strong>Add Kubernetes leader election failure alerting</strong> (High)</p>
+</li>
+<li>No alert fired for <code>failed to renew lease</code> log entries across 5 controllers over 36h.</li>
+<li>Action: Add Loki/Alloy alert rule matching <code>failed to renew lease</code> in controller logs.</li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-122/add-loki-alert-for-kubernetes-leader-election-failures">PGM-122</a></strong></li>
+</ol>
+<h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Upgrade hostpath-provisioner</strong> (Medium)</li>
+<li><code>cdkbot/hostpath-provisioner:1.3.0</code> does not support <code>--leader-election-lease-duration</code> flags. Stabilised naturally after dqlite VACUUM but cannot be tuned for slow etcd environments.</li>
+<li>Action: Upgrade to a version that supports leader election tuning (v1.4+).</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-123/upgrade-hostpath-provisioner-to-support-leader-election-flag-tuning">PGM-123</a></strong></p>
+</li>
+<li>
+<p><strong>Upgrade openebs-localpv-provisioner</strong> (Medium)</p>
+</li>
+<li><code>openebs/provisioner-localpv:2.12.0</code> does not support <code>--leader-election-lease-duration</code> flags. Same issue as hostpath-provisioner.</li>
+<li>Action: Upgrade to a version that supports leader election tuning.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-124/upgrade-openebs-localpv-provisioner-to-support-leader-election-flag">PGM-124</a></strong></p>
+</li>
+<li>
+<p><strong>Upgrade summerwind/actions-runner-controller</strong> (Medium)</p>
+</li>
+<li><code>v0.27.6</code> is the last release of the summerwind ARC variant. It does not support modern leader election flags. Consider migrating to the <code>actions/actions-runner-controller</code> (the official successor) which supports <code>gha-runner-scale-set</code>.</li>
+<li>Action: Evaluate migration to <code>actions/actions-runner-controller</code> gha-runner-scale-set mode (already partly in use via <code>gharc-*</code> apps).</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-125/evaluate-migration-from-summerwind-arc-v0276-to-actionsactions-runner">PGM-125</a></strong></p>
+</li>
+<li>
+<p><strong>Document and schedule monthly dqlite maintenance</strong> (Medium)</p>
+</li>
+<li>The monthly maintenance playbook (<code>ansible/microk8s-monthly-maintenance.yml</code>) was the definitive fix. It is not currently scheduled.</li>
+<li>Action: Set up a cron trigger or AWX job template to run <code>microk8s-monthly-maintenance.yml</code> on the first Sunday of each month.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-126/schedule-monthly-dqlite-maintenance-awx-job-or-cron">PGM-126</a></strong></p>
+</li>
+<li>
+<p><strong>Document watch stream failure recovery runbook</strong> (High)</p>
+<ul>
+<li>No runbook existed for "controllers and scheduler stopped processing new objects". The symptom is non-obvious (API server accepts requests, events are recorded, but nothing happens).</li>
+<li>Action: Add runbook entry:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Symptom: new Deployments stuck at gen&gt;obs, new Pods never scheduled</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Diagnose:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>kubectl<span class="w"> </span>create<span class="w"> </span>deployment<span class="w"> </span>test-stream<span class="w"> </span>--image<span class="o">=</span>nginx<span class="w"> </span>-n<span class="w"> </span>default
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>kubectl<span class="w"> </span>get<span class="w"> </span>rs<span class="w"> </span>-n<span class="w"> </span>default<span class="w">  </span><span class="c1"># if no RS created within 30s, watch stream broken</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Fix:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory/hosts.ini<span class="w"> </span>microk8s-monthly-maintenance.yml
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># OR if urgent: rolling kubelite restart AFTER dqlite snapshot storm has subsided</span>
+</code></pre></div></li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-127/document-kube-apiserver-watch-stream-failure-recovery-runbook">PGM-127</a></strong></li>
+</ul>
+</li>
+<li>
+<p><strong>Verify binary flag support before patching Deployments</strong> (Medium)</p>
+<ul>
+<li>Two recovery actions (gh-arc <code>--lease-duration</code> flags, hostpath-provisioner <code>--leader-election-lease-duration</code>) failed because the binary didn't support the flags. Wasted ~2h.</li>
+<li>Action: Before patching a Deployment with new CLI flags, verify: <code>kubectl exec &lt;pod&gt; -- &lt;binary&gt; --help | grep &lt;flag&gt;</code>. Document this in the operator runbook.</li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-128/add-binary-flag-verification-step-to-operator-patching-runbook">PGM-128</a></strong></li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
+<h3 id="what-went-well">What Went Well<a class="headerlink" href="#what-went-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>IPAM handle root cause identified quickly</strong>: The connection between 6,071 handles → large snapshots → slow apiserver → leader election failures was traced within ~1h of starting investigation.</li>
+<li><strong>Calico IPAM cleanup was safe</strong>: Deleting 5,472 orphaned handles had no impact on running pods. The 599 remaining handles all had live allocations.</li>
+<li><strong>ArgoCD GitOps preserved intent</strong>: All fixes were committed to git and synced via ArgoCD. Manual kubectl patches were used only for emergency recovery and documented for later GitOps reconciliation.</li>
+<li><strong>No data loss</strong>: All persistent storage (OpenEBS volumes, dqlite Raft state) was unaffected throughout.</li>
+<li><strong>Monthly maintenance playbook was definitive</strong>: The existing <code>microk8s-monthly-maintenance.yml</code> playbook, when finally run, resolved both the dqlite snapshot size issue and the broken watch stream in a single operation.</li>
+</ul>
+<h3 id="what-didnt-go-well">What Didn't Go Well<a class="headerlink" href="#what-didnt-go-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>No alerting for 36h</strong>: Five controllers crashed hundreds of times with no notification. The incident was discovered manually.</li>
+<li><strong>Multiple kubelite restarts worsened the situation</strong>: Each restart under active dqlite snapshot pressure had a chance of breaking the watch stream further. A better approach: fix the root cause (dqlite bloat) first, then perform a single clean restart.</li>
+<li><strong>Offline vacuum attempt wasted time</strong>: The LZ4-decompress → sqlite3 VACUUM → recompress approach was attempted before understanding that dqlite snapshots are Raft-state-encoded. The 8-minute cluster hang and manual recovery cost ~2h.</li>
+<li><strong>Binary flag incompatibility not checked</strong>: Patching <code>gh-arc</code> with <code>--lease-duration</code> flags without first verifying binary support caused an additional crash-loop that took ~1h to diagnose.</li>
+<li><strong>gcr.io deprecation not caught earlier</strong>: The <code>gcr.io/kubebuilder</code> image deprecation was a known issue (since March 2025) that was not applied to the awx.yaml manifest until this incident forced it.</li>
+</ul>
+<h3 id="surprise-findings">Surprise Findings<a class="headerlink" href="#surprise-findings" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Offline dqlite vacuum is not safe</strong>: The attempt to vacuum snapshots offline by stopping all dqlite services and vacuuming each node's snapshot independently caused Raft state inconsistency. Each node's snapshot was at a different Raft log index; independent SQLite vacuums produce binary-incompatible page layouts. Recovery required restoring all nodes to their original (pre-vacuum) snapshots.</li>
+<li><strong>Watch stream failure is silent</strong>: When the kube-apiserver watch stream breaks after reconnection under etcd/dqlite pressure, it does not produce obvious error logs. Controllers continue to function for existing objects and produce no errors — only new objects are silently ignored. The symptom (<code>observedGeneration</code> never incrementing) looks identical to a controller being overloaded or having a bug.</li>
+<li><strong><code>ansible-operator-plugins</code> uses <code>--leader-elect-*</code> not <code>--leader-election-*</code></strong>: The AWX operator binary uses non-standard flag naming (<code>--leader-elect-lease-duration</code> not <code>--leader-election-lease-duration</code>). This caused an initial patch to fail silently (flag accepted but not acted on) before the correct flag name was found.</li>
+</ul>
+<hr />
+<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Priority</th>
+<th>Owner</th>
+<th>Linear</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Enable Calico IPAM GC controller (<code>ENABLED_CONTROLLERS=node,workloadendpoint,ipam</code>)</td>
+<td>Critical</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-118/enable-calico-ipam-gc-controller-to-prevent-handle-accumulation">PGM-118</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Upgrade Calico v3.13.2 → v3.29+</td>
+<td>High</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-119/upgrade-calico-from-v3132-to-v329">PGM-119</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add Prometheus alert for IPAM handle count (&gt;1000 warn, &gt;3000 crit)</td>
+<td>High</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-120/add-prometheus-alert-for-calico-ipam-handle-count">PGM-120</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add alert for dqlite snapshot storm (rate &gt;1/5min or size &gt;50MB)</td>
+<td>High</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-121/add-alert-for-dqlite-snapshot-storm-rate-and-size">PGM-121</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Add Loki alert for Kubernetes leader election failures (<code>failed to renew lease</code>)</td>
+<td>High</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-122/add-loki-alert-for-kubernetes-leader-election-failures">PGM-122</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Upgrade hostpath-provisioner to version supporting leader election flag tuning</td>
+<td>Medium</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-123/upgrade-hostpath-provisioner-to-support-leader-election-flag-tuning">PGM-123</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Upgrade openebs-localpv-provisioner to version supporting leader election flag tuning</td>
+<td>Medium</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-124/upgrade-openebs-localpv-provisioner-to-support-leader-election-flag">PGM-124</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Evaluate migration from summerwind ARC v0.27.6 to actions/actions-runner-controller gha-runner-scale-set</td>
+<td>Medium</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-125/evaluate-migration-from-summerwind-arc-v0276-to-actionsactions-runner">PGM-125</a></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Schedule monthly dqlite maintenance (AWX job template or cron, first Sunday of month)</td>
+<td>Medium</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-126/schedule-monthly-dqlite-maintenance-awx-job-or-cron">PGM-126</a></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Document watch stream failure recovery runbook</td>
+<td>High</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-127/document-kube-apiserver-watch-stream-failure-recovery-runbook">PGM-127</a></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Add binary flag verification step to operator runbook</td>
+<td>Medium</td>
+<td>@pgmac</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-128/add-binary-flag-verification-step-to-operator-patching-runbook">PGM-128</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cluster:</strong> <code>pvek8s</code> (microk8s HA, 3 nodes)</li>
+<li><strong>Kubernetes version:</strong> v1.34.5</li>
+<li><strong>Container runtime:</strong> containerd 1.7.28</li>
+<li><strong>Calico version:</strong> v3.13.2</li>
+<li><strong>AWX operator version:</strong> 2.19.1</li>
+<li><strong>summerwind ARC version:</strong> v0.27.6</li>
+<li><strong>dqlite snapshot size at incident start:</strong> ~215 MB (every ~2 min)</li>
+<li><strong>IPAM handles at incident start:</strong> 6,071 (5,472 orphaned)</li>
+</ul>
+<h3 id="crash-looping-pods-at-incident-start">Crash-Looping Pods at Incident Start<a class="headerlink" href="#crash-looping-pods-at-incident-start" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Pod</th>
+<th>Restarts</th>
+<th>Root Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ci</td>
+<td>awx-operator-controller-manager</td>
+<td>~700 over 55d</td>
+<td>renewDeadline exceeded + gcr.io image pull failure</td>
+<td>leader-elect flags + registry fix (GitOps)</td>
+</tr>
+<tr>
+<td>ci</td>
+<td>gh-arc-actions-runner-controller</td>
+<td>~700 over 55d</td>
+<td>renewDeadline exceeded</td>
+<td>dqlite VACUUM (root fix); unsupported flags removed</td>
+</tr>
+<tr>
+<td>openebs</td>
+<td>openebs-localpv-provisioner</td>
+<td>~700 over 55d</td>
+<td>renewDeadline exceeded</td>
+<td>Stabilised naturally after dqlite VACUUM</td>
+</tr>
+<tr>
+<td>kube-system</td>
+<td>hostpath-provisioner</td>
+<td>~700 over 55d</td>
+<td>renewDeadline exceeded</td>
+<td>Stabilised naturally after dqlite VACUUM</td>
+</tr>
+<tr>
+<td>kube-system</td>
+<td>csi-nfs-controller</td>
+<td>~700 over 55d</td>
+<td>renewDeadline exceeded</td>
+<td><code>--leader-election-lease-duration=60s</code> kubectl patch</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-error-signatures">Key Error Signatures<a class="headerlink" href="#key-error-signatures" title="Permanent link">&para;</a></h3>
+<p><strong>Controller leader election failure (all 5 pods, continuous):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>E leaderelection.go:330 error retrieving resource lock kube-system/csi-nfs
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>err=&quot;Get \&quot;https://127.0.0.1:16443/apis/coordination.k8s.io/v1/namespaces/kube-system/leases/csi-nfs\&quot;: context deadline exceeded&quot;
+</code></pre></div></p>
+<p><strong>dqlite WAL checkpoint lock contention (kube-controller-manager):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>W controller.go:244 &quot;Requeue&quot; key=&quot;ci/awx-operator-controller-manager&quot; err=&quot;database is locked&quot;
+</code></pre></div></p>
+<p><strong>Watch stream failure (silent — identified by observing controller inaction):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a># No error log. Symptom only:
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a># kubectl get deploy &lt;name&gt; -o jsonpath=&#39;{.status.observedGeneration}&#39; → empty or stale
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a># kubectl get rs -n &lt;namespace&gt; → no new RS created
+</code></pre></div></p>
+<p><strong>gh-arc binary flag incompatibility:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>flag provided but not defined: -lease-duration
+</code></pre></div></p>
+<p><strong>awx-operator image pull failure:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Failed to pull image &quot;gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0&quot;:
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>rpc error: code = NotFound desc = failed to pull and unpack image
+</code></pre></div></p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Related incident (disk pressure on k8s02 as contributing factor): memory record <code>project_k8s02_disk.md</code></li>
+<li>Related incident (ARC pods stuck Pending, kubelet sync stall): <code>incidents/src/incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall.md</code></li>
+<li>Monthly maintenance playbook: <code>ansible/microk8s-monthly-maintenance.yml</code></li>
+<li>Calico IPAM GC documentation: https://docs.tigera.io/calico/latest/reference/kube-controllers/configuration</li>
+<li>MicroK8s dqlite documentation: https://microk8s.io/docs/dqlite</li>
+<li>Kubernetes leader election: https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/</li>
+</ul>
+<hr />
+<h2 id="reviewers">Reviewers<a class="headerlink" href="#reviewers" title="Permanent link">&para;</a></h2>
+<ul>
+<li>@pgmac</li>
+</ul>
+<hr />
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<h3 id="on-dqlite-snapshot-safety">On dqlite Snapshot Safety<a class="headerlink" href="#on-dqlite-snapshot-safety" title="Permanent link">&para;</a></h3>
+<p>The dqlite snapshot format is not plain SQLite — each snapshot is LZ4-compressed and encodes a Raft log index. Nodes in a Raft cluster can have snapshots at different indices; this is normal and expected (the leader sends the latest snapshot to lagging followers). However, if you decompress and SQLite-VACUUM a snapshot offline, the resulting file has a different SQLite page layout but the same Raft index. When dqlite restarts and attempts to reconcile snapshots across nodes, the divergent page layouts cause Raft state machine inconsistency. <strong>Never vacuum dqlite snapshots offline.</strong> Use the <code>microk8s dbctl</code> tooling or the monthly maintenance playbook.</p>
+<h3 id="on-kube-apiserver-watch-stream-failures">On kube-apiserver Watch Stream Failures<a class="headerlink" href="#on-kube-apiserver-watch-stream-failures" title="Permanent link">&para;</a></h3>
+<p>Under sustained dqlite write pressure (frequent large snapshots causing lock contention), kube-apiserver watch streams to controllers can fail silently. The failure mode is not a connection drop — TCP remains established — but rather a lost or rejected resume token during a background reconnection. Affected controllers continue to receive <code>MODIFIED</code> and <code>DELETED</code> events for existing objects (these are delivered via the existing stream buffer) but stop receiving <code>ADD</code> events for new objects. Diagnosis: create a new object and observe whether the relevant controller acknowledges it within 30 seconds. Recovery: wait for dqlite snapshot pressure to subside, then perform a rolling kubelite restart. The monthly maintenance playbook does both.</p>
+<h3 id="on-calico-ipam-handle-accumulation-rate">On Calico IPAM Handle Accumulation Rate<a class="headerlink" href="#on-calico-ipam-handle-accumulation-rate" title="Permanent link">&para;</a></h3>
+<p>At normal homelab workload churn (ephemeral runner pods, occasional deployments), approximately 5,000 handles accumulated over ~3 years — roughly 1,500 per year or ~4 per day. At this rate, re-accumulation to 1,000 handles (alert threshold) would take ~8 months if the IPAM GC controller remains disabled. Enabling the IPAM GC controller should reduce handles to near-zero and maintain them there.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/pgmac" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "navigation.indexes"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

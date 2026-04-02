@@ -2,30 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://incidents.pgmac.net.au/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/2026-01-06-cluster-cascade-failure/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/2026-02-22-radarr-openebs-jiva-replica-divergence/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/2026-03-28-radarr-jiva-replica-divergence-second/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://incidents.pgmac.net.au/incidents/2026-03-30-sonarr-iscsi-hairpin-containercreating/</loc>
-         <lastmod>2026-03-29</lastmod>
+         <lastmod>2026-04-02</lastmod>
+    </url>
+    <url>
+         <loc>https://incidents.pgmac.net.au/incidents/2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/</loc>
+         <lastmod>2026-04-02</lastmod>
     </url>
 </urlset>
