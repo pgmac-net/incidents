@@ -1,0 +1,2271 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Internal post-incident review documentation">
+      
+      
+        <meta name="author" content="pgmac">
+      
+      
+        <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage/">
+      
+      
+        <link rel="prev" href="../2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags - Post-Incident Reviews</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#post-incident-review-pvek8s-complete-cluster-outage-dqlite-quorum-loss-and-ansible-injected-invalid-flags" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Post-Incident Reviews" class="md-header__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Post-Incident Reviews
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Post-Incident Reviews
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Incidents
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Post-Incident Reviews" class="md-nav__button md-logo" aria-label="Post-Incident Reviews" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Post-Incident Reviews
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pgmac-net/incidents/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pgmac-net/incidents
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post-Incident Reviews
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incidents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Incidents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-01-06-cluster-cascade-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Cascading Kubernetes Cluster Failures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-28-arc-pods-pending-kubelet-sync-stall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-28-radarr-jiva-replica-divergence-second/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-03-30-sonarr-iscsi-hairpin-containercreating/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-were-nrpe-checks-timing-out-with-no-useful-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How were NRPE checks timing out with no useful error?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-api-server-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the API server unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-k8s-dqlite-not-running-after-microk8s-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was k8s-dqlite not running after microk8s start?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-an-unknown-flag-end-up-in-the-args-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did an unknown flag end up in the args file?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-role-allowed-to-inject-unsupported-flags-without-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the role allowed to inject unsupported flags without detection?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-cluster-reach-complete-quorum-loss-the-underlying-outage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the cluster reach complete quorum loss (the underlying outage)?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-2-node-operation-cascade-to-all-3-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the 2-node operation cascade to all 3 nodes?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-disk-pressure-on-k8s02-go-undetected-for-7-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did disk pressure on k8s02 go undetected for 7 days?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-dqlite-crash-loop-go-undetected-for-7-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the dqlite crash-loop go undetected for 7 days?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-finding-snapshot-embedded-raft-membership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Finding: Snapshot-Embedded Raft Membership
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-diagnosis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Diagnosis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-nrpe-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: NRPE Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-invalid-flags-discovery-and-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Invalid Flags Discovery and Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-single-node-recovery-attempt-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Single-Node Recovery Attempt (Failed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-correct-recovery-simultaneous-3-node-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Correct Recovery — Simultaneous 3-Node Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cluster-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nrpe-fix-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NRPE Fix Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s-dqlite-args-file-before-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s-dqlite Args File Before Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s-dqlite-args-file-after-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s-dqlite Args File After Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline-aest-utc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline (AEST — UTC+10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Causes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-infinite-hows-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Infinite How's Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Infinite How&#39;s Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-were-nrpe-checks-timing-out-with-no-useful-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How were NRPE checks timing out with no useful error?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-api-server-unavailable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the API server unavailable?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-k8s-dqlite-not-running-after-microk8s-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was k8s-dqlite not running after microk8s start?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-an-unknown-flag-end-up-in-the-args-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did an unknown flag end up in the args file?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-was-the-role-allowed-to-inject-unsupported-flags-without-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How was the role allowed to inject unsupported flags without detection?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-cluster-reach-complete-quorum-loss-the-underlying-outage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the cluster reach complete quorum loss (the underlying outage)?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-2-node-operation-cascade-to-all-3-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the 2-node operation cascade to all 3 nodes?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-disk-pressure-on-k8s02-go-undetected-for-7-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did disk pressure on k8s02 go undetected for 7 days?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-did-the-dqlite-crash-loop-go-undetected-for-7-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How did the dqlite crash-loop go undetected for 7 days?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secondary-finding-snapshot-embedded-raft-membership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secondary Finding: Snapshot-Embedded Raft Membership
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#services-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Services Affected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-steps-taken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Steps Taken
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolution Steps Taken">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-diagnosis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Diagnosis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-nrpe-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: NRPE Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-invalid-flags-discovery-and-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Invalid Flags Discovery and Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-single-node-recovery-attempt-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Single-Node Recovery Attempt (Failed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-correct-recovery-simultaneous-3-node-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Correct Recovery — Simultaneous 3-Node Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cluster-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster Health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nrpe-fix-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NRPE Fix Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventive-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventive Measures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preventive Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-actions-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Actions Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longer-term-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Longer-Term Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-went-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Went Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-didnt-go-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Didn't Go Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surprise-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Surprise Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s-dqlite-args-file-before-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s-dqlite Args File Before Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k8s-dqlite-args-file-after-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        k8s-dqlite Args File After Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-error-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Error Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reviewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reviewers
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="post-incident-review-pvek8s-complete-cluster-outage-dqlite-quorum-loss-and-ansible-injected-invalid-flags">Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags<a class="headerlink" href="#post-incident-review-pvek8s-complete-cluster-outage-dqlite-quorum-loss-and-ansible-injected-invalid-flags" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-04 (degraded) → 2026-04-12
+<strong>Duration:</strong> 7 days degraded (2/3 nodes) + ~1h 12m complete outage (2026-04-12 09:27–10:39 AEST)
+<strong>Severity:</strong> Critical (complete cluster outage; all NRPE checks timing out; API server unreachable)
+<strong>Status:</strong> Resolved</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>The pvek8s microk8s cluster suffered a complete 3-node outage when dqlite's Raft consensus layer lost quorum. The proximate trigger was disk pressure on k8s02 (detected 2026-04-04) causing dqlite WAL write failures, which put k8s02 into a crash-restart loop. Over the following 7 days the cluster continued operating with 2/3 voters, but accumulated un-ACKed WAL entries; on 2026-04-11 a snapshot compaction deadlock propagated to k8s01 and k8s03, taking all 3 nodes down.</p>
+<p>Recovery was blocked for ~1.5 hours by a second, unrelated issue: an Ansible dqlite tuning role had injected <code>--snapshot-threshold=512</code> and <code>--snapshot-trailing-logs=256</code> into the k8s-dqlite args file overnight. These flags <strong>do not exist</strong> in k8s-dqlite snap rev 8695. The binary exited with <code>Error: unknown flag: --snapshot-threshold</code> on every start attempt, preventing dqlite — and therefore the API server — from coming up.</p>
+<p>A further complication: the standard single-node recovery procedure (edit <code>cluster.yaml</code> to one node, start that node) failed silently because <strong>dqlite Raft snapshots embed the cluster membership at snapshot time</strong>. A single node cannot reach quorum (2/3) against its own snapshot's 3-node membership list. Recovery required starting all 3 nodes simultaneously.</p>
+<p>Total active recovery time from incident detection to resolution: ~1h 12m. No persistent data loss occurred.</p>
+<hr />
+<h2 id="timeline-aest-utc10">Timeline (AEST — UTC+10)<a class="headerlink" href="#timeline-aest-utc10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>2026-04-04 (est.)</strong></td>
+<td>k8s02 disk pressure causes dqlite WAL write failure. k8s02 dqlite enters crash-restart loop. Cluster continues on 2/3 voters (k8s01 + k8s03). No alert fires.</td>
+</tr>
+<tr>
+<td><strong>2026-04-11 ~16:07</strong></td>
+<td>dqlite snapshot compaction ACK deadlock on all 3 nodes. k8s01 and k8s03 dqlite enter crash loops. All 3 nodes now failing. ~3,794 restarts on k8s01.</td>
+</tr>
+<tr>
+<td><strong>2026-04-12 09:27 AEST</strong></td>
+<td>Incident opened (PGM-137). Nagios Nagios shows <code>microk8s-dqlite-scheduler</code> CRITICAL on k8s01, k8s02, k8s03 with 15s socket timeouts. <code>kubectl --context pvek8s get nodes</code> fails.</td>
+</tr>
+<tr>
+<td>~09:35</td>
+<td>Nagios MCP confirms all 3 nodes CRITICAL. NRPE execution time 15.03s — confirms check is hanging, not just reporting failure.</td>
+</tr>
+<tr>
+<td>~09:40</td>
+<td><code>journalctl</code> shows <code>[go-dqlite] attempt N: server 172.22.22.X:19001: connection refused</code> / <code>no known leader</code> on all nodes. Port 19001 not bound. NRestarts=3794 on k8s01.</td>
+</tr>
+<tr>
+<td>~09:45</td>
+<td>Disk confirmed adequate (k8s01: 74%, k8s02: ~75%, k8s03: 71%). Certificates valid until 2027. Root cause: Raft quorum loss confirmed.</td>
+</tr>
+<tr>
+<td>~09:52</td>
+<td>All 3 nodes stopped: <code>sudo microk8s stop</code> (parallel). Stop sequence: k8s02, k8s01, k8s03.</td>
+</tr>
+<tr>
+<td>~09:55</td>
+<td>NRPE check fix: <code>--request-timeout=10s</code> added to both kubectl calls in <code>check_microk8s_dqlite.sh</code>. Deployed to all 3 nodes. Ansible source files updated.</td>
+</tr>
+<tr>
+<td>~10:00</td>
+<td><code>microk8s start</code> on k8s01 (single-node recovery attempt). NRestarts=39 immediately — binary still failing.</td>
+</tr>
+<tr>
+<td>~10:05</td>
+<td><strong>Invalid flags discovered</strong>: manual invocation of <code>/snap/microk8s/8695/bin/k8s-dqlite --snapshot-threshold=512</code> → <code>Error: unknown flag: --snapshot-threshold</code>. Args file contains Ansible-injected flags not supported by this binary version.</td>
+</tr>
+<tr>
+<td>~10:08</td>
+<td>Invalid flags removed from args files on all 3 nodes: <code>sed -i '/snapshot-threshold\|snapshot-trailing-logs\|^#/d'</code>. Ansible role <code>dqlite.yml</code> updated to remove the task entirely.</td>
+</tr>
+<tr>
+<td>~10:12</td>
+<td>k8s01 restarted. Binary now starts but stuck at <code>[go-dqlite] attempt N: no known leader</code> indefinitely (250+ attempts).</td>
+</tr>
+<tr>
+<td>~10:20</td>
+<td><strong>Snapshot membership issue discovered</strong>: raft snapshot (216MB, term 2774) embeds 3-node cluster config. Single-node <code>cluster.yaml</code> has no effect. Raft segments deleted to force fresh bootstrap — still stuck at quorum 1/3.</td>
+</tr>
+<tr>
+<td>~10:30</td>
+<td>3-node <code>cluster.yaml</code> restored from backup on k8s01. All 3 nodes started simultaneously.</td>
+</tr>
+<tr>
+<td><strong>~10:39 AEST</strong></td>
+<td>Raft election succeeds in ~60s. All 3 nodes: <code>microk8s is running</code>. High availability: yes. Datastore master nodes: 172.22.22.6 172.22.22.8 172.22.22.9.</td>
+</tr>
+<tr>
+<td>~10:42</td>
+<td><code>kubectl get nodes</code>: k8s01/k8s02/k8s03 all Ready. ArgoCD server running. Workloads resuming. PGM-137 closed.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="root-causes">Root Causes<a class="headerlink" href="#root-causes" title="Permanent link">&para;</a></h2>
+<h3 id="the-infinite-hows-chain">The Infinite How's Chain<a class="headerlink" href="#the-infinite-hows-chain" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><em>"The infinite how's" methodology: at each causal step, ask "how?" rather than accepting the surface answer. Keep drilling until reaching an actionable, preventable cause.</em></p>
+</blockquote>
+<h4 id="how-were-nrpe-checks-timing-out-with-no-useful-error">How were NRPE checks timing out with no useful error?<a class="headerlink" href="#how-were-nrpe-checks-timing-out-with-no-useful-error" title="Permanent link">&para;</a></h4>
+<p><code>check_microk8s_dqlite.sh</code> called <code>microk8s kubectl get componentstatuses</code> and <code>microk8s kubectl get pods -A</code> with no <code>--request-timeout</code> flag. When the API server was unavailable, both calls blocked indefinitely — exceeding the NRPE socket timeout of 15 seconds. Nagios received <code>CHECK_NRPE STATE CRITICAL: Socket timeout after 15 seconds</code> rather than any diagnostic information about the actual cluster state.</p>
+<h4 id="how-was-the-api-server-unavailable">How was the API server unavailable?<a class="headerlink" href="#how-was-the-api-server-unavailable" title="Permanent link">&para;</a></h4>
+<p>The kube-apiserver (inside kubelite) depends on <code>kine.sock</code> — a UNIX socket created by k8s-dqlite that proxies etcd API calls into dqlite. k8s-dqlite was not running on any node, so <code>kine.sock</code> was never created, and kubelite failed to start.</p>
+<h4 id="how-was-k8s-dqlite-not-running-after-microk8s-start">How was k8s-dqlite not running after <code>microk8s start</code>?<a class="headerlink" href="#how-was-k8s-dqlite-not-running-after-microk8s-start" title="Permanent link">&para;</a></h4>
+<p>The k8s-dqlite binary exited with <code>Error: unknown flag: --snapshot-threshold</code> on every invocation. The systemd service restarted it continuously (NRestarts=39 within minutes), but each attempt immediately failed. Since <code>set -e</code> is active in the startup script and <code>exec</code> replaces the process, the exit code propagated directly to systemd.</p>
+<h4 id="how-did-an-unknown-flag-end-up-in-the-args-file">How did an unknown flag end up in the args file?<a class="headerlink" href="#how-did-an-unknown-flag-end-up-in-the-args-file" title="Permanent link">&para;</a></h4>
+<p>The Ansible dqlite tuning role (<code>roles-dev/ansible-role-microk8s/tasks/dqlite.yml</code>) used <code>ansible.builtin.blockinfile</code> to inject:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--snapshot-threshold=512
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>--snapshot-trailing-logs=256
+</code></pre></div>
+<p>These flags were added based on the k8s-dqlite API as it existed when the role was written (after the Jan 2026 dqlite lock contention incident). The flags were removed or renamed in a subsequent microk8s snap release. Snap rev 8695 (the installed version) does not include them.</p>
+<h4 id="how-was-the-role-allowed-to-inject-unsupported-flags-without-detection">How was the role allowed to inject unsupported flags without detection?<a class="headerlink" href="#how-was-the-role-allowed-to-inject-unsupported-flags-without-detection" title="Permanent link">&para;</a></h4>
+<p>The Ansible role had no mechanism to validate that a flag exists in the target binary before writing it. The run script (<code>run-k8s-dqlite-with-args</code>) passes all lines from the args file directly to the binary — including comment lines injected by <code>blockinfile</code> — without any pre-validation. After the playbook ran overnight and the restart was completed, there was no health check task to verify the service remained running.</p>
+<p>Additionally, <code>blockinfile</code> injects <code># BEGIN/END ANSIBLE MANAGED BLOCK</code> comment lines. While bash evaluates these as comments in an <code>eval</code>-style array expansion, their presence alongside invalid flags made diagnosis harder — it was initially unclear whether the comments or the flags were causing the failure.</p>
+<h4 id="how-did-the-cluster-reach-complete-quorum-loss-the-underlying-outage">How did the cluster reach complete quorum loss (the underlying outage)?<a class="headerlink" href="#how-did-the-cluster-reach-complete-quorum-loss-the-underlying-outage" title="Permanent link">&para;</a></h4>
+<p>k8s02 ran low on disk space (estimated 2026-04-04). dqlite's write-ahead log (WAL) requires disk writes to commit entries. When dqlite tried to write a WAL entry on k8s02 and the filesystem was full, the write failed. dqlite exited, and systemd restarted it. On restart, the same WAL entries needed to be applied — and dqlite exited again. k8s02 entered a crash-restart loop with thousands of restarts.</p>
+<p>With k8s02's dqlite out of the election pool, the cluster continued on 2 voters (k8s01 + k8s03), which still constitutes quorum in a 3-node cluster. The cluster remained nominally operational for ~7 days.</p>
+<h4 id="how-did-the-2-node-operation-cascade-to-all-3-nodes">How did the 2-node operation cascade to all 3 nodes?<a class="headerlink" href="#how-did-the-2-node-operation-cascade-to-all-3-nodes" title="Permanent link">&para;</a></h4>
+<p>During 7 days of degraded operation, the 2 active nodes continued taking dqlite snapshots and accumulating WAL entries. At some point (2026-04-11 ~16:07 AEST), a snapshot compaction cycle attempted to ACK completion across all 3 Raft voters. Because k8s02 was not responding to Raft RPC calls, the ACK could not complete. The snapshot compaction deadlock caused the dqlite process on k8s01 and k8s03 to stall, eventually crash. With all 3 nodes now unable to run dqlite, the Raft quorum was completely lost.</p>
+<h4 id="how-did-disk-pressure-on-k8s02-go-undetected-for-7-days">How did disk pressure on k8s02 go undetected for 7 days?<a class="headerlink" href="#how-did-disk-pressure-on-k8s02-go-undetected-for-7-days" title="Permanent link">&para;</a></h4>
+<p>There was no disk space monitoring or alerting on k8s nodes targeting the <code>/var/snap/microk8s/</code> mount point. The existing Nagios NRPE configuration checked overall system disk usage but did not specifically alert on the snap data partition where dqlite stores its WAL, snapshots, and database files.</p>
+<h4 id="how-did-the-dqlite-crash-loop-go-undetected-for-7-days">How did the dqlite crash-loop go undetected for 7 days?<a class="headerlink" href="#how-did-the-dqlite-crash-loop-go-undetected-for-7-days" title="Permanent link">&para;</a></h4>
+<p>There was no NRPE check or Nagios service monitoring the systemd <code>NRestarts</code> property for <code>snap.microk8s.daemon-k8s-dqlite</code>. The existing <code>microk8s-dqlite-scheduler</code> check relied on <code>kubectl</code> API calls — which continued to succeed while 2/3 voters were running — and so returned OK throughout the degraded period.</p>
+<hr />
+<h3 id="secondary-finding-snapshot-embedded-raft-membership">Secondary Finding: Snapshot-Embedded Raft Membership<a class="headerlink" href="#secondary-finding-snapshot-embedded-raft-membership" title="Permanent link">&para;</a></h3>
+<p>The standard dqlite recovery guide suggests editing <code>cluster.yaml</code> to reduce membership to a single node and starting that node. This approach <strong>does not work when an existing raft snapshot is present</strong>.</p>
+<p>dqlite Raft snapshots embed the full cluster configuration (membership) at the time the snapshot was taken. When the single node loads the snapshot, it reads the embedded 3-node membership and requires 2/3 votes to elect a leader. Since the node is alone, it gets 1/3 votes and is stuck at <code>no known leader</code> indefinitely.</p>
+<p>This is counter-intuitive because <code>cluster.yaml</code> is clearly documented as controlling cluster membership. The documentation does not make clear that for an existing cluster with an existing snapshot, the snapshot's embedded membership takes precedence over <code>cluster.yaml</code> for Raft election purposes.</p>
+<hr />
+<h2 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h2>
+<h3 id="services-affected">Services Affected<a class="headerlink" href="#services-affected" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Impact</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All Kubernetes workloads</td>
+<td>API server unreachable; no new pod scheduling possible</td>
+<td>~7 days degraded + ~1h 12m full outage</td>
+</tr>
+<tr>
+<td>Nagios NRPE monitoring</td>
+<td>All 3 k8s nodes reporting CRITICAL socket timeout (misleading, not diagnostic)</td>
+<td>~1h 12m visible outage</td>
+</tr>
+<tr>
+<td>ArgoCD</td>
+<td>Unavailable (depends on API server)</td>
+<td>~1h 12m</td>
+</tr>
+<tr>
+<td>All homelab applications</td>
+<td>Running on existing pods; unaffected (no new scheduling required)</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duration">Duration<a class="headerlink" href="#duration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Degraded operation</strong> (2/3 voters, no alerting): ~2026-04-04 → 2026-04-11 (~7 days)</li>
+<li><strong>Complete outage</strong> (0/3 voters): ~2026-04-11 16:07 AEST → 2026-04-12 10:39 AEST (~18h 32m)</li>
+<li><strong>Active incident window</strong>: 2026-04-12 09:27 AEST → 10:39 AEST (~1h 12m)</li>
+</ul>
+<h3 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h3>
+<ul>
+<li>3-node microk8s HA cluster <code>pvek8s</code></li>
+<li>No persistent storage data loss</li>
+<li>No user-facing services disrupted (all applications continued running on existing pods)</li>
+<li>Cluster state recovered from snapshot taken at 2026-04-11 16:17 AEST</li>
+</ul>
+<hr />
+<h2 id="resolution-steps-taken">Resolution Steps Taken<a class="headerlink" href="#resolution-steps-taken" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-diagnosis">Phase 1: Diagnosis<a class="headerlink" href="#phase-1-diagnosis" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Queried Nagios MCP</strong> for unhandled problems — confirmed all 3 nodes CRITICAL with 15s socket timeout.</p>
+</li>
+<li>
+<p><strong>Confirmed API server down</strong>:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>--context<span class="w"> </span>pvek8s<span class="w"> </span>get<span class="w"> </span>nodes
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># → &quot;server was unable to return a response in the time allotted&quot;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Identified crash-restart loop</strong> on all nodes:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>systemctl<span class="w"> </span>show<span class="w"> </span>snap.microk8s.daemon-k8s-dqlite<span class="w"> </span>--property<span class="o">=</span>NRestarts
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># → NRestarts=3794 (k8s01)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>journalctl<span class="w"> </span>-u<span class="w"> </span>snap.microk8s.daemon-k8s-dqlite<span class="w"> </span>--since<span class="w"> </span><span class="s1">&#39;2026-04-10&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;error|warn&#39;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># → [go-dqlite] attempt N: server 172.22.22.X:19001: connection refused / no known leader</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Confirmed data intact</strong>: snapshot <code>snapshot-2774-2115903254-99297685</code> (216MB, Apr 11 16:17) present on k8s01.</p>
+</li>
+</ol>
+<h3 id="phase-2-nrpe-fix">Phase 2: NRPE Fix<a class="headerlink" href="#phase-2-nrpe-fix" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Added <code>--request-timeout=10s</code></strong> to both kubectl calls in <code>check_microk8s_dqlite.sh</code>:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Before:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">COMPSTAT</span><span class="o">=</span><span class="k">$(</span>/snap/bin/microk8s<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>componentstatuses<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="k">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">PENDING_PODS</span><span class="o">=</span><span class="k">$(</span>/snap/bin/microk8s<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-A<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;Pending&quot;</span><span class="k">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># After:</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">COMPSTAT</span><span class="o">=</span><span class="k">$(</span>/snap/bin/microk8s<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>componentstatuses<span class="w"> </span>--request-timeout<span class="o">=</span>10s<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="k">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nv">PENDING_PODS</span><span class="o">=</span><span class="k">$(</span>/snap/bin/microk8s<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-A<span class="w"> </span>--request-timeout<span class="o">=</span>10s<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;Pending&quot;</span><span class="k">)</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Deployed to all 3 nodes</strong> via <code>scp</code> + <code>ssh</code>. Updated Ansible source files.</p>
+</li>
+</ol>
+<h3 id="phase-3-invalid-flags-discovery-and-fix">Phase 3: Invalid Flags Discovery and Fix<a class="headerlink" href="#phase-3-invalid-flags-discovery-and-fix" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Stopped all nodes</strong>: <code>for node in k8s01 k8s02 k8s03; do ssh $node "sudo microk8s stop" &amp; done</code></p>
+</li>
+<li>
+<p><strong>Attempted <code>microk8s start</code> on k8s01</strong> — NRestarts=39 immediately, service still failing.</p>
+</li>
+<li>
+<p><strong>Ran binary manually</strong> to diagnose:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/snap/microk8s/8695/bin/k8s-dqlite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--storage-dir<span class="o">=</span>/var/snap/microk8s/8695/var/kubernetes/backend/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--listen<span class="o">=</span>unix:///var/snap/microk8s/8695/var/kubernetes/backend/kine.sock:12379<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--snapshot-threshold<span class="o">=</span><span class="m">512</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--snapshot-trailing-logs<span class="o">=</span><span class="m">256</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># → Error: unknown flag: --snapshot-threshold</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Removed invalid flags and comment lines</strong> from args files on all 3 nodes:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">for</span><span class="w"> </span>node<span class="w"> </span><span class="k">in</span><span class="w"> </span>k8s01<span class="w"> </span>k8s02<span class="w"> </span>k8s03<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>ssh<span class="w"> </span><span class="nv">$node</span><span class="w"> </span><span class="s2">&quot;sed -i &#39;/snapshot-threshold\|snapshot-trailing-logs\|^#/d&#39; \</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s2">    /var/snap/microk8s/8695/args/k8s-dqlite&quot;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">done</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Removed the task from Ansible role</strong> <code>roles-dev/ansible-role-microk8s/tasks/dqlite.yml</code> entirely.</p>
+</li>
+</ol>
+<h3 id="phase-4-single-node-recovery-attempt-failed">Phase 4: Single-Node Recovery Attempt (Failed)<a class="headerlink" href="#phase-4-single-node-recovery-attempt-failed" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Edited <code>cluster.yaml</code></strong> on k8s01 to single-node configuration. Started k8s01 dqlite. Observed <code>[go-dqlite] attempt N: no known leader</code> for 250+ attempts (~4 minutes).</p>
+</li>
+<li>
+<p><strong>Removed raft segments</strong> to force fresh bootstrap from snapshot:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ssh<span class="w"> </span>k8s01<span class="w"> </span><span class="s2">&quot;rm -f /var/snap/microk8s/current/var/kubernetes/backend/0000* metadata1 metadata2&quot;</span>
+</code></pre></div>
+    Still stuck at <code>no known leader</code> — snapshot-embedded 3-node membership requires quorum.</p>
+</li>
+</ol>
+<h3 id="phase-5-correct-recovery-simultaneous-3-node-start">Phase 5: Correct Recovery — Simultaneous 3-Node Start<a class="headerlink" href="#phase-5-correct-recovery-simultaneous-3-node-start" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Restored 3-node <code>cluster.yaml</code></strong> from backup on k8s01.</p>
+</li>
+<li>
+<p><strong>Started all 3 nodes simultaneously</strong>:
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">for</span><span class="w"> </span>node<span class="w"> </span><span class="k">in</span><span class="w"> </span>k8s01<span class="w"> </span>k8s02<span class="w"> </span>k8s03<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>ssh<span class="w"> </span><span class="nv">$node</span><span class="w"> </span><span class="s2">&quot;sudo microk8s start&quot;</span><span class="w"> </span><span class="p">&amp;</span><span class="w"> </span><span class="k">done</span><span class="p">;</span><span class="w"> </span><span class="nb">wait</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Raft election completed in ~60 seconds</strong>. All 3 nodes joined as datastore masters.</p>
+</li>
+</ol>
+<hr />
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<h3 id="cluster-health">Cluster Health<a class="headerlink" href="#cluster-health" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>NAME    STATUS   ROLES    AGE      VERSION
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>k8s01   Ready    &lt;none&gt;   4y234d   v1.34.5
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>k8s02   Ready    &lt;none&gt;   4y234d   v1.34.5
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>k8s03   Ready    &lt;none&gt;   4y234d   v1.34.5
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>microk8s status:
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  high-availability: yes
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  datastore master nodes: 172.22.22.6:19001 172.22.22.8:19001 172.22.22.9:19001
+</code></pre></div>
+<h3 id="nrpe-fix-verification">NRPE Fix Verification<a class="headerlink" href="#nrpe-fix-verification" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>grep<span class="w"> </span><span class="s1">&#39;request-timeout&#39;</span><span class="w"> </span>/etc/nagios/nrpe.d/check_microk8s_dqlite.cfg
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># → --request-timeout=10s present in both kubectl calls on all 3 nodes</span>
+</code></pre></div>
+<hr />
+<h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Add disk space monitoring for k8s nodes</strong> (Urgent)</li>
+<li>No alerting existed for disk pressure on <code>/var/snap/microk8s/</code>. k8s02 disk pressure was the cascade trigger.</li>
+<li>Action: Add NRPE check for <code>/var/snap/microk8s/</code> utilisation: warn &lt; 20% free, critical &lt; 10% free.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-138">PGM-138</a></strong></p>
+</li>
+<li>
+<p><strong>Add dqlite service crash-loop alert</strong> (Urgent)</p>
+</li>
+<li><code>snap.microk8s.daemon-k8s-dqlite</code> accumulated 3,794 restarts over 7+ days with no alerting.</li>
+<li>Action: Add NRPE check on <code>systemctl show snap.microk8s.daemon-k8s-dqlite --property=NRestarts</code>: warn &gt; 10, critical &gt; 50.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-139">PGM-139</a></strong></p>
+</li>
+<li>
+<p><strong>Add flag validation and health check to Ansible dqlite role</strong> (High)</p>
+</li>
+<li>The role wrote flags unsupported by the installed binary with no pre-check and no post-restart health verification.</li>
+<li>Action: Add <code>--help | grep &lt;flag&gt;</code> validation before writing flags; add service health check after any restart triggered by Ansible.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-140">PGM-140</a></strong></p>
+</li>
+<li>
+<p><strong>Document dqlite quorum recovery procedure</strong> (High)</p>
+</li>
+<li>The snapshot-embedded membership constraint is not documented. The single-node recovery approach fails silently and cost ~1.5h.</li>
+<li>Action: Add runbook: start all 3 nodes simultaneously; do NOT attempt single-node recovery with existing snapshots.</li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-141">PGM-141</a></strong></li>
+</ol>
+<h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix Ansible blockinfile comment pollution in k8s-dqlite args file</strong> (Medium)</li>
+<li><code>blockinfile</code> injects <code># BEGIN/END ANSIBLE MANAGED BLOCK</code> comment lines. Replace with <code>lineinfile</code>.</li>
+<li>
+<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-142">PGM-142</a></strong></p>
+</li>
+<li>
+<p><strong>Add NRPE check test suite to prevent kubectl timeout omissions</strong> (Medium)</p>
+</li>
+<li>No automated check prevents <code>kubectl</code> calls without <code>--request-timeout</code> from being added to NRPE scripts.</li>
+<li>Action: Add pre-commit lint check: any <code>kubectl</code> call in <code>ansible/files/nagios/*.sh</code> must include <code>--request-timeout</code>.</li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-143">PGM-143</a></strong></li>
+</ol>
+<hr />
+<h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
+<h3 id="what-went-well">What Went Well<a class="headerlink" href="#what-went-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Data intact throughout</strong>: The 216MB dqlite snapshot from 2026-04-11 16:17 was preserved on all nodes. No Kubernetes state was lost.</li>
+<li><strong>Invalid flag diagnosis was fast</strong>: Running the binary manually with explicit args immediately revealed <code>Error: unknown flag: --snapshot-threshold</code>. ~3 minutes from suspicion to confirmed root cause.</li>
+<li><strong>Simultaneous 3-node restart was decisive</strong>: Once the correct recovery approach was identified, the cluster was up in ~60 seconds with no manual raft manipulation required.</li>
+<li><strong>NRPE fix deployed immediately</strong>: The <code>--request-timeout=10s</code> fix was deployed to all nodes and Ansible source files in parallel with the recovery work, before the cluster came back up.</li>
+</ul>
+<h3 id="what-didnt-go-well">What Didn't Go Well<a class="headerlink" href="#what-didnt-go-well" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>7 days of silent degraded operation</strong>: k8s02's dqlite crash-loop went completely undetected. Two alerting gaps — no disk monitoring, no NRestarts monitoring — together allowed a single-node failure to accumulate for long enough to take the entire cluster down.</li>
+<li><strong>Ansible role silently deployed breaking change</strong>: The overnight playbook run added unsupported flags to all 3 nodes with no validation and no notification. This turned a repairable quorum loss into a complete binary-level failure that blocked recovery.</li>
+<li><strong>Single-node recovery approach wasted ~1.5 hours</strong>: The standard recovery guide's suggestion to reduce <code>cluster.yaml</code> to one node is correct for bootstrap scenarios but fails for existing snapshots. This was not documented and cost significant investigation time.</li>
+<li><strong>Comment lines in args file complicated diagnosis</strong>: The <code># BEGIN/END ANSIBLE MANAGED BLOCK</code> comment lines were initially suspected as the cause of the binary failure, requiring additional time to confirm that it was actually the invalid flags.</li>
+</ul>
+<h3 id="surprise-findings">Surprise Findings<a class="headerlink" href="#surprise-findings" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>dqlite Raft snapshots embed cluster membership</strong>: Editing <code>cluster.yaml</code> does not change the cluster configuration used for Raft elections when an existing snapshot is present. The snapshot's membership overrides <code>cluster.yaml</code>. This is a critical undocumented constraint for recovery scenarios.</li>
+<li><strong><code>blockinfile</code> comment lines are passed to the binary</strong>: The k8s-dqlite run script uses <code>declare -a args="($(cat $SNAP_DATA/args/$app))"</code> to build argument arrays. In this evaluation context, <code>#</code> lines behave as comments — but only in some bash versions and evaluation modes. This is an unintended interaction between Ansible's file management approach and the microk8s startup mechanism.</li>
+<li><strong><code>--snapshot-threshold</code> and <code>--snapshot-trailing-logs</code> removed in snap rev 8695</strong>: The k8s-dqlite binary no longer supports these flags. Any Ansible role, runbook, or documentation referencing these flags must be updated before applying to a cluster running rev 8695+.</li>
+</ul>
+<hr />
+<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>Priority</th>
+<th>Linear</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add disk space monitoring for k8s nodes (<code>/var/snap/microk8s/</code> &lt; 20% free)</td>
+<td>Urgent</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-138">PGM-138</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Add dqlite crash-loop alert (NRestarts &gt; 10 warn, &gt; 50 critical)</td>
+<td>Urgent</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-139">PGM-139</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add flag validation + health check to Ansible dqlite args role</td>
+<td>High</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-140">PGM-140</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Document dqlite quorum recovery (all-nodes-simultaneous, snapshot membership)</td>
+<td>High</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-141">PGM-141</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Fix Ansible <code>blockinfile</code> comment pollution in k8s-dqlite args file</td>
+<td>Medium</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-142">PGM-142</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Add NRPE check lint: all <code>kubectl</code> calls must include <code>--request-timeout</code></td>
+<td>Medium</td>
+<td><a href="https://linear.app/pgmac-net-au/issue/PGM-143">PGM-143</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technical-details">Technical Details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cluster:</strong> <code>pvek8s</code> (microk8s HA, 3 nodes)</li>
+<li><strong>Kubernetes version:</strong> v1.34.5</li>
+<li><strong>microk8s snap revision:</strong> 8695</li>
+<li><strong>Container runtime:</strong> containerd 1.7.28</li>
+<li><strong>dqlite snapshot at recovery:</strong> <code>snapshot-2774-2115903254-99297685</code> (216MB, 2026-04-11 16:17 AEST)</li>
+<li><strong>k8s01 dqlite NRestarts at incident start:</strong> 3,794</li>
+</ul>
+<h3 id="k8s-dqlite-args-file-before-fix">k8s-dqlite Args File Before Fix<a class="headerlink" href="#k8s-dqlite-args-file-before-fix" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>--storage-dir=${SNAP_DATA}/var/kubernetes/backend/
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>--listen=unix://${SNAP_DATA}/var/kubernetes/backend/kine.sock:12379
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a># BEGIN ANSIBLE MANAGED BLOCK - dqlite tuning
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>--snapshot-threshold=512
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>--snapshot-trailing-logs=256
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a># END ANSIBLE MANAGED BLOCK - dqlite tuning
+</code></pre></div>
+<h3 id="k8s-dqlite-args-file-after-fix">k8s-dqlite Args File After Fix<a class="headerlink" href="#k8s-dqlite-args-file-after-fix" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>--storage-dir=${SNAP_DATA}/var/kubernetes/backend/
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>--listen=unix://${SNAP_DATA}/var/kubernetes/backend/kine.sock:12379
+</code></pre></div>
+<h3 id="key-error-signatures">Key Error Signatures<a class="headerlink" href="#key-error-signatures" title="Permanent link">&para;</a></h3>
+<p><strong>Invalid flag (primary recovery blocker):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Error: unknown flag: --snapshot-threshold
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Usage:
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>  k8s-dqlite [flags]
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>  k8s-dqlite [command]
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>...
+</code></pre></div></p>
+<p><strong>Raft quorum loss (underlying outage):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>time=&quot;...&quot; level=warning msg=&quot;[go-dqlite] attempt N: server 172.22.22.X:19001: connection refused&quot;
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>time=&quot;...&quot; level=warning msg=&quot;[go-dqlite] attempt N: server 172.22.22.6:19001: no known leader&quot;
+</code></pre></div></p>
+<p><strong>Single-node recovery failure (snapshot membership):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a># 250+ identical lines — node never becomes leader
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>time=&quot;...&quot; level=warning msg=&quot;[go-dqlite] attempt 251: server 172.22.22.6:19001: no known leader&quot;
+</code></pre></div></p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Related incident (dqlite snapshot bloat + WAL deadlock, April 2026): <a href="../2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/">2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md</a></li>
+<li>Linear incident ticket: <a href="https://linear.app/pgmac-net-au/issue/PGM-137">PGM-137</a></li>
+<li>Memory record on dqlite recovery: <code>memory/project_dqlite_recovery.md</code></li>
+<li>microk8s dqlite documentation: https://microk8s.io/docs/dqlite</li>
+<li>go-dqlite project: https://github.com/canonical/go-dqlite</li>
+</ul>
+<hr />
+<h2 id="reviewers">Reviewers<a class="headerlink" href="#reviewers" title="Permanent link">&para;</a></h2>
+<ul>
+<li>@pgmac</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/pgmac" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "navigation.indexes"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
