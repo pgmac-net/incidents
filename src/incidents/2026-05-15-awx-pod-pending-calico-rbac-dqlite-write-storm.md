@@ -389,8 +389,8 @@ exec (try: 500): database is locked
 
 ## References
 
-- Related incident (dqlite snapshot bloat, crash-loop cascade): [`2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md`](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
-- Related incident (dqlite quorum loss, invalid Ansible flags): [`2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage.md`](2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage.md)
+- Related incident (dqlite snapshot bloat, crash-loop cascade): [dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
+- Related incident (dqlite quorum loss, invalid Ansible flags): [pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags](2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage.md)
 - Linear ticket: [PGM-181](https://linear.app/pgmac-net-au/issue/PGM-181)
 - Calico v3.13 RBAC reference: https://projectcalico.docs.tigera.io/archive/v3.13/reference/resources/clusterrole
 

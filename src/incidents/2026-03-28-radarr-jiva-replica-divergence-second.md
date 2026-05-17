@@ -5,7 +5,7 @@
 **Severity:** High (single service outage — Radarr completely unavailable)
 **Status:** Resolved
 **Linear:** [PGM-115](https://linear.app/pgmac-net-au/issue/PGM-115/pir-radarr-outage-openebs-jiva-replica-divergence-second-occurrence)
-**Second occurrence** on the same PVC — see also [2026-02-22 PIR](2026-02-22-radarr-openebs-jiva-replica-divergence.md)
+**Second occurrence** on the same PVC — see also [Radarr Outage Due to OpenEBS Jiva Replica Divergence](2026-02-22-radarr-openebs-jiva-replica-divergence.md)
 
 ---
 
@@ -442,8 +442,8 @@ Previously Volume RO: true, Currently: false, Total Replicas: 2, RW replicas: 2
 
 ## References
 
-- Previous incident (same PVC, same failure mode): [`2026-02-22-radarr-openebs-jiva-replica-divergence.md`](2026-02-22-radarr-openebs-jiva-replica-divergence.md)
-- Cluster cascade failure (Jiva snapshot chain depth): [`2026-01-06-cluster-cascade-failure.md`](2026-01-06-cluster-cascade-failure.md)
+- Previous incident (same PVC, same failure mode): [Radarr Outage Due to OpenEBS Jiva Replica Divergence](2026-02-22-radarr-openebs-jiva-replica-divergence.md)
+- Cluster cascade failure (Jiva snapshot chain depth): [Cascading Kubernetes Cluster Failures](2026-01-06-cluster-cascade-failure.md)
 - Linear ticket: [PGM-115](https://linear.app/pgmac-net-au/issue/PGM-115)
 
 ---
