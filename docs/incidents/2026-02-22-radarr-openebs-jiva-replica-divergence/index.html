@@ -2343,85 +2343,89 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Alert on pods stuck in ContainerCreating &gt; 5 minutes</strong> (Critical Priority)</li>
+<li>
+<p><strong>Alert on pods stuck in ContainerCreating &gt; 5 minutes</strong> (Critical Priority)</p>
+<ul>
 <li>Current: No alerting; a pod can sit stuck indefinitely without detection</li>
 <li>Target: PagerDuty/Slack alert when any pod remains in <code>ContainerCreating</code> beyond 5 minutes</li>
 <li>Implementation: Prometheus <code>kube_pod_status_phase</code> + duration alert rule</li>
-<li>
-<p><strong>Rationale</strong>: 4+ hours elapsed before manual detection. This single alert would have reduced radarr's outage from hours to minutes.</p>
+<li><strong>Rationale</strong>: 4+ hours elapsed before manual detection. This single alert would have reduced radarr's outage from hours to minutes.</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on Jiva replica CrashLoopBackOff</strong> (Critical Priority)</p>
-</li>
+<ul>
 <li>Current: No alerting on OpenEBS replica pod failures</li>
 <li>Target: Immediate alert when any Jiva replica pod enters <code>CrashLoopBackOff</code> or <code>Error</code></li>
 <li>Implementation: Prometheus <code>kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}</code> filtered to <code>openebs</code> namespace</li>
-<li>
-<p><strong>Rationale</strong>: All 3 replicas were in CrashLoopBackOff for ~16 hours before detection</p>
+<li><strong>Rationale</strong>: All 3 replicas were in CrashLoopBackOff for ~16 hours before detection</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on Jiva replica restart count threshold</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: No alerting; overseerr and minecraft accumulated 10-53 restarts silently</li>
 <li>Target: Alert when any Jiva replica pod exceeds 5 restarts within 30 minutes</li>
 <li>Implementation: <code>rate(kube_pod_container_status_restarts_total[30m]) &gt; 0.1</code> filtered to openebs namespace</li>
-<li>
-<p><strong>Rationale</strong>: The self-recovered PVCs showed the same failure pattern but slightly less severe — an early restart alert would flag the pattern before it becomes critical</p>
+<li><strong>Rationale</strong>: The self-recovered PVCs showed the same failure pattern but slightly less severe — an early restart alert would flag the pattern before it becomes critical</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on FailedMount events</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: <code>FailedMount</code> events are only visible via <code>kubectl describe</code>; no alerting</li>
 <li>Target: Alert when a pod generates more than 3 <code>FailedMount</code> events</li>
 <li>Implementation: Prometheus <code>kube_event_count{reason="FailedMount"}</code> alert rule</li>
-<li>
-<p><strong>Rationale</strong>: The mount failure was generating repeated events for hours with no visibility</p>
+<li><strong>Rationale</strong>: The mount failure was generating repeated events for hours with no visibility</li>
+</ul>
 </li>
 <li>
 <p><strong>Document OpenEBS Jiva replica divergence recovery runbook</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: No documented procedure; recovery required real-time diagnosis</li>
 <li>Target: Step-by-step runbook covering: identify diverged replicas → patch volume.meta → clear image data on non-source replicas → scale up in sequence</li>
 <li>Location: <code>incidents/docs/runbooks/openebs-jiva-replica-recovery.md</code></li>
-<li>
-<p><strong>Rationale</strong>: Recovery took ~43 minutes of active work; a runbook would reduce this significantly and remove the knowledge dependency</p>
+<li><strong>Rationale</strong>: Recovery took ~43 minutes of active work; a runbook would reduce this significantly and remove the knowledge dependency</li>
+</ul>
 </li>
 <li>
 <p><strong>Investigate and document the Feb 21 22:25 root event</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: The simultaneous all-node disruption at 22:25 AEST is unexplained</li>
 <li>Target: Identify whether this was a power event, network partition, kernel bug, or other cause</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Review UPS/PDU logs for that timeframe</li>
 <li>Review node-level system logs (<code>/var/log/syslog</code>) from all 3 nodes around 22:25</li>
 <li>Check Proxmox/hypervisor logs if nodes are VMs</li>
+<li><strong>Rationale</strong>: The same unknown event also degraded overseerr and minecraft. If it recurs, all Jiva volumes are at risk of the same failure mode</li>
 </ul>
 </li>
-<li><strong>Rationale</strong>: The same unknown event also degraded overseerr and minecraft. If it recurs, all Jiva volumes are at risk of the same failure mode</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Jiva Rebuilding flag monitoring</strong> (Medium Priority)</li>
+<li>
+<p><strong>Jiva Rebuilding flag monitoring</strong> (Medium Priority)</p>
+<ul>
 <li>Add a periodic check (every 5 minutes) that inspects <code>volume.meta</code> on all Jiva replica nodes and alerts if <code>Rebuilding: true</code> persists beyond 30 minutes</li>
 <li>A replica stuck in Rebuilding for &gt;30 minutes indicates a stalled or failed rebuild that requires intervention</li>
-<li>
-<p>Implementation: CronJob running a script against node hostPaths, or custom Prometheus exporter</p>
+<li>Implementation: CronJob running a script against node hostPaths, or custom Prometheus exporter</li>
+</ul>
 </li>
 <li>
 <p><strong>Jiva rebuild serialisation guard</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>When a cluster-wide disruption leaves all replicas in Rebuilding state simultaneously, Jiva has no self-healing path because no replica can establish as RW</li>
 <li>Investigate whether OpenEBS Jiva has a recovery mode or operator-level intervention hook that can be automated</li>
-<li>
-<p>Consider upgrading OpenEBS if newer versions have improved recovery handling for this scenario</p>
+<li>Consider upgrading OpenEBS if newer versions have improved recovery handling for this scenario</li>
+</ul>
 </li>
 <li>
 <p><strong>Structured review of all Jiva volumes' health state</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>Run a periodic job that checks <code>volume.meta</code> on all Jiva replica hostPaths across all nodes</li>
 <li>Report: revision counter skew between replicas, Rebuilding flag, Dirty flag, snapshot chain depth</li>
-<li>
-<p>This would surface partial degradation (e.g., one of three replicas in an unhealthy state) before it becomes a full outage</p>
+<li>This would surface partial degradation (e.g., one of three replicas in an unhealthy state) before it becomes a full outage</li>
+</ul>
 </li>
 <li>
 <p><strong>Snapshot chain depth monitoring</strong> (Medium Priority)</p>

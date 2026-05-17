@@ -3622,74 +3622,80 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Add snap old-revision cleanup to upgrade playbook</strong> (High)</li>
+<li>
+<p><strong>Add snap old-revision cleanup to upgrade playbook</strong> (High)</p>
+<ul>
 <li>No automated removal of previous snap revision after successful upgrade; each revision consumes 3-5GB.</li>
 <li>Action: Add <code>snap remove microk8s --revision &lt;prev&gt;</code> task to upgrade playbook after node reaches Ready.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-183">PGM-183</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-183">PGM-183</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add containerd-template.toml <code>${RUNTIME_TYPE}</code> restoration to upgrade playbook</strong> (High)</p>
-</li>
+<ul>
 <li>The pre-substitution of the template variable can silently persist across cgroup migrations and snap upgrades.</li>
 <li>Action: Add task to reset <code>io.containerd.runc.v[12]</code> back to <code>${RUNTIME_TYPE}</code> in containerd-template.toml as part of upgrade.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-184">PGM-184</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-184">PGM-184</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add pre-upgrade disk space check to upgrade playbook</strong> (High)</p>
-</li>
+<ul>
 <li>If disk is above 70% before starting a snap refresh (which will temporarily have 2 revisions), abort and alert.</li>
 <li>Action: <code>assert</code> task checking <code>df /var/snap/microk8s</code> &lt; 70% before <code>snap refresh</code>.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-185">PGM-185</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-185">PGM-185</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add snap partition disk monitoring</strong> (High)</p>
-</li>
+<ul>
 <li>The same gap as PGM-138 (dqlite WAL partition) exists for the containerd overlayfs snapshotter path. Both live under <code>/var/snap/microk8s/</code>.</li>
 <li>Action: Extend PGM-138's NRPE disk check to cover <code>/var/snap/microk8s/</code> partition with warn &lt; 25%, critical &lt; 15% free.</li>
 <li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-186">PGM-186</a></li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Document kubelet stall pattern and runbook</strong> (Medium)</li>
+<li>
+<p><strong>Document kubelet stall pattern and runbook</strong> (Medium)</p>
+<ul>
 <li>A node appearing Ready while silently not processing pod assignments is a subtle failure mode.</li>
 <li>Action: Add runbook entry covering detection (pods Pending on Ready node + kubelite log silence) and fix (restart <code>snap.microk8s.daemon-kubelite</code>).</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-187">PGM-187</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-187">PGM-187</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add kubelet pod-processing staleness alert</strong> (Medium)</p>
-</li>
+<ul>
 <li>No alert exists for the case where a Ready node is not processing pod assignments.</li>
 <li>Action: NRPE check: if any pod has been Pending &gt; 5 minutes on a Ready node with capacity, fire Warning.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-188">PGM-188</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-188">PGM-188</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add journald size limits to k8s nodes</strong> (Medium)</p>
-</li>
+<ul>
 <li>Journals grew large enough to contribute to disk pressure. Rolling size limit should be configured by default.</li>
 <li>Action: Configure <code>SystemMaxUse=512M</code> via <code>ansible-role-journald</code> on all k8s nodes.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-189">PGM-189</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-189">PGM-189</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Tune kubelet imageGC thresholds</strong> (Medium)</p>
-</li>
+<ul>
 <li>Default high threshold (80%) provides insufficient headroom given baseline usage of 70-75%.</li>
 <li>Action: Set <code>imageGCHighThresholdPercent=70</code> and <code>imageGCLowThresholdPercent=60</code> in kubelet configuration.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-190">PGM-190</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-190">PGM-190</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Add BuildKit stale lock init container</strong> (Low)</p>
-</li>
+<ul>
 <li>BuildKit crashes on stale lock with no self-healing.</li>
 <li>Action: Add init container to buildkitd deployment that removes <code>buildkitd.lock</code> before daemon starts.</li>
-<li>
-<p>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-191">PGM-191</a></p>
+<li>Linear: <a href="https://linear.app/pgmac-net-au/issue/PGM-191">PGM-191</a></li>
+</ul>
 </li>
 <li>
 <p><strong>Update dependency-track chart postgresql image</strong> (Medium)</p>

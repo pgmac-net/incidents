@@ -4204,95 +4204,87 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Implement Node Disk Space Monitoring</strong> (Critical Priority)</li>
+<li>
+<p><strong>Implement Node Disk Space Monitoring</strong> (Critical Priority)</p>
+<ul>
 <li>Current: No alerts for disk usage &gt;85%</li>
 <li>Target: Alert at 80%, critical alert at 90%</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Deploy Prometheus node-exporter on all nodes</li>
 <li>Configure AlertManager rules for disk pressure</li>
 <li>Add Nagios checks for disk usage as backup</li>
+<li><strong>Rationale</strong>: Both k8s01 (97%) and k8s03 (100%) hit critical thresholds without detection</li>
 </ul>
-</li>
-<li>
-<p><strong>Rationale</strong>: Both k8s01 (97%) and k8s03 (100%) hit critical thresholds without detection</p>
 </li>
 <li>
 <p><strong>Automated Container Image Garbage Collection</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: Manual cleanup required during incident</li>
 <li>Target: Automated daily cleanup maintaining &lt;75% disk usage</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Configure kubelet <code>imageGCHighThresholdPercent=75</code> (default: 85)</li>
 <li>Configure kubelet <code>imageGCLowThresholdPercent=70</code> (default: 80)</li>
 <li>Schedule weekly cleanup cronjob as backup</li>
+<li><strong>Rationale</strong>: 4+ years of accumulated images contributed to disk exhaustion</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: 4+ years of accumulated images contributed to disk exhaustion</p>
-</li>
-<li>
 <p><strong>Audit Log Rotation and Buffer Management</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: Audit buffer overload caused kubelet crashes on k8s01</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Reduce audit log verbosity (current level generating excessive data)</li>
 <li>Implement aggressive log rotation (hourly vs daily)</li>
 <li>Configure audit buffer size limits</li>
 <li>Consider disabling detailed audit logging for non-critical operations</li>
+<li><strong>Rationale</strong>: "audit buffer queue blocked" directly caused kubelet instability</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: "audit buffer queue blocked" directly caused kubelet instability</p>
-</li>
-<li>
 <p><strong>Radarr PVC Expansion</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: 1Gi volume at 95% capacity (carried over from Phase 2)</li>
 <li>Target: 2Gi to accommodate media artwork growth</li>
 <li>Action: Requires PVC recreation (Jiva doesn't support online expansion)</li>
-<li>
-<p>Steps:
-     <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># 1. Backup Radarr config</span>
+<li>Steps:
+ <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># 1. Backup Radarr config</span>
 <a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># 2. Create new 2Gi PVC</span>
 <a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="c1"># 3. Restore data</span>
 <a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c1"># 4. Update deployment to use new PVC</span>
-</code></pre></div></p>
+</code></pre></div></li>
+</ul>
 </li>
 <li>
 <p><strong>Jiva Snapshot Cleanup Frequency</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Current: Daily at 2 AM (threshold: 500 snapshots)</li>
 <li>Problem: 1011 snapshots accumulated when cronjob couldn't run during Phase 1</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Lower threshold from 500 to 300 snapshots</li>
 <li>Increase frequency to every 12 hours (2 AM and 2 PM)</li>
 <li>Add monitoring/alerting for snapshot counts &gt;400</li>
 <li>Add pod anti-affinity to ensure cleanup job can run on healthy nodes</li>
+<li><strong>Rationale</strong>: Cronjob failure during Phase 1 directly caused Phase 2 storage issues</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: Cronjob failure during Phase 1 directly caused Phase 2 storage issues</p>
-</li>
-<li>
 <p><strong>GitHub Actions Runner Controller Migration</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>Current: Orphaned runner pods consumed significant resources</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Migrate to GitHub-hosted runners or alternative self-hosted solution</li>
 <li>If keeping self-hosted: implement strict <code>maxReplicas</code> limits</li>
 <li>Add PodDisruptionBudgets to prevent runaway scaling</li>
 <li>Configure aggressive pod cleanup policies</li>
+<li><strong>Rationale</strong>: 571 orphaned pods significantly contributed to cluster instability</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: 571 orphaned pods significantly contributed to cluster instability</p>
-</li>
-<li>
 <p><strong>CronJob Timeout Configuration Baseline</strong> (High Priority - Added from Phase 3)</p>
-</li>
+<ul>
 <li>Current: CronJobs created without timeout settings, allowing infinite hangs</li>
 <li>Target: All cronjobs have defensive timeout configuration</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Create baseline cronjob template with standard timeouts:</li>
 <li><code>startingDeadlineSeconds: 60</code> (for minute-frequency jobs)</li>
 <li><code>activeDeadlineSeconds: &lt;appropriate for task&gt;</code> (e.g., 300 for 5-min tasks)</li>
@@ -4301,39 +4293,35 @@
 <li><code>failedJobsHistoryLimit: 2</code></li>
 <li>Audit all existing cronjobs and add timeout configuration</li>
 <li>Add validation in ArgoCD to require timeout settings</li>
+<li><strong>Rationale</strong>: Timeout settings proved critical for self-healing, but were missing</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: Timeout settings proved critical for self-healing, but were missing</p>
-</li>
-<li>
 <p><strong>Job Controller Health Monitoring</strong> (Critical Priority - Added from Phase 3)</p>
-</li>
+<ul>
 <li>Current: No monitoring for job controller state or corruption</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Add synthetic job creation tests every 5 minutes cluster-wide</li>
 <li>Monitor job controller logs for "not found" errors</li>
 <li>Alert on jobs with 0 pods after 2 minutes</li>
 <li>Alert on jobs exceeding activeDeadlineSeconds without termination</li>
 <li>Monitor dqlite database health and replication lag</li>
+<li><strong>Rationale</strong>: Job controller corruption went undetected for 16+ hours</li>
 </ul>
 </li>
 <li>
-<p><strong>Rationale</strong>: Job controller corruption went undetected for 16+ hours</p>
-</li>
-<li>
 <p><strong>Dqlite Database Backup Automation</strong> (High Priority - Added from Phase 3)</p>
-</li>
+<ul>
 <li>Current: Manual backup procedures only</li>
 <li>Target: Automated hourly backups with 24-hour retention</li>
-<li>Actions:<ul>
+<li>Actions:</li>
 <li>Create cronjob to backup dqlite database (requires node-local execution)</li>
 <li>Store backups on NFS with rotation policy</li>
 <li>Document and test restoration procedure</li>
 <li>Add alerts for backup failures</li>
+<li><strong>Rationale</strong>: Database backup was critical for nuclear option confidence</li>
 </ul>
 </li>
-<li><strong>Rationale</strong>: Database backup was critical for nuclear option confidence</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>

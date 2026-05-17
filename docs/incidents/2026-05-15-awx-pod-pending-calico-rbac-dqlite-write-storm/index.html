@@ -2088,66 +2088,74 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Commit Calico ClusterRole fix to GitOps</strong> (High Priority)</li>
-<li>The RBAC fix was applied directly with <code>kubectl apply</code>. It is not yet in the ArgoCD GitOps manifests. ArgoCD drift detection will surface this.</li>
 <li>
-<p>Action: Patch the Calico manifests in the GitOps repo with the corrected ClusterRole and sync.</p>
+<p><strong>Commit Calico ClusterRole fix to GitOps</strong> (High Priority)</p>
+<ul>
+<li>The RBAC fix was applied directly with <code>kubectl apply</code>. It is not yet in the ArgoCD GitOps manifests. ArgoCD drift detection will surface this.</li>
+<li>Action: Patch the Calico manifests in the GitOps repo with the corrected ClusterRole and sync.</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on consecutive AWX job failures</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Jobs 1859, 1861, and 1863 failed before this incident was investigated. A repeated-failure pattern is a strong signal of infrastructure, not playbook, problems.</li>
-<li>
-<p>Action: Add an AWX/webhook alert for N ≥ 2 consecutive failures of the same template. Route to homelab alerting channel.</p>
+<li>Action: Add an AWX/webhook alert for N ≥ 2 consecutive failures of the same template. Route to homelab alerting channel.</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on kube-apiserver RBAC 403 rate</strong> (High Priority)</p>
-</li>
+<ul>
 <li>The calico-kube-controllers crash loop generated hundreds of 403 errors per hour for an unknown period. No alert fired.</li>
-<li>
-<p>Action: Add Prometheus alert for <code>apiserver_request_total{code="403"} &gt; 10/min</code> sustained over 5 minutes, with label filter for system service accounts.</p>
+<li>Action: Add Prometheus alert for <code>apiserver_request_total{code="403"} &gt; 10/min</code> sustained over 5 minutes, with label filter for system service accounts.</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on dqlite write error rate</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li><code>database is locked</code> in kubelite logs is a direct signal that snapshot serialization is interfering with API server writes. Currently treated as background noise.</li>
 <li>Action: Add log-based alert (Loki/Promtail or similar) for <code>database is locked</code> occurrences &gt; 5 in any 5-minute window.</li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Reduce dqlite snapshot size via microk8s upgrade</strong> (High Priority)</li>
+<li>
+<p><strong>Reduce dqlite snapshot size via microk8s upgrade</strong> (High Priority)</p>
+<ul>
 <li>The snapshot is 225MB vs 21.8MB of live data (~10x fragmentation). This is the underlying reason snapshots cause long lock windows.</li>
 <li>The monthly maintenance rolling-restart play <strong>does not fix this</strong> — each restarted node re-syncs from the leader's un-vacuumed snapshot, discarding its local VACUUM. Online VACUUM via cowsql is not supported. Offline simultaneous VACUUM breaks Raft consensus (confirmed April 2026).</li>
-<li>
-<p>Action: Upgrade microk8s to a current snap revision. Newer k8s-dqlite versions have improved snapshot compaction and WAL management. This is the only safe path to snapshot size reduction.</p>
+<li>Action: Upgrade microk8s to a current snap revision. Newer k8s-dqlite versions have improved snapshot compaction and WAL management. This is the only safe path to snapshot size reduction.</li>
+</ul>
 </li>
 <li>
 <p><strong>Implement Calico IPAM GC</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>838 stale IPAM handles (pod IP allocation records from deleted pods) remain. These should self-GC now that <code>calico-kube-controllers</code> has correct RBAC and the workloadendpoint controller is functional.</li>
 <li>Manual cleanup with <code>calicoctl ipam check --allow-version-mismatch</code> is blocked by the v3.32 client vs v3.13.2 cluster version mismatch.</li>
-<li>
-<p>Action: Install calicoctl v3.13.x locally, or use the version bundled in the calico-node pod, and run <code>calicoctl ipam check</code> + <code>release --leaked</code> to explicitly clean stale handles.</p>
+<li>Action: Install calicoctl v3.13.x locally, or use the version bundled in the calico-node pod, and run <code>calicoctl ipam check</code> + <code>release --leaked</code> to explicitly clean stale handles.</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on scheduler informer watch reconnections</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>The scheduler silently lost its pod informer and never recovered without a restart. This failure mode is invisible without active log monitoring.</li>
-<li>
-<p>Action: Add alert for kube-scheduler log pattern <code>Failed to watch *v1.Pod</code> or <code>watch chan error</code>. If the scheduler reconnects more than once per 10 minutes, something is disrupting the watch stream.</p>
+<li>Action: Add alert for kube-scheduler log pattern <code>Failed to watch *v1.Pod</code> or <code>watch chan error</code>. If the scheduler reconnects more than once per 10 minutes, something is disrupting the watch stream.</li>
+</ul>
 </li>
 <li>
 <p><strong>Investigate and resolve recurring scheduler leader elections</strong> (High Priority)</p>
-</li>
+<ul>
 <li>4,499 scheduler leader elections since cluster install is abnormal. Even after this fix, the underlying dqlite snapshot locking will continue to cause occasional missed renewals.</li>
-<li>
-<p>The long-term fix is snapshot size reduction (item 5). Monitoring the election rate post-fix will confirm whether the Calico RBAC was the dominant contributor.</p>
+<li>The long-term fix is snapshot size reduction (item 5). Monitoring the election rate post-fix will confirm whether the Calico RBAC was the dominant contributor.</li>
+</ul>
 </li>
 <li>
 <p><strong>AWX job failure runbook</strong> (Low Priority)</p>
-</li>
+<ul>
 <li>No runbook existed for "AWX pod stuck Pending". Diagnosis required ad-hoc investigation.</li>
 <li>Action: Add runbook entry: if AWX pod Pending &gt; 2 min with no events → check scheduler lease, check dqlite lock errors, check calico-kube-controllers logs, check node conditions.</li>
+</ul>
+</li>
 </ol>
 <hr />
 <h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>

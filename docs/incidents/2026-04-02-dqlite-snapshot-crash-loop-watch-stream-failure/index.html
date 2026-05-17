@@ -2305,10 +2305,12 @@
 </ol>
 <h3 id="phase-2-leader-election-fixes-gitops">Phase 2: Leader Election Fixes (GitOps)<a class="headerlink" href="#phase-2-leader-election-fixes-gitops" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Updated <code>awx.yaml</code></strong> (commit de4b157):</li>
-<li>Fixed kube-rbac-proxy image: <code>gcr.io/kubebuilder</code> → <code>registry.k8s.io/kubebuilder</code></li>
 <li>
-<p>Added <code>--leader-elect-lease-duration=60s --leader-elect-renew-deadline=40s</code> to awx-manager args</p>
+<p><strong>Updated <code>awx.yaml</code></strong> (commit de4b157):</p>
+<ul>
+<li>Fixed kube-rbac-proxy image: <code>gcr.io/kubebuilder</code> → <code>registry.k8s.io/kubebuilder</code></li>
+<li>Added <code>--leader-elect-lease-duration=60s --leader-elect-renew-deadline=40s</code> to awx-manager args</li>
+</ul>
 </li>
 <li>
 <p><strong>Patched <code>csi-nfs-controller</code></strong> directly (via kubectl) with <code>--leader-election-lease-duration=60s</code>.</p>
@@ -2319,11 +2321,13 @@
 </ol>
 <h3 id="phase-3-watch-stream-diagnosis">Phase 3: Watch Stream Diagnosis<a class="headerlink" href="#phase-3-watch-stream-diagnosis" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Confirmed cluster-wide watch stream failure</strong> by:</li>
+<li>
+<p><strong>Confirmed cluster-wide watch stream failure</strong> by:</p>
+<ul>
 <li>Creating test Deployment in <code>default</code> namespace → no RS created (gen=1, obs=empty)</li>
 <li>Creating test Pod directly → pod remained Pending indefinitely (scheduler silent)</li>
-<li>
-<p>Confirming Deployment controller on k8s03 had not processed any new generations for hours</p>
+<li>Confirming Deployment controller on k8s03 had not processed any new generations for hours</li>
+</ul>
 </li>
 <li>
 <p><strong>Multiple kubelite restarts</strong> (k8s03, k8s01, k8s02, k8s03 again) — each restored some function temporarily but did not fix the root stream issue under continued dqlite snapshot pressure.</p>
@@ -2399,76 +2403,82 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Enable Calico IPAM GC controller</strong> (Critical)</li>
+<li>
+<p><strong>Enable Calico IPAM GC controller</strong> (Critical)</p>
+<ul>
 <li><code>calico-kube-controllers</code> currently has <code>ENABLED_CONTROLLERS=node</code> only. IPAM handles will re-accumulate at the same rate as before.</li>
 <li>Action: Add <code>workloadendpoint</code> and <code>ipam</code> to <code>ENABLED_CONTROLLERS</code> in calico-kube-controllers deployment. This enables automatic cleanup of orphaned handles.</li>
 <li>If on Calico ≥ v3.20: also use <code>calicoctl ipam check --fix</code> to perform one-time cleanup.</li>
 <li>Risk if ignored: 6,071 handles will re-accumulate within months; incident will recur.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-118/enable-calico-ipam-gc-controller-to-prevent-handle-accumulation">PGM-118</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-118/enable-calico-ipam-gc-controller-to-prevent-handle-accumulation">PGM-118</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Upgrade Calico from v3.13.2 to current (v3.29+)</strong> (High)</p>
-</li>
+<ul>
 <li>v3.13.2 is ~4 years old. Modern Calico includes improved IPAM GC, better eBPF support, and security fixes.</li>
 <li>Action: Plan and execute Calico upgrade via rolling node procedure. Test with <code>calico-node</code> pod health checks between nodes.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-119/upgrade-calico-from-v3132-to-v329">PGM-119</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-119/upgrade-calico-from-v3132-to-v329">PGM-119</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add monitoring for IPAM handle count</strong> (High)</p>
-</li>
+<ul>
 <li>No alert existed for IPAM handle accumulation.</li>
 <li>Action: Add Prometheus alert: <code>count(calico_ipam_allocated_ips) &gt; 1000</code> → warning; <code>&gt; 3000</code> → critical.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-120/add-prometheus-alert-for-calico-ipam-handle-count">PGM-120</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-120/add-prometheus-alert-for-calico-ipam-handle-count">PGM-120</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add monitoring for dqlite snapshot frequency and size</strong> (High)</p>
-</li>
+<ul>
 <li>Frequent large snapshots are a leading indicator of database bloat. No alert fired during 36h of snapshot storms.</li>
 <li>Action: Add alert on dqlite snapshot file age (<code>find /var/snap/microk8s/current/var/kubernetes/backend -name 'snapshot-*' -newer snapshot-${N-1}</code> rate &gt; 1/5min) and size (&gt; 50 MB per snapshot).</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-121/add-alert-for-dqlite-snapshot-storm-rate-and-size">PGM-121</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-121/add-alert-for-dqlite-snapshot-storm-rate-and-size">PGM-121</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add Kubernetes leader election failure alerting</strong> (High)</p>
-</li>
+<ul>
 <li>No alert fired for <code>failed to renew lease</code> log entries across 5 controllers over 36h.</li>
 <li>Action: Add Loki/Alloy alert rule matching <code>failed to renew lease</code> in controller logs.</li>
 <li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-122/add-loki-alert-for-kubernetes-leader-election-failures">PGM-122</a></strong></li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Upgrade hostpath-provisioner</strong> (Medium)</li>
+<li>
+<p><strong>Upgrade hostpath-provisioner</strong> (Medium)</p>
+<ul>
 <li><code>cdkbot/hostpath-provisioner:1.3.0</code> does not support <code>--leader-election-lease-duration</code> flags. Stabilised naturally after dqlite VACUUM but cannot be tuned for slow etcd environments.</li>
 <li>Action: Upgrade to a version that supports leader election tuning (v1.4+).</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-123/upgrade-hostpath-provisioner-to-support-leader-election-flag-tuning">PGM-123</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-123/upgrade-hostpath-provisioner-to-support-leader-election-flag-tuning">PGM-123</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Upgrade openebs-localpv-provisioner</strong> (Medium)</p>
-</li>
+<ul>
 <li><code>openebs/provisioner-localpv:2.12.0</code> does not support <code>--leader-election-lease-duration</code> flags. Same issue as hostpath-provisioner.</li>
 <li>Action: Upgrade to a version that supports leader election tuning.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-124/upgrade-openebs-localpv-provisioner-to-support-leader-election-flag">PGM-124</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-124/upgrade-openebs-localpv-provisioner-to-support-leader-election-flag">PGM-124</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Upgrade summerwind/actions-runner-controller</strong> (Medium)</p>
-</li>
+<ul>
 <li><code>v0.27.6</code> is the last release of the summerwind ARC variant. It does not support modern leader election flags. Consider migrating to the <code>actions/actions-runner-controller</code> (the official successor) which supports <code>gha-runner-scale-set</code>.</li>
 <li>Action: Evaluate migration to <code>actions/actions-runner-controller</code> gha-runner-scale-set mode (already partly in use via <code>gharc-*</code> apps).</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-125/evaluate-migration-from-summerwind-arc-v0276-to-actionsactions-runner">PGM-125</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-125/evaluate-migration-from-summerwind-arc-v0276-to-actionsactions-runner">PGM-125</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Document and schedule monthly dqlite maintenance</strong> (Medium)</p>
-</li>
+<ul>
 <li>The monthly maintenance playbook (<code>ansible/microk8s-monthly-maintenance.yml</code>) was the definitive fix. It is not currently scheduled.</li>
 <li>Action: Set up a cron trigger or AWX job template to run <code>microk8s-monthly-maintenance.yml</code> on the first Sunday of each month.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-126/schedule-monthly-dqlite-maintenance-awx-job-or-cron">PGM-126</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-126/schedule-monthly-dqlite-maintenance-awx-job-or-cron">PGM-126</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Document watch stream failure recovery runbook</strong> (High)</p>

@@ -2224,12 +2224,14 @@
 <h2 id="resolution-steps-taken">Resolution Steps Taken<a class="headerlink" href="#resolution-steps-taken" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-root-cause-identification">Phase 1: Root Cause Identification<a class="headerlink" href="#phase-1-root-cause-identification" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Error detective analysis</strong> of cluster events, pod states, and node conditions identified:</li>
+<li><strong>Error detective analysis</strong> of cluster events, pod states, and node conditions identified:<ul>
 <li><code>FreeDiskSpaceFailed</code> on k8s02 (x36, recurring every ~5 min)</li>
 <li>Pods scheduled to k8s03 (<code>runner-5zs9b</code>, listener) with <code>PodScheduled: True</code> but no IP</li>
 <li>Three runner pods with <code>Node: &lt;none&gt;</code> (never scheduled)</li>
 <li>No <code>FailedScheduling</code> events, no image pull errors, no PVC issues</li>
 <li>All nodes reporting <code>DiskPressure: False</code> (kubelet threshold not yet breached, misleading)</li>
+</ul>
+</li>
 </ol>
 <h3 id="phase-2-node-stabilisation">Phase 2: Node Stabilisation<a class="headerlink" href="#phase-2-node-stabilisation" title="Permanent link">&para;</a></h3>
 <ol>
@@ -2333,84 +2335,88 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>k8s02 disk cleanup</strong> (High Priority)</li>
+<li>
+<p><strong>k8s02 disk cleanup</strong> (High Priority)</p>
+<ul>
 <li>k8s02 remains at 85% disk utilisation (63G used, 12G free). Kubelet image GC will continue to fail.</li>
 <li>Action: Drain openebs replica pods temporarily, run <code>microk8s ctr --namespace k8s.io images prune</code>, allow pods to reschedule.</li>
-<li>
-<p>Risk if ignored: As ephemeral runner images accumulate, k8s02 will reach 100% and new pods will fail to pull images.</p>
+<li>Risk if ignored: As ephemeral runner images accumulate, k8s02 will reach 100% and new pods will fail to pull images.</li>
+</ul>
 </li>
 <li>
 <p><strong>Avoid force-deleting Running pods</strong> (High Priority)</p>
-</li>
+<ul>
 <li><code>kubectl delete pod --force --grace-period=0</code> on a Running pod leaves orphaned container records in containerd if kubelite is restarted before cleanup completes.</li>
 <li>Action: Prefer graceful deletion (<code>kubectl delete pod</code>). Only use force-delete for pods that are already in <code>Terminating</code> or <code>Unknown</code> state.</li>
-<li>
-<p>If force-delete is necessary on a Running pod, immediately check containerd state: <code>microk8s ctr --namespace k8s.io containers ls</code> and clean up any orphaned records before restarting kubelite.</p>
+<li>If force-delete is necessary on a Running pod, immediately check containerd state: <code>microk8s ctr --namespace k8s.io containers ls</code> and clean up any orphaned records before restarting kubelite.</li>
+</ul>
 </li>
 <li>
 <p><strong>Disk pressure alerting</strong> (High Priority)</p>
-</li>
+<ul>
 <li>No alert fired during 3h32m of silent <code>FreeDiskSpaceFailed</code> events.</li>
 <li>Action: Deploy Prometheus node-exporter with alert rule for <code>node_filesystem_avail_bytes / node_filesystem_size_bytes &lt; 0.20</code> on all nodes.</li>
-<li>
-<p>Add dedicated alert for kubelet <code>imageGCFailed</code> condition.</p>
+<li>Add dedicated alert for kubelet <code>imageGCFailed</code> condition.</li>
+</ul>
 </li>
 <li>
 <p><strong>Kubelet imageGC threshold tuning</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>Default thresholds (85% high, 80% low) are too close to k8s02's baseline usage given openebs pod density.</li>
 <li>Action: Lower thresholds in <code>/var/snap/microk8s/current/args/kubelet</code>:
-     <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>--image-gc-high-threshold=75
+ <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>--image-gc-high-threshold=75
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>--image-gc-low-threshold=70
 </code></pre></div></li>
 <li>Alternatively, migrate openebs images to a dedicated node to reduce image density on k8s02.</li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Ephemeral runner image cleanup</strong> (Medium Priority)</li>
+<li>
+<p><strong>Ephemeral runner image cleanup</strong> (Medium Priority)</p>
+<ul>
 <li>ARC ephemeral runners pull <code>docker:dind</code> and <code>ghcr.io/actions/actions-runner</code> on every scale event. These images accumulate layers.</li>
 <li>Action: Deploy a CronJob to periodically prune ARC-related images on all nodes:
-     <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>rm<span class="w"> </span><span class="k">$(</span>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>ls<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;actions-runner\|docker.*dind&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+ <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>rm<span class="w"> </span><span class="k">$(</span>microk8s<span class="w"> </span>ctr<span class="w"> </span>--namespace<span class="w"> </span>k8s.io<span class="w"> </span>images<span class="w"> </span>ls<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;actions-runner\|docker.*dind&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
 </code></pre></div></li>
-<li>
-<p>Schedule: weekly, with a check that no runner pods are active before pruning.</p>
+<li>Schedule: weekly, with a check that no runner pods are active before pruning.</li>
+</ul>
 </li>
 <li>
 <p><strong>Structured node restart procedure</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Multiple investigator-introduced failures (Calico networking on k8s02, PLEG on k8s03) resulted from uncoordinated kubelite restarts without verifying containerd state first.</li>
-<li>
-<p>Action: Document and follow a node restart runbook:</p>
-<ol>
+<li>Action: Document and follow a node restart runbook:</li>
 <li>Cordon node before restarting kubelite</li>
 <li>Restart containerd first, wait for all containerd tasks to show RUNNING</li>
 <li>Restart kubelite</li>
 <li>Verify all pods on node reach Ready before uncordoning</li>
 <li>Check <code>microk8s ctr --namespace k8s.io containers ls</code> for orphaned records</li>
-</ol>
+</ul>
 </li>
 <li>
 <p><strong>Wazuh audit webhook monitoring</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>The webhook was silently dropping 100% of audit events via 500 responses. No alert existed.</li>
 <li>Action: Add health check for Wazuh webhook endpoint. If endpoint returns non-2xx, alert immediately — audit logging is a security control.</li>
-<li>
-<p>If Wazuh webhook is re-enabled: set <code>--audit-webhook-batch-max-size</code> to a higher value (e.g. 100) and use async mode to prevent blocking API server event processing.</p>
+<li>If Wazuh webhook is re-enabled: set <code>--audit-webhook-batch-max-size</code> to a higher value (e.g. 100) and use async mode to prevent blocking API server event processing.</li>
+</ul>
 </li>
 <li>
 <p><strong>ARC controller node affinity</strong> (Low Priority)</p>
-</li>
+<ul>
 <li>The <code>nodeSelector</code> applied during this incident (<code>kubernetes.io/hostname: k8s01</code>) is a workaround, not a solution. It creates a single point of failure for CI/CD.</li>
 <li>Action: Replace nodeSelector with node affinity + anti-affinity rules that prefer stable nodes and spread across the cluster. Add pod disruption budgets for ARC controller.</li>
-<li>
-<p>Commit the nodeSelector patch to ArgoCD GitOps manifests (current patch is applied directly to the cluster, not via ArgoCD).</p>
+<li>Commit the nodeSelector patch to ArgoCD GitOps manifests (current patch is applied directly to the cluster, not via ArgoCD).</li>
+</ul>
 </li>
 <li>
 <p><strong>PLEG monitoring</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>k8s03 experienced PLEG desync multiple times, each requiring manual intervention.</li>
-<li>
-<p>Action: Add alert for <code>kubelet_pleg_relist_duration_seconds</code> exceeding 5 seconds, or for kubelet log pattern <code>PLEG is not healthy</code>.</p>
+<li>Action: Add alert for <code>kubelet_pleg_relist_duration_seconds</code> exceeding 5 seconds, or for kubelet log pattern <code>PLEG is not healthy</code>.</li>
+</ul>
 </li>
 <li>
 <p><strong>Runbook: Ghost container cleanup</strong> (High Priority)</p>

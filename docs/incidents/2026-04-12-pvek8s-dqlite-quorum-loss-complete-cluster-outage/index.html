@@ -2162,48 +2162,56 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Add disk space monitoring for k8s nodes</strong> (Urgent)</li>
+<li>
+<p><strong>Add disk space monitoring for k8s nodes</strong> (Urgent)</p>
+<ul>
 <li>No alerting existed for disk pressure on <code>/var/snap/microk8s/</code>. k8s02 disk pressure was the cascade trigger.</li>
 <li>Action: Add NRPE check for <code>/var/snap/microk8s/</code> utilisation: warn &lt; 20% free, critical &lt; 10% free.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-138">PGM-138</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-138">PGM-138</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add dqlite service crash-loop alert</strong> (Urgent)</p>
-</li>
+<ul>
 <li><code>snap.microk8s.daemon-k8s-dqlite</code> accumulated 3,794 restarts over 7+ days with no alerting.</li>
 <li>Action: Add NRPE check on <code>systemctl show snap.microk8s.daemon-k8s-dqlite --property=NRestarts</code>: warn &gt; 10, critical &gt; 50.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-139">PGM-139</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-139">PGM-139</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add flag validation and health check to Ansible dqlite role</strong> (High)</p>
-</li>
+<ul>
 <li>The role wrote flags unsupported by the installed binary with no pre-check and no post-restart health verification.</li>
 <li>Action: Add <code>--help | grep &lt;flag&gt;</code> validation before writing flags; add service health check after any restart triggered by Ansible.</li>
-<li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-140">PGM-140</a></strong></p>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-140">PGM-140</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Document dqlite quorum recovery procedure</strong> (High)</p>
-</li>
+<ul>
 <li>The snapshot-embedded membership constraint is not documented. The single-node recovery approach fails silently and cost ~1.5h.</li>
 <li>Action: Add runbook: start all 3 nodes simultaneously; do NOT attempt single-node recovery with existing snapshots.</li>
 <li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-141">PGM-141</a></strong></li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Fix Ansible blockinfile comment pollution in k8s-dqlite args file</strong> (Medium)</li>
-<li><code>blockinfile</code> injects <code># BEGIN/END ANSIBLE MANAGED BLOCK</code> comment lines. Replace with <code>lineinfile</code>.</li>
 <li>
-<p>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-142">PGM-142</a></strong></p>
+<p><strong>Fix Ansible blockinfile comment pollution in k8s-dqlite args file</strong> (Medium)</p>
+<ul>
+<li><code>blockinfile</code> injects <code># BEGIN/END ANSIBLE MANAGED BLOCK</code> comment lines. Replace with <code>lineinfile</code>.</li>
+<li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-142">PGM-142</a></strong></li>
+</ul>
 </li>
 <li>
 <p><strong>Add NRPE check test suite to prevent kubectl timeout omissions</strong> (Medium)</p>
-</li>
+<ul>
 <li>No automated check prevents <code>kubectl</code> calls without <code>--request-timeout</code> from being added to NRPE scripts.</li>
 <li>Action: Add pre-commit lint check: any <code>kubectl</code> call in <code>ansible/files/nagios/*.sh</code> must include <code>--request-timeout</code>.</li>
 <li>Linear: <strong><a href="https://linear.app/pgmac-net-au/issue/PGM-143">PGM-143</a></strong></li>
+</ul>
+</li>
 </ol>
 <hr />
 <h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>

@@ -1970,11 +1970,13 @@
 <h2 id="preventive-measures">Preventive Measures<a class="headerlink" href="#preventive-measures" title="Permanent link">&para;</a></h2>
 <h3 id="immediate-actions-required">Immediate Actions Required<a class="headerlink" href="#immediate-actions-required" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Add pod anti-affinity to sonarr deployment to prevent co-scheduling with its Jiva controller</strong> (Critical Priority)</li>
+<li>
+<p><strong>Add pod anti-affinity to sonarr deployment to prevent co-scheduling with its Jiva controller</strong> (Critical Priority)</p>
+<ul>
 <li>Current: No anti-affinity rules; scheduler can place sonarr and its Jiva controller on the same node</li>
 <li>Target: Preferred anti-affinity rule preventing sonarr from sharing a node with pods labelled for its PV</li>
 <li>Implementation (via ArgoCD):
-     <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">affinity</span><span class="p">:</span>
+ <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">affinity</span><span class="p">:</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">podAntiAffinity</span><span class="p">:</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">preferredDuringSchedulingIgnoredDuringExecution</span><span class="p">:</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
@@ -1984,55 +1986,61 @@
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">            </span><span class="nt">openebs.io/persistent-volume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pvc-17e6e808-a9fc-4f64-b490-71deffdb81fd</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nt">topologyKey</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kubernetes.io/hostname</span>
 </code></pre></div></li>
-<li>
-<p><strong>Rationale</strong>: The co-scheduling failure mode is entirely preventable with a single affinity rule. Without it, any future rescheduling event can reproduce this outage.</p>
+<li><strong>Rationale</strong>: The co-scheduling failure mode is entirely preventable with a single affinity rule. Without it, any future rescheduling event can reproduce this outage.</li>
+</ul>
 </li>
 <li>
 <p><strong>Apply the same anti-affinity pattern to all Jiva-backed deployments</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Radarr, Readarr, Overseerr, Calibreweb all use <code>openebs-jiva-default</code> PVCs and have the same latent exposure</li>
 <li>Implement the same anti-affinity pattern for each deployment, referencing their respective PV names</li>
-<li>
-<p><strong>Rationale</strong>: This incident revealed a cluster-wide misconfiguration, not a sonarr-specific one</p>
+<li><strong>Rationale</strong>: This incident revealed a cluster-wide misconfiguration, not a sonarr-specific one</li>
+</ul>
 </li>
 <li>
 <p><strong>Alert on pods stuck in ContainerCreating &gt; 5 minutes</strong> (Critical Priority)</p>
-</li>
+<ul>
 <li>This action item carries over from the 2026-02-22 Radarr PIR (still Open). This incident is a second occurrence of the same detection gap.</li>
 <li>Implementation: Prometheus <code>kube_pod_status_phase</code> + duration alert rule → Slack/notification</li>
-<li>
-<p><strong>Rationale</strong>: Two separate incidents have now involved pods sitting in <code>ContainerCreating</code> for extended periods without alerting. This must be closed.</p>
+<li><strong>Rationale</strong>: Two separate incidents have now involved pods sitting in <code>ContainerCreating</code> for extended periods without alerting. This must be closed.</li>
+</ul>
 </li>
 <li>
 <p><strong>Document iSCSI hairpin NAT as a known microk8s/Calico limitation in a runbook</strong> (High Priority)</p>
-</li>
+<ul>
 <li>Add a runbook entry: "Sonarr/Radarr/other Jiva-backed pod stuck in ContainerCreating with iSCSI PDU errors — check for controller/consumer co-scheduling on same node"</li>
 <li>Include the cordon-reschedule resolution procedure</li>
 <li>Location: <code>incidents/docs/runbooks/openebs-jiva-iscsi-hairpin.md</code></li>
+</ul>
+</li>
 </ol>
 <h3 id="longer-term-improvements">Longer-Term Improvements<a class="headerlink" href="#longer-term-improvements" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Investigate microk8s hairpin NAT configuration</strong> (Medium Priority)</li>
+<li>
+<p><strong>Investigate microk8s hairpin NAT configuration</strong> (Medium Priority)</p>
+<ul>
 <li>Calico in microk8s may support hairpin NAT via <code>natOutgoing</code> or <code>IPIPMode</code> configuration changes</li>
 <li>Enabling hairpin NAT would eliminate the failure mode entirely, removing the need for anti-affinity rules as a workaround</li>
-<li>
-<p>Validate on a test pod before applying to production</p>
+<li>Validate on a test pod before applying to production</li>
+</ul>
 </li>
 <li>
 <p><strong>Address k8s02 disk pressure</strong> (High Priority — tracked separately)</p>
-</li>
+<ul>
 <li><code>openebs-localpv-provisioner</code> (697 restarts), <code>snapshot-operator</code> (184 restarts), <code>provisioner</code> (110 restarts) all on k8s02</li>
 <li><code>ImageGCFailed</code> events active: kubelet cannot free space, GC finds 0 bytes eligible</li>
 <li>Drain OpenEBS pods from k8s02 temporarily, prune container images manually</li>
-<li>
-<p>See: <code>memory/project_k8s02_disk.md</code></p>
+<li>See: <code>memory/project_k8s02_disk.md</code></li>
+</ul>
 </li>
 <li>
 <p><strong>Review Jiva replica placement strategy</strong> (Medium Priority)</p>
-</li>
+<ul>
 <li>Jiva controller pods have no affinity rules and can schedule to any node</li>
 <li>If the controller and consumer always avoid the same node, the hairpin failure cannot occur even without application-level anti-affinity</li>
 <li>Investigate adding node anti-affinity to OpenEBS Jiva controller deployments at the operator level</li>
+</ul>
+</li>
 </ol>
 <hr />
 <h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
