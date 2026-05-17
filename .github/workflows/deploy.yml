@@ -1,4 +1,4 @@
-name: Deploy to macro.int.pgmac.net
+name: Deploy to GH Pages and macro.int.pgmac.net
 
 on:
   push:
