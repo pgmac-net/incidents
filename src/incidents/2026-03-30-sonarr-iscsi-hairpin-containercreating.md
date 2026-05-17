@@ -205,9 +205,9 @@ New pod `sonarr-dd4cb4f69-k929r` scheduled to k8s01. iSCSI mounted cleanly. Pod 
 ### Immediate Actions Required
 
 1. **Add pod anti-affinity to sonarr deployment to prevent co-scheduling with its Jiva controller** (Critical Priority)
-   - Current: No anti-affinity rules; scheduler can place sonarr and its Jiva controller on the same node
-   - Target: Preferred anti-affinity rule preventing sonarr from sharing a node with pods labelled for its PV
-   - Implementation (via ArgoCD):
+    - Current: No anti-affinity rules; scheduler can place sonarr and its Jiva controller on the same node
+    - Target: Preferred anti-affinity rule preventing sonarr from sharing a node with pods labelled for its PV
+    - Implementation (via ArgoCD):
      ```yaml
      affinity:
        podAntiAffinity:
@@ -219,40 +219,40 @@ New pod `sonarr-dd4cb4f69-k929r` scheduled to k8s01. iSCSI mounted cleanly. Pod 
                  openebs.io/persistent-volume: pvc-17e6e808-a9fc-4f64-b490-71deffdb81fd
              topologyKey: kubernetes.io/hostname
      ```
-   - **Rationale**: The co-scheduling failure mode is entirely preventable with a single affinity rule. Without it, any future rescheduling event can reproduce this outage.
+    - **Rationale**: The co-scheduling failure mode is entirely preventable with a single affinity rule. Without it, any future rescheduling event can reproduce this outage.
 
 2. **Apply the same anti-affinity pattern to all Jiva-backed deployments** (High Priority)
-   - Radarr, Readarr, Overseerr, Calibreweb all use `openebs-jiva-default` PVCs and have the same latent exposure
-   - Implement the same anti-affinity pattern for each deployment, referencing their respective PV names
-   - **Rationale**: This incident revealed a cluster-wide misconfiguration, not a sonarr-specific one
+    - Radarr, Readarr, Overseerr, Calibreweb all use `openebs-jiva-default` PVCs and have the same latent exposure
+    - Implement the same anti-affinity pattern for each deployment, referencing their respective PV names
+    - **Rationale**: This incident revealed a cluster-wide misconfiguration, not a sonarr-specific one
 
 3. **Alert on pods stuck in ContainerCreating > 5 minutes** (Critical Priority)
-   - This action item carries over from the 2026-02-22 Radarr PIR (still Open). This incident is a second occurrence of the same detection gap.
-   - Implementation: Prometheus `kube_pod_status_phase` + duration alert rule → Slack/notification
-   - **Rationale**: Two separate incidents have now involved pods sitting in `ContainerCreating` for extended periods without alerting. This must be closed.
+    - This action item carries over from the 2026-02-22 Radarr PIR (still Open). This incident is a second occurrence of the same detection gap.
+    - Implementation: Prometheus `kube_pod_status_phase` + duration alert rule → Slack/notification
+    - **Rationale**: Two separate incidents have now involved pods sitting in `ContainerCreating` for extended periods without alerting. This must be closed.
 
 4. **Document iSCSI hairpin NAT as a known microk8s/Calico limitation in a runbook** (High Priority)
-   - Add a runbook entry: "Sonarr/Radarr/other Jiva-backed pod stuck in ContainerCreating with iSCSI PDU errors — check for controller/consumer co-scheduling on same node"
-   - Include the cordon-reschedule resolution procedure
-   - Location: `incidents/docs/runbooks/openebs-jiva-iscsi-hairpin.md`
+    - Add a runbook entry: "Sonarr/Radarr/other Jiva-backed pod stuck in ContainerCreating with iSCSI PDU errors — check for controller/consumer co-scheduling on same node"
+    - Include the cordon-reschedule resolution procedure
+    - Location: `incidents/docs/runbooks/openebs-jiva-iscsi-hairpin.md`
 
 ### Longer-Term Improvements
 
 5. **Investigate microk8s hairpin NAT configuration** (Medium Priority)
-   - Calico in microk8s may support hairpin NAT via `natOutgoing` or `IPIPMode` configuration changes
-   - Enabling hairpin NAT would eliminate the failure mode entirely, removing the need for anti-affinity rules as a workaround
-   - Validate on a test pod before applying to production
+    - Calico in microk8s may support hairpin NAT via `natOutgoing` or `IPIPMode` configuration changes
+    - Enabling hairpin NAT would eliminate the failure mode entirely, removing the need for anti-affinity rules as a workaround
+    - Validate on a test pod before applying to production
 
 6. **Address k8s02 disk pressure** (High Priority — tracked separately)
-   - `openebs-localpv-provisioner` (697 restarts), `snapshot-operator` (184 restarts), `provisioner` (110 restarts) all on k8s02
-   - `ImageGCFailed` events active: kubelet cannot free space, GC finds 0 bytes eligible
-   - Drain OpenEBS pods from k8s02 temporarily, prune container images manually
-   - See: `memory/project_k8s02_disk.md`
+    - `openebs-localpv-provisioner` (697 restarts), `snapshot-operator` (184 restarts), `provisioner` (110 restarts) all on k8s02
+    - `ImageGCFailed` events active: kubelet cannot free space, GC finds 0 bytes eligible
+    - Drain OpenEBS pods from k8s02 temporarily, prune container images manually
+    - See: `memory/project_k8s02_disk.md`
 
 7. **Review Jiva replica placement strategy** (Medium Priority)
-   - Jiva controller pods have no affinity rules and can schedule to any node
-   - If the controller and consumer always avoid the same node, the hairpin failure cannot occur even without application-level anti-affinity
-   - Investigate adding node anti-affinity to OpenEBS Jiva controller deployments at the operator level
+    - Jiva controller pods have no affinity rules and can schedule to any node
+    - If the controller and consumer always avoid the same node, the hairpin failure cannot occur even without application-level anti-affinity
+    - Investigate adding node anti-affinity to OpenEBS Jiva controller deployments at the operator level
 
 ---
 
