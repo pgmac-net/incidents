@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://incidents.pgmac.net.au/incidents/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../tags/">
       
       
         <link rel="next" href="2026-01-06-cluster-cascade-failure/">
@@ -244,6 +244,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../tags/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Tags
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -340,6 +359,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tags
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -385,7 +431,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -407,14 +453,14 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link md-nav__link--active" for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -736,8 +782,14 @@
 </thead>
 <tbody>
 <tr>
+<td>2026-05-16</td>
+<td><a href="2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure/">microk8s 1.34 → 1.35 Rolling Upgrade — cgroup v2, containerd Shim, Disk Pressure, and Kubelet Stall</a></td>
+<td>High</td>
+<td>~8.75h</td>
+</tr>
+<tr>
 <td>2026-05-15</td>
-<td><a href="2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm/">AWX Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm</a></td>
+<td><a href="2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm/">AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm</a></td>
 <td>Medium</td>
 <td>~13 min silent + ~8 min to fix</td>
 </tr>
@@ -748,8 +800,14 @@
 <td>7d degraded + ~1h 12m full outage</td>
 </tr>
 <tr>
+<td>2026-04-02</td>
+<td><a href="2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/">dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure</a></td>
+<td>High</td>
+<td>~7h</td>
+</tr>
+<tr>
 <td>2026-03-30</td>
-<td><a href="2026-03-30-sonarr-iscsi-hairpin-containercreating/">Sonarr Outage — iSCSI Hairpin NAT Failure (ContainerCreating)</a></td>
+<td><a href="2026-03-30-sonarr-iscsi-hairpin-containercreating/">Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03</a></td>
 <td>High</td>
 <td>~45m</td>
 </tr>
@@ -761,7 +819,7 @@
 </tr>
 <tr>
 <td>2026-03-28</td>
-<td><a href="2026-03-28-arc-pods-pending-kubelet-sync-stall/">ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall</a></td>
+<td><a href="2026-03-28-arc-pods-pending-kubelet-sync-stall/">ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation</a></td>
 <td>High</td>
 <td>~7h40m</td>
 </tr>
@@ -779,17 +837,6 @@
 </tr>
 </tbody>
 </table>
-<ul>
-<li><a href="2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure/">Post Incident Review: microk8s 1.34 → 1.35 Rolling Upgrade — cgroup v2, containerd Shim, Disk Pressure, and Kubelet Stall</a> — 2026-05-16</li>
-<li><a href="2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm/">Post Incident Review: AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm</a> — 2026-05-15</li>
-<li><a href="2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage/">Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags</a> — 2026-04-04 (degraded) → 2026-04-12</li>
-<li><a href="2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure/">Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure</a> — 2026-04-01 to 2026-04-02</li>
-<li><a href="2026-03-30-sonarr-iscsi-hairpin-containercreating/">Post Incident Review: Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03</a> — 2026-03-30</li>
-<li><a href="2026-03-28-radarr-jiva-replica-divergence-second/">Post Incident Review: Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)</a> — 2026-03-28</li>
-<li><a href="2026-03-28-arc-pods-pending-kubelet-sync-stall/">Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation</a> — 2026-03-28</li>
-<li><a href="2026-02-22-radarr-openebs-jiva-replica-divergence/">Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence</a> — 2026-02-22</li>
-<li><a href="2026-01-06-cluster-cascade-failure/">Post Incident Review: Cascading Kubernetes Cluster Failures</a> — 2026-01-06</li>
-</ul>
 
 
 

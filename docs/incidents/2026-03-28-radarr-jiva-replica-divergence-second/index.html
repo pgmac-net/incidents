@@ -244,6 +244,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../../tags/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Tags
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -340,6 +359,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tags
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -385,7 +431,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -407,14 +453,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1793,6 +1839,45 @@
                 
                   
 
+  <nav class="md-tags" >
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:containerd" class="md-tag">containerd</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:iscsi" class="md-tag">iscsi</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:openebs" class="md-tag">openebs</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:radarr" class="md-tag">radarr</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:replica-divergence" class="md-tag">replica-divergence</a>
+      
+    
+  </nav>
+
 
   
   
@@ -1804,7 +1889,7 @@
 <strong>Severity:</strong> High (single service outage — Radarr completely unavailable)
 <strong>Status:</strong> Resolved
 <strong>Linear:</strong> <a href="https://linear.app/pgmac-net-au/issue/PGM-115/pir-radarr-outage-openebs-jiva-replica-divergence-second-occurrence">PGM-115</a>
-<strong>Second occurrence</strong> on the same PVC — see also <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/">2026-02-22 PIR</a></p>
+<strong>Second occurrence</strong> on the same PVC — see also <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/">Radarr Outage Due to OpenEBS Jiva Replica Divergence</a></p>
 <hr />
 <h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
 <p>Radarr became unavailable when its pod was stuck in <code>ContainerCreating</code>. The pod could not start because its persistent volume (<code>radarr-config</code>) could not be mounted — the iSCSI portal at <code>10.152.183.80:3260</code> was refusing connections. All three OpenEBS Jiva replica pods for the volume had been in <code>CrashLoopBackOff</code> for approximately 30 hours prior to detection, each failing with a diverged snapshot chain error.</p>
@@ -2359,8 +2444,8 @@
 <hr />
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Previous incident (same PVC, same failure mode): <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/"><code>2026-02-22-radarr-openebs-jiva-replica-divergence.md</code></a></li>
-<li>Cluster cascade failure (Jiva snapshot chain depth): <a href="../2026-01-06-cluster-cascade-failure/"><code>2026-01-06-cluster-cascade-failure.md</code></a></li>
+<li>Previous incident (same PVC, same failure mode): <a href="../2026-02-22-radarr-openebs-jiva-replica-divergence/">Radarr Outage Due to OpenEBS Jiva Replica Divergence</a></li>
+<li>Cluster cascade failure (Jiva snapshot chain depth): <a href="../2026-01-06-cluster-cascade-failure/">Cascading Kubernetes Cluster Failures</a></li>
 <li>Linear ticket: <a href="https://linear.app/pgmac-net-au/issue/PGM-115">PGM-115</a></li>
 </ul>
 <hr />
@@ -2376,6 +2461,9 @@
 
 
 
+
+  
+  
 
 
 

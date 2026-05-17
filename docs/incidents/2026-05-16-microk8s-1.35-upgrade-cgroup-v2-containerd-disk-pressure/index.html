@@ -242,6 +242,25 @@
   
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../../tags/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Tags
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
     
   
   
@@ -338,6 +357,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tags
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -383,7 +429,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -405,14 +451,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2899,6 +2945,73 @@
                 
                   
 
+  <nav class="md-tags" >
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:buildkit" class="md-tag">buildkit</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:cgroup-v2" class="md-tag">cgroup-v2</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:containerd" class="md-tag">containerd</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:disk-pressure" class="md-tag">disk-pressure</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:dqlite" class="md-tag">dqlite</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:ingress-nginx" class="md-tag">ingress-nginx</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:k8s03" class="md-tag">k8s03</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:kubelet" class="md-tag">kubelet</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:upgrade" class="md-tag">upgrade</a>
+      
+    
+  </nav>
+
 
   
   
@@ -3797,8 +3910,8 @@
 <li>Notion investigation: <a href="https://www.notion.so/362524b4a07781428c77e7bbc7ef168f">PGM-195: k8s03 Kubelet Deadlock Investigation &amp; Recovery</a></li>
 <li>Ansible PR (upgrade playbook cgroup v2 fix): <a href="https://github.com/pgmac-net/ansible/pull/146">pgmac-net/ansible#146</a></li>
 <li>pgk8s PR (ingress-nginx migration): <a href="https://github.com/pgmac-net/pgk8s/pull/472">pgmac-net/pgk8s#472</a></li>
-<li>Related incident (dqlite quorum loss): <a href="../2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage/">2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage.md</a></li>
-<li>Related incident (Calico RBAC dqlite write storm): <a href="../2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm/">2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm.md</a></li>
+<li>Related incident (dqlite quorum loss): <a href="../2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage/">pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags</a></li>
+<li>Related incident (Calico RBAC dqlite write storm): <a href="../2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm/">AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm</a></li>
 <li>microk8s 1.35 release notes: https://microk8s.io/docs/release-notes</li>
 <li>Kubernetes cgroup v2 migration: https://kubernetes.io/docs/concepts/architecture/cgroups/</li>
 </ul>
@@ -3813,6 +3926,9 @@
 
 
 
+
+  
+  
 
 
 
