@@ -930,37 +930,37 @@ k8s03: 81% (down from 100%)
 ### Immediate Actions Required
 
 1. **Implement Node Disk Space Monitoring** (Critical Priority)
-   - Current: No alerts for disk usage >85%
-   - Target: Alert at 80%, critical alert at 90%
-   - Actions:
+    - Current: No alerts for disk usage >85%
+    - Target: Alert at 80%, critical alert at 90%
+    - Actions:
      - Deploy Prometheus node-exporter on all nodes
      - Configure AlertManager rules for disk pressure
      - Add Nagios checks for disk usage as backup
-   - **Rationale**: Both k8s01 (97%) and k8s03 (100%) hit critical thresholds without detection
+    - **Rationale**: Both k8s01 (97%) and k8s03 (100%) hit critical thresholds without detection
 
 2. **Automated Container Image Garbage Collection** (High Priority)
-   - Current: Manual cleanup required during incident
-   - Target: Automated daily cleanup maintaining <75% disk usage
-   - Actions:
+    - Current: Manual cleanup required during incident
+    - Target: Automated daily cleanup maintaining <75% disk usage
+    - Actions:
      - Configure kubelet `imageGCHighThresholdPercent=75` (default: 85)
      - Configure kubelet `imageGCLowThresholdPercent=70` (default: 80)
      - Schedule weekly cleanup cronjob as backup
-   - **Rationale**: 4+ years of accumulated images contributed to disk exhaustion
+    - **Rationale**: 4+ years of accumulated images contributed to disk exhaustion
 
 3. **Audit Log Rotation and Buffer Management** (High Priority)
-   - Current: Audit buffer overload caused kubelet crashes on k8s01
-   - Actions:
+    - Current: Audit buffer overload caused kubelet crashes on k8s01
+    - Actions:
      - Reduce audit log verbosity (current level generating excessive data)
      - Implement aggressive log rotation (hourly vs daily)
      - Configure audit buffer size limits
      - Consider disabling detailed audit logging for non-critical operations
-   - **Rationale**: "audit buffer queue blocked" directly caused kubelet instability
+    - **Rationale**: "audit buffer queue blocked" directly caused kubelet instability
 
 4. **Radarr PVC Expansion** (High Priority)
-   - Current: 1Gi volume at 95% capacity (carried over from Phase 2)
-   - Target: 2Gi to accommodate media artwork growth
-   - Action: Requires PVC recreation (Jiva doesn't support online expansion)
-   - Steps:
+    - Current: 1Gi volume at 95% capacity (carried over from Phase 2)
+    - Target: 2Gi to accommodate media artwork growth
+    - Action: Requires PVC recreation (Jiva doesn't support online expansion)
+    - Steps:
      ```bash
      # 1. Backup Radarr config
      # 2. Create new 2Gi PVC
@@ -969,28 +969,28 @@ k8s03: 81% (down from 100%)
      ```
 
 5. **Jiva Snapshot Cleanup Frequency** (High Priority)
-   - Current: Daily at 2 AM (threshold: 500 snapshots)
-   - Problem: 1011 snapshots accumulated when cronjob couldn't run during Phase 1
-   - Actions:
+    - Current: Daily at 2 AM (threshold: 500 snapshots)
+    - Problem: 1011 snapshots accumulated when cronjob couldn't run during Phase 1
+    - Actions:
      - Lower threshold from 500 to 300 snapshots
      - Increase frequency to every 12 hours (2 AM and 2 PM)
      - Add monitoring/alerting for snapshot counts >400
      - Add pod anti-affinity to ensure cleanup job can run on healthy nodes
-   - **Rationale**: Cronjob failure during Phase 1 directly caused Phase 2 storage issues
+    - **Rationale**: Cronjob failure during Phase 1 directly caused Phase 2 storage issues
 
 6. **GitHub Actions Runner Controller Migration** (Medium Priority)
-   - Current: Orphaned runner pods consumed significant resources
-   - Actions:
+    - Current: Orphaned runner pods consumed significant resources
+    - Actions:
      - Migrate to GitHub-hosted runners or alternative self-hosted solution
      - If keeping self-hosted: implement strict `maxReplicas` limits
      - Add PodDisruptionBudgets to prevent runaway scaling
      - Configure aggressive pod cleanup policies
-   - **Rationale**: 571 orphaned pods significantly contributed to cluster instability
+    - **Rationale**: 571 orphaned pods significantly contributed to cluster instability
 
 7. **CronJob Timeout Configuration Baseline** (High Priority - Added from Phase 3)
-   - Current: CronJobs created without timeout settings, allowing infinite hangs
-   - Target: All cronjobs have defensive timeout configuration
-   - Actions:
+    - Current: CronJobs created without timeout settings, allowing infinite hangs
+    - Target: All cronjobs have defensive timeout configuration
+    - Actions:
      - Create baseline cronjob template with standard timeouts:
        - `startingDeadlineSeconds: 60` (for minute-frequency jobs)
        - `activeDeadlineSeconds: <appropriate for task>` (e.g., 300 for 5-min tasks)
@@ -999,27 +999,27 @@ k8s03: 81% (down from 100%)
        - `failedJobsHistoryLimit: 2`
      - Audit all existing cronjobs and add timeout configuration
      - Add validation in ArgoCD to require timeout settings
-   - **Rationale**: Timeout settings proved critical for self-healing, but were missing
+    - **Rationale**: Timeout settings proved critical for self-healing, but were missing
 
 8. **Job Controller Health Monitoring** (Critical Priority - Added from Phase 3)
-   - Current: No monitoring for job controller state or corruption
-   - Actions:
+    - Current: No monitoring for job controller state or corruption
+    - Actions:
      - Add synthetic job creation tests every 5 minutes cluster-wide
      - Monitor job controller logs for "not found" errors
      - Alert on jobs with 0 pods after 2 minutes
      - Alert on jobs exceeding activeDeadlineSeconds without termination
      - Monitor dqlite database health and replication lag
-   - **Rationale**: Job controller corruption went undetected for 16+ hours
+    - **Rationale**: Job controller corruption went undetected for 16+ hours
 
 9. **Dqlite Database Backup Automation** (High Priority - Added from Phase 3)
-   - Current: Manual backup procedures only
-   - Target: Automated hourly backups with 24-hour retention
-   - Actions:
+    - Current: Manual backup procedures only
+    - Target: Automated hourly backups with 24-hour retention
+    - Actions:
      - Create cronjob to backup dqlite database (requires node-local execution)
      - Store backups on NFS with rotation policy
      - Document and test restoration procedure
      - Add alerts for backup failures
-   - **Rationale**: Database backup was critical for nuclear option confidence
+    - **Rationale**: Database backup was critical for nuclear option confidence
 
 ### Longer-Term Improvements
 
