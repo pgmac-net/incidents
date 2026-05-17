@@ -1,3 +1,15 @@
+---
+tags:
+  - dqlite
+  - kubelet
+  - openebs
+  - disk-pressure
+  - cascade
+  - k8s01
+  - k8s02
+  - k8s03
+---
+
 # Post Incident Review: Cascading Kubernetes Cluster Failures
 
 **Date:** 2026-01-06

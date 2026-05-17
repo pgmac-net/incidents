@@ -1,3 +1,11 @@
+---
+tags:
+  - kubelet
+  - arc-runners
+  - disk-pressure
+  - pleg-stall
+---
+
 # Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
 
 **Date:** 2026-03-28

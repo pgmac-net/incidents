@@ -39,8 +39,6 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
-hooks:
-  - hooks.py
 
 plugins:
   - search

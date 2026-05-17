@@ -1,3 +1,11 @@
+---
+tags:
+  - dqlite
+  - quorum-loss
+  - disk-pressure
+  - outage
+---
+
 # Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
 
 **Date:** 2026-04-04 (degraded) → 2026-04-12
@@ -372,7 +380,7 @@ time="..." level=warning msg="[go-dqlite] attempt 251: server 172.22.22.6:19001:
 
 ## References
 
-- Related incident (dqlite snapshot bloat + WAL deadlock, April 2026): [2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
+- Related incident (dqlite snapshot bloat + WAL deadlock, April 2026): [dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
 - Linear incident ticket: [PGM-137](https://linear.app/pgmac-net-au/issue/PGM-137)
 - Memory record on dqlite recovery: `memory/project_dqlite_recovery.md`
 - microk8s dqlite documentation: https://microk8s.io/docs/dqlite
