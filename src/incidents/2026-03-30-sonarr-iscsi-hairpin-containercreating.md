@@ -1,3 +1,12 @@
+---
+tags:
+  - sonarr
+  - iscsi
+  - hairpin-nat
+  - network
+  - k8s03
+---
+
 # Post Incident Review: Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03
 
 **Date:** 2026-03-30

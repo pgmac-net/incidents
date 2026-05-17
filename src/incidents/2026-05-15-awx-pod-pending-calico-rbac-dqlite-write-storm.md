@@ -1,3 +1,12 @@
+---
+tags:
+  - calico
+  - awx
+  - rbac
+  - dqlite
+  - write-storm
+---
+
 # Post Incident Review: AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm
 
 **Date:** 2026-05-15

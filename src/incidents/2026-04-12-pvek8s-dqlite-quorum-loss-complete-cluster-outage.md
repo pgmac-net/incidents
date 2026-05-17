@@ -1,3 +1,11 @@
+---
+tags:
+  - dqlite
+  - quorum-loss
+  - disk-pressure
+  - outage
+---
+
 # Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
 
 **Date:** 2026-04-04 (degraded) → 2026-04-12

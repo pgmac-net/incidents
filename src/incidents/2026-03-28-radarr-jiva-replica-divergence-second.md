@@ -1,3 +1,12 @@
+---
+tags:
+  - openebs
+  - radarr
+  - replica-divergence
+  - iscsi
+  - containerd
+---
+
 # Post Incident Review: Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)
 
 **Date:** 2026-03-28

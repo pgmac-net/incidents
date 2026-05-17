@@ -1,3 +1,13 @@
+---
+tags:
+  - dqlite
+  - calico
+  - kube-apiserver
+  - snapshot-bloat
+  - watch-stream
+  - crash-loop
+---
+
 # Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
 
 **Date:** 2026-04-01 to 2026-04-02
