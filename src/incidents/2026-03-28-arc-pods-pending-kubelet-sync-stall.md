@@ -143,11 +143,11 @@ k8s03 experienced PLEG desync multiple times during investigation, each time req
 ### Phase 1: Root Cause Identification
 
 1. **Error detective analysis** of cluster events, pod states, and node conditions identified:
-   - `FreeDiskSpaceFailed` on k8s02 (x36, recurring every ~5 min)
-   - Pods scheduled to k8s03 (`runner-5zs9b`, listener) with `PodScheduled: True` but no IP
-   - Three runner pods with `Node: <none>` (never scheduled)
-   - No `FailedScheduling` events, no image pull errors, no PVC issues
-   - All nodes reporting `DiskPressure: False` (kubelet threshold not yet breached, misleading)
+    - `FreeDiskSpaceFailed` on k8s02 (x36, recurring every ~5 min)
+    - Pods scheduled to k8s03 (`runner-5zs9b`, listener) with `PodScheduled: True` but no IP
+    - Three runner pods with `Node: <none>` (never scheduled)
+    - No `FailedScheduling` events, no image pull errors, no PVC issues
+    - All nodes reporting `DiskPressure: False` (kubelet threshold not yet breached, misleading)
 
 ### Phase 2: Node Stabilisation
 
@@ -252,42 +252,42 @@ Post-restart kubelite logs: no `Error in audit plugin 'webhook'` entries observe
 ### Immediate Actions Required
 
 1. **k8s02 disk cleanup** (High Priority)
-   - k8s02 remains at 85% disk utilisation (63G used, 12G free). Kubelet image GC will continue to fail.
-   - Action: Drain openebs replica pods temporarily, run `microk8s ctr --namespace k8s.io images prune`, allow pods to reschedule.
-   - Risk if ignored: As ephemeral runner images accumulate, k8s02 will reach 100% and new pods will fail to pull images.
+    - k8s02 remains at 85% disk utilisation (63G used, 12G free). Kubelet image GC will continue to fail.
+    - Action: Drain openebs replica pods temporarily, run `microk8s ctr --namespace k8s.io images prune`, allow pods to reschedule.
+    - Risk if ignored: As ephemeral runner images accumulate, k8s02 will reach 100% and new pods will fail to pull images.
 
 2. **Avoid force-deleting Running pods** (High Priority)
-   - `kubectl delete pod --force --grace-period=0` on a Running pod leaves orphaned container records in containerd if kubelite is restarted before cleanup completes.
-   - Action: Prefer graceful deletion (`kubectl delete pod`). Only use force-delete for pods that are already in `Terminating` or `Unknown` state.
-   - If force-delete is necessary on a Running pod, immediately check containerd state: `microk8s ctr --namespace k8s.io containers ls` and clean up any orphaned records before restarting kubelite.
+    - `kubectl delete pod --force --grace-period=0` on a Running pod leaves orphaned container records in containerd if kubelite is restarted before cleanup completes.
+    - Action: Prefer graceful deletion (`kubectl delete pod`). Only use force-delete for pods that are already in `Terminating` or `Unknown` state.
+    - If force-delete is necessary on a Running pod, immediately check containerd state: `microk8s ctr --namespace k8s.io containers ls` and clean up any orphaned records before restarting kubelite.
 
 3. **Disk pressure alerting** (High Priority)
-   - No alert fired during 3h32m of silent `FreeDiskSpaceFailed` events.
-   - Action: Deploy Prometheus node-exporter with alert rule for `node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.20` on all nodes.
-   - Add dedicated alert for kubelet `imageGCFailed` condition.
+    - No alert fired during 3h32m of silent `FreeDiskSpaceFailed` events.
+    - Action: Deploy Prometheus node-exporter with alert rule for `node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.20` on all nodes.
+    - Add dedicated alert for kubelet `imageGCFailed` condition.
 
 4. **Kubelet imageGC threshold tuning** (Medium Priority)
-   - Default thresholds (85% high, 80% low) are too close to k8s02's baseline usage given openebs pod density.
-   - Action: Lower thresholds in `/var/snap/microk8s/current/args/kubelet`:
+    - Default thresholds (85% high, 80% low) are too close to k8s02's baseline usage given openebs pod density.
+    - Action: Lower thresholds in `/var/snap/microk8s/current/args/kubelet`:
      ```
      --image-gc-high-threshold=75
      --image-gc-low-threshold=70
      ```
-   - Alternatively, migrate openebs images to a dedicated node to reduce image density on k8s02.
+    - Alternatively, migrate openebs images to a dedicated node to reduce image density on k8s02.
 
 ### Longer-Term Improvements
 
 5. **Ephemeral runner image cleanup** (Medium Priority)
-   - ARC ephemeral runners pull `docker:dind` and `ghcr.io/actions/actions-runner` on every scale event. These images accumulate layers.
-   - Action: Deploy a CronJob to periodically prune ARC-related images on all nodes:
+    - ARC ephemeral runners pull `docker:dind` and `ghcr.io/actions/actions-runner` on every scale event. These images accumulate layers.
+    - Action: Deploy a CronJob to periodically prune ARC-related images on all nodes:
      ```bash
      microk8s ctr --namespace k8s.io images rm $(microk8s ctr --namespace k8s.io images ls | grep 'actions-runner\|docker.*dind' | awk '{print $1}')
      ```
-   - Schedule: weekly, with a check that no runner pods are active before pruning.
+    - Schedule: weekly, with a check that no runner pods are active before pruning.
 
 6. **Structured node restart procedure** (High Priority)
-   - Multiple investigator-introduced failures (Calico networking on k8s02, PLEG on k8s03) resulted from uncoordinated kubelite restarts without verifying containerd state first.
-   - Action: Document and follow a node restart runbook:
+    - Multiple investigator-introduced failures (Calico networking on k8s02, PLEG on k8s03) resulted from uncoordinated kubelite restarts without verifying containerd state first.
+    - Action: Document and follow a node restart runbook:
      1. Cordon node before restarting kubelite
      2. Restart containerd first, wait for all containerd tasks to show RUNNING
      3. Restart kubelite
@@ -295,18 +295,18 @@ Post-restart kubelite logs: no `Error in audit plugin 'webhook'` entries observe
      5. Check `microk8s ctr --namespace k8s.io containers ls` for orphaned records
 
 7. **Wazuh audit webhook monitoring** (Medium Priority)
-   - The webhook was silently dropping 100% of audit events via 500 responses. No alert existed.
-   - Action: Add health check for Wazuh webhook endpoint. If endpoint returns non-2xx, alert immediately — audit logging is a security control.
-   - If Wazuh webhook is re-enabled: set `--audit-webhook-batch-max-size` to a higher value (e.g. 100) and use async mode to prevent blocking API server event processing.
+    - The webhook was silently dropping 100% of audit events via 500 responses. No alert existed.
+    - Action: Add health check for Wazuh webhook endpoint. If endpoint returns non-2xx, alert immediately — audit logging is a security control.
+    - If Wazuh webhook is re-enabled: set `--audit-webhook-batch-max-size` to a higher value (e.g. 100) and use async mode to prevent blocking API server event processing.
 
 8. **ARC controller node affinity** (Low Priority)
-   - The `nodeSelector` applied during this incident (`kubernetes.io/hostname: k8s01`) is a workaround, not a solution. It creates a single point of failure for CI/CD.
-   - Action: Replace nodeSelector with node affinity + anti-affinity rules that prefer stable nodes and spread across the cluster. Add pod disruption budgets for ARC controller.
-   - Commit the nodeSelector patch to ArgoCD GitOps manifests (current patch is applied directly to the cluster, not via ArgoCD).
+    - The `nodeSelector` applied during this incident (`kubernetes.io/hostname: k8s01`) is a workaround, not a solution. It creates a single point of failure for CI/CD.
+    - Action: Replace nodeSelector with node affinity + anti-affinity rules that prefer stable nodes and spread across the cluster. Add pod disruption budgets for ARC controller.
+    - Commit the nodeSelector patch to ArgoCD GitOps manifests (current patch is applied directly to the cluster, not via ArgoCD).
 
 9. **PLEG monitoring** (Medium Priority)
-   - k8s03 experienced PLEG desync multiple times, each requiring manual intervention.
-   - Action: Add alert for `kubelet_pleg_relist_duration_seconds` exceeding 5 seconds, or for kubelet log pattern `PLEG is not healthy`.
+    - k8s03 experienced PLEG desync multiple times, each requiring manual intervention.
+    - Action: Add alert for `kubelet_pleg_relist_duration_seconds` exceeding 5 seconds, or for kubelet log pattern `PLEG is not healthy`.
 
 10. **Runbook: Ghost container cleanup** (High Priority)
     - No documented procedure existed for identifying and removing orphaned containerd containers that block kubelet sync loops.

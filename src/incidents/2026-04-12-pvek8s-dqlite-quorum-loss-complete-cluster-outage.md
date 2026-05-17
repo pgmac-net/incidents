@@ -255,35 +255,35 @@ grep 'request-timeout' /etc/nagios/nrpe.d/check_microk8s_dqlite.cfg
 ### Immediate Actions Required
 
 1. **Add disk space monitoring for k8s nodes** (Urgent)
-   - No alerting existed for disk pressure on `/var/snap/microk8s/`. k8s02 disk pressure was the cascade trigger.
-   - Action: Add NRPE check for `/var/snap/microk8s/` utilisation: warn < 20% free, critical < 10% free.
-   - Linear: **[PGM-138](https://linear.app/pgmac-net-au/issue/PGM-138)**
+    - No alerting existed for disk pressure on `/var/snap/microk8s/`. k8s02 disk pressure was the cascade trigger.
+    - Action: Add NRPE check for `/var/snap/microk8s/` utilisation: warn < 20% free, critical < 10% free.
+    - Linear: **[PGM-138](https://linear.app/pgmac-net-au/issue/PGM-138)**
 
 2. **Add dqlite service crash-loop alert** (Urgent)
-   - `snap.microk8s.daemon-k8s-dqlite` accumulated 3,794 restarts over 7+ days with no alerting.
-   - Action: Add NRPE check on `systemctl show snap.microk8s.daemon-k8s-dqlite --property=NRestarts`: warn > 10, critical > 50.
-   - Linear: **[PGM-139](https://linear.app/pgmac-net-au/issue/PGM-139)**
+    - `snap.microk8s.daemon-k8s-dqlite` accumulated 3,794 restarts over 7+ days with no alerting.
+    - Action: Add NRPE check on `systemctl show snap.microk8s.daemon-k8s-dqlite --property=NRestarts`: warn > 10, critical > 50.
+    - Linear: **[PGM-139](https://linear.app/pgmac-net-au/issue/PGM-139)**
 
 3. **Add flag validation and health check to Ansible dqlite role** (High)
-   - The role wrote flags unsupported by the installed binary with no pre-check and no post-restart health verification.
-   - Action: Add `--help | grep <flag>` validation before writing flags; add service health check after any restart triggered by Ansible.
-   - Linear: **[PGM-140](https://linear.app/pgmac-net-au/issue/PGM-140)**
+    - The role wrote flags unsupported by the installed binary with no pre-check and no post-restart health verification.
+    - Action: Add `--help | grep <flag>` validation before writing flags; add service health check after any restart triggered by Ansible.
+    - Linear: **[PGM-140](https://linear.app/pgmac-net-au/issue/PGM-140)**
 
 4. **Document dqlite quorum recovery procedure** (High)
-   - The snapshot-embedded membership constraint is not documented. The single-node recovery approach fails silently and cost ~1.5h.
-   - Action: Add runbook: start all 3 nodes simultaneously; do NOT attempt single-node recovery with existing snapshots.
-   - Linear: **[PGM-141](https://linear.app/pgmac-net-au/issue/PGM-141)**
+    - The snapshot-embedded membership constraint is not documented. The single-node recovery approach fails silently and cost ~1.5h.
+    - Action: Add runbook: start all 3 nodes simultaneously; do NOT attempt single-node recovery with existing snapshots.
+    - Linear: **[PGM-141](https://linear.app/pgmac-net-au/issue/PGM-141)**
 
 ### Longer-Term Improvements
 
 5. **Fix Ansible blockinfile comment pollution in k8s-dqlite args file** (Medium)
-   - `blockinfile` injects `# BEGIN/END ANSIBLE MANAGED BLOCK` comment lines. Replace with `lineinfile`.
-   - Linear: **[PGM-142](https://linear.app/pgmac-net-au/issue/PGM-142)**
+    - `blockinfile` injects `# BEGIN/END ANSIBLE MANAGED BLOCK` comment lines. Replace with `lineinfile`.
+    - Linear: **[PGM-142](https://linear.app/pgmac-net-au/issue/PGM-142)**
 
 6. **Add NRPE check test suite to prevent kubectl timeout omissions** (Medium)
-   - No automated check prevents `kubectl` calls without `--request-timeout` from being added to NRPE scripts.
-   - Action: Add pre-commit lint check: any `kubectl` call in `ansible/files/nagios/*.sh` must include `--request-timeout`.
-   - Linear: **[PGM-143](https://linear.app/pgmac-net-au/issue/PGM-143)**
+    - No automated check prevents `kubectl` calls without `--request-timeout` from being added to NRPE scripts.
+    - Action: Add pre-commit lint check: any `kubectl` call in `ansible/files/nagios/*.sh` must include `--request-timeout`.
+    - Linear: **[PGM-143](https://linear.app/pgmac-net-au/issue/PGM-143)**
 
 ---
 

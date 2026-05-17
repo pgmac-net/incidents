@@ -306,40 +306,40 @@ iSCSI session:        Active on k8s01 only
 ### Immediate — Overdue (Carry-over from 2026-02-22 PIR)
 
 1. **Alert: pod stuck in ContainerCreating > 5 minutes** (Critical — 34 days overdue)
-   - Both this incident and the February incident would have been detected within minutes, not hours, if this alert existed
-   - Implementation: `kube_pod_status_phase{phase="Pending"}` duration alert
+    - Both this incident and the February incident would have been detected within minutes, not hours, if this alert existed
+    - Implementation: `kube_pod_status_phase{phase="Pending"}` duration alert
 
 2. **Alert: Jiva replica CrashLoopBackOff in openebs namespace** (Critical — 34 days overdue)
-   - The replicas were in CrashLoopBackOff for ~30h. This alert would have fired within minutes of the root event
-   - Implementation: `kube_pod_container_status_waiting_reason{namespace="openebs",reason="CrashLoopBackOff"} > 0`
+    - The replicas were in CrashLoopBackOff for ~30h. This alert would have fired within minutes of the root event
+    - Implementation: `kube_pod_container_status_waiting_reason{namespace="openebs",reason="CrashLoopBackOff"} > 0`
 
 ### New — Specific to This Incident
 
 3. **Investigate the recurring divergence root cause** (Critical)
-   - This is the **second** Jiva replica divergence on `radarr-config` in 34 days. The PVC was rebuilt fresh on 2026-02-22; it diverged again by 2026-03-27
-   - The root event (a cluster disruption interrupting a Jiva rebuild) has happened at least twice to this PVC. The underlying cause must be identified
-   - Actions: review node system logs, UPS/PDU logs, hypervisor/Proxmox events around 2026-03-27 03:00 AEST; correlate with Feb 21 22:25 event from previous PIR
+    - This is the **second** Jiva replica divergence on `radarr-config` in 34 days. The PVC was rebuilt fresh on 2026-02-22; it diverged again by 2026-03-27
+    - The root event (a cluster disruption interrupting a Jiva rebuild) has happened at least twice to this PVC. The underlying cause must be identified
+    - Actions: review node system logs, UPS/PDU logs, hypervisor/Proxmox events around 2026-03-27 03:00 AEST; correlate with Feb 21 22:25 event from previous PIR
 
 4. **Document and automate ghost replica detection** (High)
-   - The Jiva controller can retain stale replica entries after pod restarts. This is not self-healing and blocks volume recovery
-   - A periodic check (or post-restart hook) should detect replicas whose IP addresses don't match any running pod
-   - Implementation: CronJob querying `GET /v1/replicas` and cross-referencing against pod IPs in the openebs namespace
+    - The Jiva controller can retain stale replica entries after pod restarts. This is not self-healing and blocks volume recovery
+    - A periodic check (or post-restart hook) should detect replicas whose IP addresses don't match any running pod
+    - Implementation: CronJob querying `GET /v1/replicas` and cross-referencing against pod IPs in the openebs namespace
 
 5. **Document and automate stale iSCSI session detection** (High)
-   - When a pod moves nodes, the previous node's iSCSI initiator may retain a live session, blocking the new node from mounting
-   - This should be detectable via the controller log message "target already connected at X" and automated logout
-   - Implementation: alert on `FailedMount` events + runbook step to check controller logs for "already connected"
+    - When a pod moves nodes, the previous node's iSCSI initiator may retain a live session, blocking the new node from mounting
+    - This should be detectable via the controller log message "target already connected at X" and automated logout
+    - Implementation: alert on `FailedMount` events + runbook step to check controller logs for "already connected"
 
 6. **Evaluate migration away from OpenEBS Jiva** (High)
-   - Two full outages in 34 days on the same PVC, both requiring manual data-dir surgery
-   - Jiva's self-healing is limited: it cannot recover when all replicas diverge, and it retains ghost state (stale replica entries, held iSCSI sessions) that requires manual cleanup
-   - Evaluate: OpenEBS Mayastor (NVMe-oF, active-active), Longhorn (better self-healing, snapshot cleanup, UI), or Rook/Ceph
-   - **Rationale**: The operational cost of Jiva failures (data loss, manual recovery, multiple sessions per incident) is not acceptable for a media server configuration store
+    - Two full outages in 34 days on the same PVC, both requiring manual data-dir surgery
+    - Jiva's self-healing is limited: it cannot recover when all replicas diverge, and it retains ghost state (stale replica entries, held iSCSI sessions) that requires manual cleanup
+    - Evaluate: OpenEBS Mayastor (NVMe-oF, active-active), Longhorn (better self-healing, snapshot cleanup, UI), or Rook/Ceph
+    - **Rationale**: The operational cost of Jiva failures (data loss, manual recovery, multiple sessions per incident) is not acceptable for a media server configuration store
 
 7. **Reconfigure Radarr with backup/restore automation** (Medium)
-   - Radarr config (library, custom formats, indexers) was lost for the second time
-   - Implement: daily Radarr XML backup to a separate PVC or external storage, and a restore playbook
-   - The Radarr backup endpoint: `POST /api/v3/command` `{"name":"Backup"}`
+    - Radarr config (library, custom formats, indexers) was lost for the second time
+    - Implement: daily Radarr XML backup to a separate PVC or external storage, and a restore playbook
+    - The Radarr backup endpoint: `POST /api/v3/command` `{"name":"Backup"}`
 
 ---
 

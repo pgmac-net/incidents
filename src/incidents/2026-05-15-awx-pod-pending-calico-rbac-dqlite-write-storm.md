@@ -251,44 +251,44 @@ AWX job 1867 logs confirmed: `automation-job-1867-ckj4l   1/1   Running` within 
 ### Immediate Actions Required
 
 1. **Commit Calico ClusterRole fix to GitOps** (High Priority)
-   - The RBAC fix was applied directly with `kubectl apply`. It is not yet in the ArgoCD GitOps manifests. ArgoCD drift detection will surface this.
-   - Action: Patch the Calico manifests in the GitOps repo with the corrected ClusterRole and sync.
+    - The RBAC fix was applied directly with `kubectl apply`. It is not yet in the ArgoCD GitOps manifests. ArgoCD drift detection will surface this.
+    - Action: Patch the Calico manifests in the GitOps repo with the corrected ClusterRole and sync.
 
 2. **Alert on consecutive AWX job failures** (High Priority)
-   - Jobs 1859, 1861, and 1863 failed before this incident was investigated. A repeated-failure pattern is a strong signal of infrastructure, not playbook, problems.
-   - Action: Add an AWX/webhook alert for N ≥ 2 consecutive failures of the same template. Route to homelab alerting channel.
+    - Jobs 1859, 1861, and 1863 failed before this incident was investigated. A repeated-failure pattern is a strong signal of infrastructure, not playbook, problems.
+    - Action: Add an AWX/webhook alert for N ≥ 2 consecutive failures of the same template. Route to homelab alerting channel.
 
 3. **Alert on kube-apiserver RBAC 403 rate** (High Priority)
-   - The calico-kube-controllers crash loop generated hundreds of 403 errors per hour for an unknown period. No alert fired.
-   - Action: Add Prometheus alert for `apiserver_request_total{code="403"} > 10/min` sustained over 5 minutes, with label filter for system service accounts.
+    - The calico-kube-controllers crash loop generated hundreds of 403 errors per hour for an unknown period. No alert fired.
+    - Action: Add Prometheus alert for `apiserver_request_total{code="403"} > 10/min` sustained over 5 minutes, with label filter for system service accounts.
 
 4. **Alert on dqlite write error rate** (Medium Priority)
-   - `database is locked` in kubelite logs is a direct signal that snapshot serialization is interfering with API server writes. Currently treated as background noise.
-   - Action: Add log-based alert (Loki/Promtail or similar) for `database is locked` occurrences > 5 in any 5-minute window.
+    - `database is locked` in kubelite logs is a direct signal that snapshot serialization is interfering with API server writes. Currently treated as background noise.
+    - Action: Add log-based alert (Loki/Promtail or similar) for `database is locked` occurrences > 5 in any 5-minute window.
 
 ### Longer-Term Improvements
 
 5. **Reduce dqlite snapshot size via microk8s upgrade** (High Priority)
-   - The snapshot is 225MB vs 21.8MB of live data (~10x fragmentation). This is the underlying reason snapshots cause long lock windows.
-   - The monthly maintenance rolling-restart play **does not fix this** — each restarted node re-syncs from the leader's un-vacuumed snapshot, discarding its local VACUUM. Online VACUUM via cowsql is not supported. Offline simultaneous VACUUM breaks Raft consensus (confirmed April 2026).
-   - Action: Upgrade microk8s to a current snap revision. Newer k8s-dqlite versions have improved snapshot compaction and WAL management. This is the only safe path to snapshot size reduction.
+    - The snapshot is 225MB vs 21.8MB of live data (~10x fragmentation). This is the underlying reason snapshots cause long lock windows.
+    - The monthly maintenance rolling-restart play **does not fix this** — each restarted node re-syncs from the leader's un-vacuumed snapshot, discarding its local VACUUM. Online VACUUM via cowsql is not supported. Offline simultaneous VACUUM breaks Raft consensus (confirmed April 2026).
+    - Action: Upgrade microk8s to a current snap revision. Newer k8s-dqlite versions have improved snapshot compaction and WAL management. This is the only safe path to snapshot size reduction.
 
 6. **Implement Calico IPAM GC** (Medium Priority)
-   - 838 stale IPAM handles (pod IP allocation records from deleted pods) remain. These should self-GC now that `calico-kube-controllers` has correct RBAC and the workloadendpoint controller is functional.
-   - Manual cleanup with `calicoctl ipam check --allow-version-mismatch` is blocked by the v3.32 client vs v3.13.2 cluster version mismatch.
-   - Action: Install calicoctl v3.13.x locally, or use the version bundled in the calico-node pod, and run `calicoctl ipam check` + `release --leaked` to explicitly clean stale handles.
+    - 838 stale IPAM handles (pod IP allocation records from deleted pods) remain. These should self-GC now that `calico-kube-controllers` has correct RBAC and the workloadendpoint controller is functional.
+    - Manual cleanup with `calicoctl ipam check --allow-version-mismatch` is blocked by the v3.32 client vs v3.13.2 cluster version mismatch.
+    - Action: Install calicoctl v3.13.x locally, or use the version bundled in the calico-node pod, and run `calicoctl ipam check` + `release --leaked` to explicitly clean stale handles.
 
 7. **Alert on scheduler informer watch reconnections** (Medium Priority)
-   - The scheduler silently lost its pod informer and never recovered without a restart. This failure mode is invisible without active log monitoring.
-   - Action: Add alert for kube-scheduler log pattern `Failed to watch *v1.Pod` or `watch chan error`. If the scheduler reconnects more than once per 10 minutes, something is disrupting the watch stream.
+    - The scheduler silently lost its pod informer and never recovered without a restart. This failure mode is invisible without active log monitoring.
+    - Action: Add alert for kube-scheduler log pattern `Failed to watch *v1.Pod` or `watch chan error`. If the scheduler reconnects more than once per 10 minutes, something is disrupting the watch stream.
 
 8. **Investigate and resolve recurring scheduler leader elections** (High Priority)
-   - 4,499 scheduler leader elections since cluster install is abnormal. Even after this fix, the underlying dqlite snapshot locking will continue to cause occasional missed renewals.
-   - The long-term fix is snapshot size reduction (item 5). Monitoring the election rate post-fix will confirm whether the Calico RBAC was the dominant contributor.
+    - 4,499 scheduler leader elections since cluster install is abnormal. Even after this fix, the underlying dqlite snapshot locking will continue to cause occasional missed renewals.
+    - The long-term fix is snapshot size reduction (item 5). Monitoring the election rate post-fix will confirm whether the Calico RBAC was the dominant contributor.
 
 9. **AWX job failure runbook** (Low Priority)
-   - No runbook existed for "AWX pod stuck Pending". Diagnosis required ad-hoc investigation.
-   - Action: Add runbook entry: if AWX pod Pending > 2 min with no events → check scheduler lease, check dqlite lock errors, check calico-kube-controllers logs, check node conditions.
+    - No runbook existed for "AWX pod stuck Pending". Diagnosis required ad-hoc investigation.
+    - Action: Add runbook entry: if AWX pod Pending > 2 min with no events → check scheduler lease, check dqlite lock errors, check calico-kube-controllers logs, check node conditions.
 
 ---
 
