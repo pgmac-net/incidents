@@ -2,9 +2,11 @@ name: Validate Documentation
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - main
   pull_request:
-    branches: ['**']
+    branches:
+      - main
 
 jobs:
   validate:
