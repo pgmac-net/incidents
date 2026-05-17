@@ -5,6 +5,7 @@ env/
 
 # MkDocs build output
 site/
+docs/
 
 # Python cache
 __pycache__/
