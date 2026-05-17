@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: self-hosted
     permissions:
-      contents: write
+      contents: read
       id-token: write
       attestations: write
 
@@ -67,15 +67,10 @@ jobs:
           touch docs/.nojekyll
           echo "incidents.pgmac.net.au" > docs/CNAME
 
-      - name: Commit and push docs/
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
-          git add docs/
-          git diff --staged --quiet || (git commit -m "chore: rebuild site [skip ci]" && git push origin main)
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
 
   deploy:
     needs: build
@@ -128,11 +123,21 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
         run: |
-          echo "========================================="
-          echo "✅ Site deployed successfully!"
-          echo "========================================="
-          echo ""
-          echo "🌐 Site URL: https://macro.int.pgmac.net/incidents/"
-          echo "📦 Deployed from: $COMMIT_SHA"
-          echo "👤 Deployed by: $ACTOR"
-          echo ""
+          echo "Site URL: https://macro.int.pgmac.net/incidents/"
+          echo "Deployed from: $COMMIT_SHA"
+          echo "Deployed by: $ACTOR"
+
+  pages:
+    needs: build
+    runs-on: self-hosted
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
