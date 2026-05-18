@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Title | Severity | Duration |
 |------|-------|----------|----------|
+| 2026-05-18 | [k8s03 Extended Recovery — kine Watch Corruption, VXLAN Route Corruption, and Kubelet Watch Stream Stall](2026-05-18-k8s03-extended-recovery-kine-watch-vxlan-route-corruption.md) | High | ~2h10m |
 | 2026-05-17 | [k8s03 PLEG Deadlock — Stale Calico IPAM Blocks + Generic PLEG Serial-Poll Vulnerability](2026-05-17-k8s03-pleg-deadlock-stale-ipam-blocks.md) | High | ~9h |
 | 2026-05-16 | [microk8s 1.34 → 1.35 Rolling Upgrade — cgroup v2, containerd Shim, Disk Pressure, and Kubelet Stall](2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md) | High | ~8.75h |
 | 2026-05-15 | [AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm](2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm.md) | Medium | ~13 min silent + ~8 min to fix |
