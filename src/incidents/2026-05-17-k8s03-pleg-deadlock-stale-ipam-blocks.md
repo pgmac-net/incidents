@@ -16,7 +16,7 @@ tags:
 **Date:** 2026-05-17 (resolved 2026-05-18)
 **Duration:** ~9 hours active (23:30 AEST 2026-05-17 → 08:45 AEST 2026-05-18)
 **Severity:** High (k8s03 node deadlocked; recurring across multiple restart attempts; workloads disrupted)
-**Status:** Partially Resolved (PLEG recovered, IPAM cleaned; k8s03 cordoned pending stability confirmation)
+**Status:** Resolved (k8s03 uncordoned and fully operational as of 2026-05-22; see follow-up note below)
 
 ---
 
@@ -346,7 +346,17 @@ Total freed: 237 stale allocations
 | 2 | Enable EventedPLEG on k8s03 (remove `EventedPLEG=false` feature gate) | High | [PGM-199](https://linear.app/pgmac-net-au/issue/PGM-199) |
 | 3 | Upgrade Calico from v3.13.2 to a current release (calico-node + calico-kube-controllers) | High | [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200) |
 | 4 | Investigate kine/dqlite latency spike frequency and duration; assess residual risk post-EventedPLEG | Medium | [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) |
-| 5 | Uncordon k8s03 after 24h stability window (pleg-detector.service confirms no deadlock) | High | [PGM-197](https://linear.app/pgmac-net-au/issue/PGM-197) |
+| 5 | ~~Uncordon k8s03 after 24h stability window (pleg-detector.service confirms no deadlock)~~ **Done 2026-05-22** | High | [PGM-197](https://linear.app/pgmac-net-au/issue/PGM-197) |
+
+---
+
+## Follow-Up Note (2026-05-22)
+
+k8s03 was uncordoned and running normally until a second PLEG stall occurred during PGM-203 recovery work (kubelite restart storm). This second stall had a **different root cause** from this incident: orphaned `containerd-shim-runc-v2` processes accumulated from multiple rapid kubelite restarts caused PLEG's first `relist()` to block on each orphaned shim's gRPC timeout (30-60s each), serialising the entire relist for 36+ minutes.
+
+The IPAM/CNI blocking root cause documented in this PIR was not present in the second stall — the Calico IPAM blocks had been cleaned. The second stall was resolved by the nuclear clean-restart procedure: stop kubelite → kill all shims → restart `snap.microk8s.daemon-k8s-dqlite` → start kubelite.
+
+This new PLEG failure mode is documented in `kubelet-silent-stall.md` as Failure Mode 3. The open action items (EventedPLEG, Calico upgrade) remain relevant as mitigations for both failure modes.
 
 ---
 
