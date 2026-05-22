@@ -329,6 +329,46 @@ The k8s-dqlite / kine separation is critical: `snap.microk8s.daemon-k8s-dqlite` 
 
 ---
 
+## Post-Incident Checks (After Nuclear Restart)
+
+After a nuclear restart (stop kubelite → kill all shims → restart k8s-dqlite → start kubelite), `containerd-shim` processes are cleaned. However, **non-shim application processes** that were running in containers on the node can also survive as orphans if their container was killed abruptly. These orphans may hold advisory file locks or bind to paths that block new container instances from initialising correctly.
+
+The symptom is subtle: the new container starts, creates its socket, but a handler or worker is blocked acquiring a file lock held by the orphaned process. The gRPC socket exists but never responds — presenting as a probe timeout rather than a lock error.
+
+### Detection
+
+```bash
+# Check for unexpected duplicates of known lock-using services
+ssh <node> "sudo pgrep -a buildkitd"
+# Multiple hits = orphan from a previous container instance
+
+# Confirm the older process is an orphan — its /proc Modify time predates the restart window
+ssh <node> "sudo stat /proc/<older-PID> | grep Modify"
+# Modify time older than the restart = orphaned from previous container
+
+# Confirm: orphan's ephemeral /run/ is empty, new instance has the live socket
+ssh <node> "sudo ls /proc/<older-PID>/root/run/<app>/"   # empty = orphan
+ssh <node> "sudo ls /proc/<newer-PID>/root/run/<app>/"   # has socket = current
+```
+
+### Recovery
+
+```bash
+sudo kill <orphan-PID>
+```
+
+The new instance acquires the lock and completes startup immediately.
+
+### Services to check after a nuclear restart on this cluster
+
+| Service | Lock file | Detection |
+|---------|-----------|-----------|
+| buildkitd | `/var/lib/buildkit/buildkitd.lock` | `pgrep -a buildkitd` → multiple hits |
+
+Add entries as new orphan patterns are discovered.
+
+---
+
 ## References
 
 - PIR: [microk8s 1.34 → 1.35 Upgrade](../incidents/2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md) — Phases 4 and 8

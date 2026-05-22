@@ -358,6 +358,8 @@ The IPAM/CNI blocking root cause documented in this PIR was not present in the s
 
 This new PLEG failure mode is documented in `kubelet-silent-stall.md` as Failure Mode 3. The open action items (EventedPLEG, Calico upgrade) remain relevant as mitigations for both failure modes.
 
+A third consequence of the nuclear restart was discovered hours later: an orphaned `buildkitd` process (PID from 02:08 AEST, during the restart storm) survived the nuclear cleanup and held an advisory flock on `/var/lib/buildkit/buildkitd.lock` for ~8 hours. Every new buildkitd container that started could create the gRPC socket but the worker initialisation blocked waiting for the lock — presenting as a probe timeout rather than an obvious lock contention signal. Killing the orphan (`sudo kill <PID>`) immediately unblocked the new instance. After any nuclear restart, check for orphaned non-shim application processes on the affected node: `sudo pgrep -a <appname>` combined with `sudo stat /proc/<PID> | grep Modify` to confirm the process predates the restart window. See `kubelet-silent-stall.md` Post-Incident Checks section.
+
 ---
 
 ## Technical Details
