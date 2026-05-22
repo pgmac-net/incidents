@@ -321,7 +321,7 @@ ssh k8s01 "ip neigh show dev vxlan.calico | grep 10.1.235.133"
 | 1 | Fix kine/dqlite watch reliability: add retry-with-backoff on `database is locked` during watch creation | High | [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) |
 | 2 | Add NRPE check: detect kubelet watch stream stall (scheduled pods not appearing in `/proxy/pods` for >120s) | High | new ticket |
 | 3 | Add NRPE check: verify VXLAN route gateways match Calico VTEP node annotations on all peer nodes | Medium | new ticket |
-| 4 | Update microk8s runbook: document canonical watch stall recovery as 3-step (cordon → k8s-dqlite restart → kubelite restart) | Medium | [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) |
+| 4 | ~~Update microk8s runbook: document canonical watch stall recovery as 3-step (cordon → k8s-dqlite restart → kubelite restart)~~ **Done 2026-05-22** — documented in `kubelet-silent-stall.md` (Failure Mode 3) and `dqlite-write-contention.md` (Recovery section) | Medium | [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) |
 | 5 | Add VXLAN route verification step to calico-node recovery checklist (post-Ready state) | Medium | [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200) |
 | 6 | Upgrade Calico from v3.13.2 (fixes Felix watch reliability, IPAM GC, VTEP reconciliation) | High | [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200) |
 

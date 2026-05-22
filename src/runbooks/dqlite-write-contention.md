@@ -81,6 +81,26 @@ The `try: 500` threshold means kine exhausted its maximum retry budget (~500 att
    ```
    Expect the rate to fall within 2–5 minutes.
 
+### If kubelite connections to kine are broken after a restart
+
+`snap.microk8s.daemon-k8s-dqlite` is a **separate** systemd service from kubelite. It is not restarted when kubelite restarts. After a write contention storm, k8s-dqlite can accumulate corrupt internal kine connection state that causes every new kubelite instance to fail its etcd-client connections at high retry counts (`attempt:80+`, `grpc: the client connection is closing`).
+
+Restart k8s-dqlite independently on each affected node before restarting kubelite:
+
+```bash
+# Restart k8s-dqlite first (clears kine internal state)
+ssh <node> "sudo systemctl restart snap.microk8s.daemon-k8s-dqlite.service"
+sleep 10
+
+# Then restart kubelite (it will connect to a clean kine session)
+kubectl cordon <node>
+ssh <node> "sudo systemctl restart snap.microk8s.daemon-kubelite.service"
+kubectl wait node/<node> --for=condition=Ready --timeout=120s --context pvek8s
+kubectl uncordon <node>
+```
+
+Detection: kubelite logs show `retrying of unary invoker failed ... attempt:80+` or `grpc: the client connection is closing` at startup; kubelite may also be silent (PLEG stall) — see [kubelet-silent-stall.md](kubelet-silent-stall.md) Failure Mode 3.
+
 ### If kcm/scheduler watches are stale (observedGeneration not advancing)
 
 The kcm's informer cache may be stuck if kine connections dropped during the write storm. The kcm will not process any reconciliations until the cache sync completes.
@@ -90,8 +110,10 @@ The kcm's informer cache may be stuck if kine connections dropped during the wri
    kubectl -n kube-system get lease kube-controller-manager -o jsonpath='{.spec.holderIdentity}'
    ```
 
-2. If the leader's cache is stuck (no RS/Deployment reconciliation in logs for >5 minutes), cordon the leader node and restart kubelite there to force a fresh leader election:
+2. If the leader's cache is stuck (no RS/Deployment reconciliation in logs for >5 minutes), restart k8s-dqlite first, then cordon and restart kubelite on the leader node to force a fresh leader election:
    ```bash
+   ssh <leader-node> "sudo systemctl restart snap.microk8s.daemon-k8s-dqlite.service"
+   sleep 10
    kubectl cordon <leader-node>
    ssh <leader-node> "sudo systemctl restart snap.microk8s.daemon-kubelite.service"
    until kubectl get node <leader-node> --no-headers | grep -q 'Ready,SchedulingDisabled'; do sleep 5; done

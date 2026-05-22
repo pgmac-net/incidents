@@ -20,9 +20,9 @@ This is a false-positive health signal: `kubectl get nodes` only confirms the ku
 
 ---
 
-## Two Distinct Root Causes
+## Three Distinct Root Causes
 
-Both failure modes produce the same symptom. Check the kubelite journal first to distinguish them.
+All three failure modes produce the same symptom. Check the kubelite journal and process state to distinguish them.
 
 ---
 
@@ -180,19 +180,157 @@ Cordoning sets the node as `Unschedulable`, preventing new pods from receiving `
 
 ---
 
+## Failure Mode 3 — PLEG Stall (Orphaned Containerd Shims)
+
+### When it occurs
+
+After multiple kubelite restarts in a short session (e.g., during incident recovery). Each restart can leave behind orphaned `containerd-shim-runc-v2` zombie processes — shims whose containers have exited but whose processes were not cleaned up. On the next kubelite start, PLEG's first `relist()` call iterates over every shim, including orphaned ones. Each orphaned shim causes a gRPC `ContainerStatus` call to hang until its timeout, serialising the entire relist for 30-60+ minutes.
+
+The k8s-dqlite service (kine) is a **separate** systemd service from kubelite (`snap.microk8s.daemon-k8s-dqlite.service`). It is NOT restarted when kubelite is restarted. After kubelite restart storms, kine's internal connection state can become corrupt — all new kubelite instances will fail their etcd-client connections to kine until k8s-dqlite is restarted independently.
+
+### Detection
+
+```bash
+# 1. Kubelet completely silent after startup — no logs after initial node registration
+ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite -n 5 --no-pager"
+# Will show only startup lines (kubelet_node_status.go:77 "Successfully registered node")
+# and then nothing — even after 10+ minutes
+
+# 2. Process is ALIVE but has zero CPU activity
+PID=$(ssh <node> "sudo systemctl show snap.microk8s.daemon-kubelite --property=MainPID | cut -d= -f2")
+ssh <node> "sudo cat /proc/$PID/schedstat && sleep 3 && sudo cat /proc/$PID/schedstat"
+# If both lines are identical → zero CPU → PLEG stall
+
+# 3. Orphaned shim count (shims > running tasks = orphans)
+ssh <node> "pgrep -c containerd-shim && sudo /snap/microk8s/current/bin/ctr \
+  --address /var/snap/microk8s/common/run/containerd.sock -n k8s.io tasks list | wc -l"
+# If shim count >> task count, there are orphaned shims causing the stall
+
+# 4. kine connection errors (check for high retry counts on startup)
+ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite --since '5 minutes ago' | \
+  grep 'retrying of unary invoker'"
+# attempt:50+ means kine connections are exhausted
+```
+
+**PLEG stall signature:**
+```
+# Only startup logs, then silence for 10+ minutes:
+May 22 02:34:21 k8s03 kubelite[...]: "Successfully registered node" node="k8s03"
+# ... nothing after this for 30+ minutes ...
+
+# schedstat identical across 3+ second window:
+195398181 57385342 625
+195398181 57385342 625   ← no CPU consumed = PLEG blocking
+
+# Shim count > running tasks:
+44 shims
+27 running tasks      ← 17 orphaned shims causing hang
+```
+
+### Recovery
+
+#### Step 1 — Kill orphaned shims
+
+Cordon the node first if not already cordoned.
+
+```bash
+kubectl --context pvek8s cordon <node>
+
+# Kill orphaned shims (shims without a corresponding running task)
+ssh <node> "
+  RUNNING=\$(sudo /snap/microk8s/current/bin/ctr \
+    --address /var/snap/microk8s/common/run/containerd.sock \
+    -n k8s.io tasks list 2>/dev/null | awk 'NR>1 {print \$1}')
+  KILLED=0
+  for PID in \$(pgrep -f containerd-shim 2>/dev/null); do
+    CID=\$(sudo cat /proc/\$PID/cmdline 2>/dev/null | tr '\0' '\n' | grep -A1 '^-id$' | tail -1)
+    if [ -n \"\$CID\" ] && ! echo \"\$RUNNING\" | grep -q \"\$CID\"; then
+      sudo kill -9 \$PID 2>/dev/null && KILLED=\$((KILLED+1))
+    fi
+  done
+  echo \"Killed \$KILLED orphaned shims\"
+"
+# Verify: shim count should now approximately equal running task count
+ssh <node> "pgrep -c containerd-shim"
+```
+
+#### Step 2 — Restart k8s-dqlite (if kine connection errors present)
+
+```bash
+ssh <node> "sudo systemctl restart snap.microk8s.daemon-k8s-dqlite.service"
+sleep 10
+# Verify kine is up
+ssh <node> "sudo systemctl is-active snap.microk8s.daemon-k8s-dqlite.service"
+```
+
+#### Step 3 — Restart kubelite
+
+If kubelite is still running from the stalled start:
+```bash
+ssh <node> "sudo systemctl restart snap.microk8s.daemon-kubelite.service"
+```
+
+#### Step 4 — Verify PLEG recovery
+
+```bash
+# Kubelet should produce logs within 30 seconds of restart
+ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite --since '1 minute ago' | \
+  grep -v '^--' | tail -10"
+
+# Node should return to Ready
+kubectl --context pvek8s wait node/<node> --for=condition=Ready --timeout=120s
+
+# Uncordon once healthy
+kubectl --context pvek8s uncordon <node>
+```
+
+#### Nuclear option — when orphan kill is insufficient
+
+If PLEG stall persists after killing orphaned shims (e.g., kine corruption also involved, or shim enumeration itself is blocking), do a full clean restart:
+
+```bash
+# Stop kubelite FIRST, then kill ALL shims (disrupts pods on node — they will restart)
+ssh <node> "sudo systemctl stop snap.microk8s.daemon-kubelite.service"
+ssh <node> "for PID in \$(pgrep -f containerd-shim 2>/dev/null); do sudo kill -9 \$PID 2>/dev/null; done"
+ssh <node> "sudo systemctl restart snap.microk8s.daemon-k8s-dqlite.service"
+sleep 10
+ssh <node> "sudo systemctl start snap.microk8s.daemon-kubelite.service"
+```
+
+This stops all pods on the node cleanly. StatefulSets, Deployments, and DaemonSets recreate their pods automatically. PVC data is preserved.
+
+### Why this happens
+
+PLEG (Pod Lifecycle Event Generator) runs a `relist()` goroutine every second. On kubelet startup, the very first relist must complete before any pod synchronization can proceed. The relist calls `ContainerStatus` via CRI (containerd's runtime service) for every known container. If a `containerd-shim-runc-v2` process for an exited container is still alive (orphaned), containerd must wait for it to respond — each such call can take 30-60 seconds to time out. With dozens of orphaned shims, the first relist can take 30-60+ minutes, during which the kubelet is completely frozen.
+
+Orphaned shims accumulate because containerd 2.x uses shim-sharing and because each kubelite restart can leave zombie shim processes behind if the node lifecycle events are not cleanly processed during the restart.
+
+The k8s-dqlite / kine separation is critical: `snap.microk8s.daemon-k8s-dqlite` provides the SQLite-backed etcd-compatible API to all kubelite processes on the node. After write contention storms (see [dqlite-write-contention runbook](dqlite-write-contention.md)), k8s-dqlite accumulates internal state that causes all subsequent kubelite etcd-client connections to fail at high retry counts. Restarting k8s-dqlite resets this state without affecting the WAL or any dqlite data.
+
+### Context
+
+- First observed: 2026-05-22, during PGM-203 follow-up kubelite restart session on k8s03
+- k8s-dqlite / kine separation discovered by observing `snap.microk8s.daemon-k8s-dqlite` service age (1 day 5h) vs kubelite restarts on the same day
+- All-shims-killed approach was required when orphan kill alone did not unblock the relist — the relist had already started enumerating shims before the kills took effect
+
+---
+
 ## Quick Reference
 
-| Signal | Failure Mode 1 (imagefs) | Failure Mode 2 (watch stall) |
-|--------|--------------------------|------------------------------|
-| kubelite logs silent? | **Yes** — zero output | No — logs active |
-| Startup error present? | Yes — `no imagefs label` | No |
-| kubelet /pods shows stale pods only? | Maybe | **Yes** |
-| Fix | `systemctl restart snap.microk8s.daemon-kubelite` | Cordon → restart → uncordon |
-| Data at risk? | No | No |
+| Signal | Failure Mode 1 (imagefs) | Failure Mode 2 (watch stall) | Failure Mode 3 (PLEG stall) |
+|--------|--------------------------|------------------------------|-----------------------------|
+| kubelite logs silent? | **Yes** — zero output | No — logs active | **Yes** — startup only |
+| Startup error present? | Yes — `no imagefs label` | No | No (or kine retry errors) |
+| kubelet /pods stale? | Maybe | **Yes** | N/A |
+| schedstat frozen (0 CPU)? | Yes | No | **Yes** |
+| shims >> running tasks? | No | No | **Yes** |
+| Fix | `systemctl restart kubelite` | Cordon → restart → uncordon | Kill orphan shims → restart k8s-dqlite → restart kubelite |
+| Data at risk? | No | No | No (pods restart from PVCs) |
 
 ---
 
 ## References
 
 - PIR: [microk8s 1.34 → 1.35 Upgrade](../incidents/2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md) — Phases 4 and 8
-- Linear: [PGM-187](https://linear.app/pgmac-net-au/issue/PGM-187), [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195)
+- Linear: [PGM-187](https://linear.app/pgmac-net-au/issue/PGM-187), [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203)
+- Related: [dqlite-write-contention runbook](dqlite-write-contention.md) — k8s-dqlite restart context
