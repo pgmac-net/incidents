@@ -31,13 +31,21 @@ Each post-incident review follows a standard structure:
 
 ## Contributing
 
-When creating a new PIR document:
+### Creating a PIR
 
 1. Use the naming convention: `YYYY-MM-DD-brief-description.md`
-2. Place documents in the `src/incidents/` directory
-3. Update the `mkdocs.yml` navigation section
-4. Follow the [PIR structure template](incidents/pir-template.md) — each section is explained with guidance on what to write and why
-5. Include relevant technical details, commands, and verification steps
+2. Place documents in the `src/incidents/` directory — auto-nav picks them up automatically, no `mkdocs.yml` changes needed
+3. Add a row to the top of `src/incidents/index.md` (newest-first)
+4. Follow the [PIR structure template](doc-templates/pir-template.md) — each section is explained with guidance on what to write and why
+
+### Creating a Runbook
+
+Write a runbook when an incident has a repeatable failure mode with a concrete, step-by-step recovery procedure that an on-call could follow cold.
+
+1. Use a descriptive name: `<service>-<failure-description>.md` (e.g., `calico-cni-unauthorized.md`)
+2. Place documents in the `src/runbooks/` directory — auto-nav picks them up automatically
+3. Follow the [runbook template](doc-templates/runbook-template.md) — it covers both the simple pattern (one failure mode) and the multi-mode pattern (same symptom, multiple root causes)
+4. Consider extending an existing runbook with a new failure mode section instead of creating a new file if the observable symptom is the same
 
 ## Navigation
 
