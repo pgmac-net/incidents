@@ -36,7 +36,7 @@ When creating a new PIR document:
 1. Use the naming convention: `YYYY-MM-DD-brief-description.md`
 2. Place documents in the `src/incidents/` directory
 3. Update the `mkdocs.yml` navigation section
-4. Follow the [PIR structure template](incidents/pir-template.md) — each section is explained with guidance on what to write and why
+4. Follow the [PIR structure template](doc-templates/pir-template.md) — each section is explained with guidance on what to write and why
 5. Include relevant technical details, commands, and verification steps
 
 ## Navigation

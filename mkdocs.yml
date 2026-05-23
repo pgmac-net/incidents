@@ -58,30 +58,6 @@ markdown_extensions:
   - toc:
       permalink: true
 
-nav:
-  - Home: index.md
-  - Incidents:
-    - incidents/index.md
-    - PIR Structure Template: incidents/pir-template.md
-    - incidents/2026-05-23-k8s01-calico-cni-unauthorized-stale-kubeconfig.md
-    - incidents/2026-05-18-k8s03-extended-recovery-kine-watch-vxlan-route-corruption.md
-    - incidents/2026-05-17-k8s03-pleg-deadlock-stale-ipam-blocks.md
-    - incidents/2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md
-    - incidents/2026-05-15-awx-pod-pending-calico-rbac-dqlite-write-storm.md
-    - incidents/2026-04-12-pvek8s-dqlite-quorum-loss-complete-cluster-outage.md
-    - incidents/2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md
-    - incidents/2026-03-30-sonarr-iscsi-hairpin-containercreating.md
-    - incidents/2026-03-28-radarr-jiva-replica-divergence-second.md
-    - incidents/2026-03-28-arc-pods-pending-kubelet-sync-stall.md
-    - incidents/2026-02-22-radarr-openebs-jiva-replica-divergence.md
-    - incidents/2026-01-06-cluster-cascade-failure.md
-  - Runbooks:
-    - runbooks/index.md
-    - runbooks/dqlite-write-contention.md
-    - runbooks/jiva-csi-mount-proliferation.md
-    - runbooks/kubelet-silent-stall.md
-  - Tags: tags.md
-
 extra:
   social:
     - icon: fontawesome/brands/github
