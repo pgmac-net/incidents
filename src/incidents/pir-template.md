@@ -40,12 +40,12 @@ tags:
 
 **What to include:**
 
-| Category | Values |
-|----------|--------|
-| Nodes | `k8s01`, `k8s02`, `k8s03` |
-| Technologies | `calico`, `kine`, `dqlite`, `kubelet`, `containerd`, `argocd`, `openebs`, `jiva` |
-| Failure types | `watch-stream`, `vxlan`, `ipam`, `pleg`, `crash-loop`, `oom`, `cni` |
-| Domain | `networking`, `storage`, `scheduling` |
+| Category      | Values                                                                           |
+| ------------- | -------------------------------------------------------------------------------- |
+| Nodes         | `k8s01`, `k8s02`, `k8s03`                                                        |
+| Technologies  | `calico`, `kine`, `dqlite`, `kubelet`, `containerd`, `argocd`, `openebs`, `jiva` |
+| Failure types | `watch-stream`, `vxlan`, `ipam`, `pleg`, `crash-loop`, `oom`, `cni`              |
+| Domain        | `networking`, `storage`, `scheduling`                                            |
 
 ---
 
@@ -62,12 +62,12 @@ tags:
 
 **Severity guide:**
 
-| Level | Criteria |
-|-------|----------|
-| Critical | Full cluster outage or data loss; multiple services completely down |
-| High | Single major service down; significant workload disruption; extended recovery |
-| Medium | Degraded redundancy; intermittent failures; no user-visible outage |
-| Low | Near-miss; caught before user impact; brief self-healing issue |
+| Level    | Criteria                                                                      |
+| -------- | ----------------------------------------------------------------------------- |
+| Critical | Full cluster outage or data loss; multiple services completely down           |
+| High     | Single major service down; significant workload disruption; extended recovery |
+| Medium   | Degraded redundancy; intermittent failures; no user-visible outage            |
+| Low      | Near-miss; caught before user impact; brief self-healing issue                |
 
 ---
 
@@ -93,10 +93,10 @@ tags:
 **Format:**
 
 ```markdown
-| Time | Event |
-|------|-------|
-| **~09:00 AEST** | Brief description of what happened or was observed |
-| **09:15 AEST** | Specific times when known; approximate (~) when reconstructed |
+| Time            | Event                                                         |
+| --------------- | ------------------------------------------------------------- |
+| **~09:00 AEST** | Brief description of what happened or was observed            |
+| **09:15 AEST**  | Specific times when known; approximate (~) when reconstructed |
 ```
 
 **Guidelines:**
@@ -130,17 +130,21 @@ Target **4–7 "how" levels** per chain. Stopping at 2–3 levels usually means 
 #### Chain N: [Surface Symptom] — [Short Title]
 
 ##### How did [symptom] happen?
+
 [Proximate cause — the immediate technical reason]
 
 ##### How did [proximate cause] happen?
+
 [Contributing factor — what enabled the proximate cause]
 
 ##### How did [contributing factor] happen?
+
 [Deeper cause]
 
 ... continue drilling ...
 
 ##### How was [root cause] not prevented or detected?
+
 [The process gap, monitoring gap, or knowledge gap — this is the actual root cause]
 ```
 
@@ -155,10 +159,10 @@ Target **4–7 "how" levels** per chain. Stopping at 2–3 levels usually means 
 **Services Affected table:**
 
 ```markdown
-| Service | Impact | Duration |
-|---------|--------|----------|
-| calico-node (k8s01) | Not scheduling new pods | ~35 min |
-| All k8s03 cross-node traffic | Silently dropped (VXLAN blackhole) | ~35 min |
+| Service                      | Impact                             | Duration |
+| ---------------------------- | ---------------------------------- | -------- |
+| calico-node (k8s01)          | Not scheduling new pods            | ~35 min  |
+| All k8s03 cross-node traffic | Silently dropped (VXLAN blackhole) | ~35 min  |
 ```
 
 Include: service name, what went wrong (not just "down"), and duration.
@@ -207,6 +211,7 @@ kubectl --context pvek8s get pods -A | grep -v Running | grep -v Completed
 - **Longer-Term Improvements** — architectural changes, tool improvements, process changes
 
 Each item should:
+
 1. State what the action is
 2. Explain why it's needed (link back to the root cause chain)
 3. Link to the Linear ticket
@@ -234,9 +239,9 @@ Each item should:
 **Format:**
 
 ```markdown
-| # | Action | Priority | Linear |
-|---|--------|----------|--------|
-| 1 | Short action description | High | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
+| #   | Action                   | Priority | Linear                                                   |
+| --- | ------------------------ | -------- | -------------------------------------------------------- |
+| 1   | Short action description | High     | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
 ```
 
 Priority: High / Medium / Low (matching the PIR text).
@@ -290,8 +295,8 @@ what fixed it, any connection to prior incidents.]
 
 ## Timeline (AEST — UTC+10)
 
-| Time | Event |
-|------|-------|
+| Time            | Event   |
+| --------------- | ------- |
 | **~HH:MM AEST** | [Event] |
 
 ---
@@ -308,12 +313,15 @@ what fixed it, any connection to prior incidents.]
 #### Chain 1: [Surface Symptom] — [Short Title]
 
 ##### How did [symptom] happen?
+
 [Proximate cause]
 
 ##### How did [proximate cause] happen?
+
 [Contributing factor]
 
 ##### How was [root cause] not prevented or detected?
+
 [The gap — monitoring, runbook, knowledge, architecture]
 
 ---
@@ -322,8 +330,8 @@ what fixed it, any connection to prior incidents.]
 
 ### Services Affected
 
-| Service | Impact | Duration |
-|---------|--------|----------|
+| Service   | Impact            | Duration   |
+| --------- | ----------------- | ---------- |
 | [service] | [what went wrong] | [duration] |
 
 ### Duration
@@ -351,9 +359,13 @@ what fixed it, any connection to prior incidents.]
 ## Verification
 
 \`\`\`bash
+
 # [Check description]
+
 kubectl --context pvek8s [command]
+
 # → [expected output]
+
 \`\`\`
 
 ---
@@ -392,9 +404,9 @@ kubectl --context pvek8s [command]
 
 ## Action Items
 
-| # | Action | Priority | Linear |
-|---|--------|----------|--------|
-| 1 | [Action] | High | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
+| #   | Action   | Priority | Linear                                                   |
+| --- | -------- | -------- | -------------------------------------------------------- |
+| 1   | [Action] | High     | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
 
 ---
 
@@ -415,7 +427,9 @@ kubectl --context pvek8s [command]
 ### [Procedure Name]
 
 \`\`\`bash
+
 # [Step description]
+
 [command]
 \`\`\`
 
