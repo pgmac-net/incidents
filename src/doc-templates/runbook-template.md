@@ -29,9 +29,9 @@ A good runbook shortens mean time to recovery (MTTR) from hours to minutes for k
 
 This site uses two runbook patterns depending on how many distinct failure modes a symptom has:
 
-| Pattern | When to use |
-|---------|-------------|
-| [Simple](#simple-runbook-pattern) | One failure mode, one root cause, one recovery path |
+| Pattern                                   | When to use                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| [Simple](#simple-runbook-pattern)         | One failure mode, one root cause, one recovery path                            |
 | [Multi-mode](#multi-mode-runbook-pattern) | Same symptom, multiple distinct root causes that need different recovery paths |
 
 If you're not sure which to use, start with Simple. Promote to Multi-mode only when a second distinct failure mode is discovered — don't pre-plan for hypothetical modes.
@@ -75,6 +75,7 @@ tags:
 **Why:** The title is the primary search target. It should match the symptom or alert name someone would search for at 3am. Lead with the service name so related runbooks sort together.
 
 **Examples:**
+
 - `# dqlite Write Contention`
 - `# Jiva CSI Mount Proliferation — Duplicate Bind Mounts After kubelite Restart`
 
@@ -282,12 +283,12 @@ All N failure modes produce the same symptom. Check [key diagnostic] to distingu
 ```markdown
 ## Quick Reference
 
-| Signal | Mode 1 (name) | Mode 2 (name) | Mode 3 (name) |
-|--------|---------------|---------------|---------------|
-| [signal A] | [value] | [value] | [value] |
-| [signal B] | [value] | [value] | [value] |
-| Fix | [one-line] | [one-line] | [one-line] |
-| Data at risk? | No | No | No |
+| Signal        | Mode 1 (name) | Mode 2 (name) | Mode 3 (name) |
+| ------------- | ------------- | ------------- | ------------- |
+| [signal A]    | [value]       | [value]       | [value]       |
+| [signal B]    | [value]       | [value]       | [value]       |
+| Fix           | [one-line]    | [one-line]    | [one-line]    |
+| Data at risk? | No            | No            | No            |
 ```
 
 **Why:** The Quick Reference table is the on-call's triage guide. After identifying which signals are present, the table tells them which mode they're in without re-reading every mode's Detection section. It is the most-used part of a Multi-mode runbook during an active incident.
@@ -365,7 +366,9 @@ tags:
 
    \`\`\`bash
    [command]
+
    # → [expected output]
+
    \`\`\`
 
 2. [Second step]
@@ -382,7 +385,9 @@ Cluster/service is healthy when:
 
 \`\`\`bash
 [check command]
+
 # → [expected output when healthy]
+
 \`\`\`
 
 ---
@@ -435,17 +440,22 @@ All N failure modes produce the same symptom. Check [key diagnostic] to distingu
 ### Detection
 
 \`\`\`bash
+
 # [Step description]
+
 [command]
 
 # [What the stall signature looks like]
+
 [log or output pattern]
 \`\`\`
 
 ### Recovery
 
 \`\`\`bash
+
 # [Step description]
+
 [command]
 \`\`\`
 
@@ -453,7 +463,9 @@ All N failure modes produce the same symptom. Check [key diagnostic] to distingu
 
 \`\`\`bash
 [check command]
+
 # → [expected output]
+
 \`\`\`
 
 ### Context
@@ -478,12 +490,12 @@ All N failure modes produce the same symptom. Check [key diagnostic] to distingu
 
 ## Quick Reference
 
-| Signal | Mode 1 ([name]) | Mode 2 ([name]) |
-|--------|-----------------|-----------------|
-| [signal A] | [value] | [value] |
-| [signal B] | [value] | [value] |
-| Fix | [one-line] | [one-line] |
-| Data at risk? | No | No |
+| Signal        | Mode 1 ([name]) | Mode 2 ([name]) |
+| ------------- | --------------- | --------------- |
+| [signal A]    | [value]         | [value]         |
+| [signal B]    | [value]         | [value]         |
+| Fix           | [one-line]      | [one-line]      |
+| Data at risk? | No              | No              |
 
 ---
 
