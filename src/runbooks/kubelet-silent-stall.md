@@ -182,6 +182,9 @@ Cordoning sets the node as `Unschedulable`, preventing new pods from receiving `
 
 ## Failure Mode 3 — PLEG Stall (Orphaned Containerd Shims)
 
+!!! info "EventedPLEG is active on all nodes (k8s 1.35, enabled 2026-05-18)"
+    With `--feature-gates=EventedPLEG=true`, the cluster-wide PLEG deadlock from orphaned shims is no longer possible. See the **[EventedPLEG Behavior](#eventedpleg-behavior-k8s-135)** section below for what changed and what the new failure signatures look like. The recovery steps in this section remain valid.
+
 ### When it occurs
 
 After multiple kubelite restarts in a short session (e.g., during incident recovery). Each restart can leave behind orphaned `containerd-shim-runc-v2` zombie processes — shims whose containers have exited but whose processes were not cleaned up. On the next kubelite start, PLEG's first `relist()` call iterates over every shim, including orphaned ones. Each orphaned shim causes a gRPC `ContainerStatus` call to hang until its timeout, serialising the entire relist for 30-60+ minutes.
@@ -369,8 +372,80 @@ Add entries as new orphan patterns are discovered.
 
 ---
 
+## EventedPLEG Behavior (k8s 1.35+)
+
+**Status:** Active on k8s01, k8s02, k8s03 since 2026-05-18 (`--feature-gates=EventedPLEG=true`).
+
+EventedPLEG replaces Generic PLEG's 1-second polling `relist()` loop with a push-based CRI event stream. This fundamentally changes the risk profile for Failure Mode 3.
+
+### What changed
+
+**Generic PLEG `relist()` (old behaviour):**
+
+1. Single goroutine calls `GetPodStatus()` → `ContainerStatus()` for every container on the node, serially.
+2. One hung `ContainerStatus()` call (e.g., orphaned shim not responding) blocks the entire goroutine.
+3. After 3 minutes with no completed relist, PLEG is declared unhealthy — the node reports `KubeletNotReady` and pod sync halts cluster-wide on that node.
+
+**EventedPLEG (current behaviour):**
+
+1. CRI events are pushed from containerd as containers start and stop — no polling.
+2. Periodic `ListPodSandboxes` resync runs every 300s: lists sandboxes from containerd's in-memory store (not per-container `ContainerStatus` calls). Orphaned shims do not block this call.
+3. Individual pod events may be delayed if that pod's sandbox serializes with a CNI ADD, but all other pods on the node continue processing normally.
+4. A cluster-wide PLEG stall from orphaned shims is no longer possible.
+
+### New failure signatures
+
+**"pleg has yet to be successful" at kubelet startup — NORMAL:**
+
+```
+E0523 00:17:51 kubelite kubelet.go:2525] "Skipping pod synchronization"
+  err="PLEG is not healthy: pleg has yet to be successful"
+```
+
+This appears at every kubelet startup and clears within ~60 seconds once the first `ListPodSandboxes` resync completes. It is expected — not an incident.
+
+**"pleg was last seen active Xm ago" during operation — ABNORMAL:**
+
+```
+E0523 ... kubelet.go:2525] "Skipping pod synchronization"
+  err="PLEG is not healthy: pleg was last seen active 4m30s ago"
+```
+
+This would indicate a full containerd gRPC freeze (the entire runtime service unresponsive, not just individual shims). If this appears with EventedPLEG active:
+
+1. Check if containerd itself is running: `sudo systemctl is-active snap.microk8s.daemon-containerd`
+2. Check for orphaned non-shim processes holding containerd locks (see Post-Incident Checks section)
+3. If containerd gRPC is frozen, restart containerd: `sudo snap restart microk8s.daemon-containerd`
+4. If restarting containerd, also restart kubelite after it recovers
+
+### Residual risks with EventedPLEG
+
+| Risk | Likelihood | Impact |
+|------|-----------|--------|
+| Orphaned shims cause per-pod event delay | Medium (shims still accumulate after rapid restarts) | Low — single pod delayed, rest of cluster unaffected |
+| Full containerd gRPC freeze stalls EventedPLEG event stream | Low | High — same as Generic PLEG deadlock; requires containerd restart |
+| dqlite write contention blocks CNI ADD → delays pod scheduling | Medium (ongoing) | Low with EventedPLEG — no longer propagates to PLEG stall |
+
+### Monitoring
+
+The PLEG detector script at `/var/log/k8s-pleg-debug/detector.log` (k8s03) continues to log PLEG health events. With EventedPLEG active, the log should show only startup entries and no stall events during normal operation.
+
+Check EventedPLEG health status:
+
+```bash
+# Should be "healthy" and recent timestamp
+ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite --since '1 minute ago' 2>/dev/null | \
+  grep -E 'pleg|PLEG' | tail -5"
+
+# Zero "pleg was last seen active" messages = healthy
+ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite --since '24 hours ago' 2>/dev/null | \
+  grep 'pleg was last seen active' | wc -l"
+```
+
+---
+
 ## References
 
 - PIR: [microk8s 1.34 → 1.35 Upgrade](../incidents/2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md) — Phases 4 and 8
-- Linear: [PGM-187](https://linear.app/pgmac-net-au/issue/PGM-187), [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203)
+- Linear: [PGM-187](https://linear.app/pgmac-net-au/issue/PGM-187), [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203), [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
 - Related: [dqlite-write-contention runbook](dqlite-write-contention.md) — k8s-dqlite restart context
