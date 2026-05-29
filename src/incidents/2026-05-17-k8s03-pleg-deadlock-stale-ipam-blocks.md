@@ -284,31 +284,31 @@ Total freed: 237 stale allocations
 ### Immediate Actions Required
 
 1. **Fix calico-kube-controllers TypeAssertionError to restore IPAM GC** (High)
-   - Without IPAM GC running, stale entries will re-accumulate and full blocks will recur.
-   - Action: Update `calico-kube-controllers` image to a version with tombstone/`DeletedFinalStateUnknown` handling. If Calico upgrade (PGM-200) proceeds, this is resolved as part of that work.
-   - Linear: [PGM-198](https://linear.app/pgmac-net-au/issue/PGM-198)
+    - Without IPAM GC running, stale entries will re-accumulate and full blocks will recur.
+    - Action: Update `calico-kube-controllers` image to a version with tombstone/`DeletedFinalStateUnknown` handling. If Calico upgrade (PGM-200) proceeds, this is resolved as part of that work.
+    - Linear: [PGM-198](https://linear.app/pgmac-net-au/issue/PGM-198)
 
 2. **Enable EventedPLEG on k8s03** (High)
-   - `EventedPLEG=false` forces Generic PLEG's blocking 1-second serial poll, creating the structural deadlock vulnerability. EventedPLEG uses a watch stream and eliminates the serial `ListPodSandboxes` poll.
-   - Action: Change `--feature-gates=EventedPLEG=false` to `EventedPLEG=true` (or remove if k8s 1.35 defaults to true) in `/var/snap/microk8s/current/args/kubelet`. Cordon k8s03 before restarting (PGM-195 procedure).
-   - Linear: [PGM-199](https://linear.app/pgmac-net-au/issue/PGM-199)
+    - `EventedPLEG=false` forces Generic PLEG's blocking 1-second serial poll, creating the structural deadlock vulnerability. EventedPLEG uses a watch stream and eliminates the serial `ListPodSandboxes` poll.
+    - Action: Change `--feature-gates=EventedPLEG=false` to `EventedPLEG=true` (or remove if k8s 1.35 defaults to true) in `/var/snap/microk8s/current/args/kubelet`. Cordon k8s03 before restarting (PGM-195 procedure).
+    - Linear: [PGM-199](https://linear.app/pgmac-net-au/issue/PGM-199)
 
 3. **Upgrade Calico from v3.13.2 to a current release** (High)
-   - Calico v3.13.2 is ~6 years old, orphaned from microk8s management, and incompatible with microk8s-bundled calicoctl. Modern versions fix IPAM GC issues and are compatible with k8s 1.35 and containerd 2.1.3.
-   - Action: Plan sequential Calico upgrade (calico-node + calico-kube-controllers + CRDs). Consider calico-operator for future management. Run IPAM cleanup (`clean_ipam_blocks.py --apply`) before upgrade.
-   - Linear: [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200)
+    - Calico v3.13.2 is ~6 years old, orphaned from microk8s management, and incompatible with microk8s-bundled calicoctl. Modern versions fix IPAM GC issues and are compatible with k8s 1.35 and containerd 2.1.3.
+    - Action: Plan sequential Calico upgrade (calico-node + calico-kube-controllers + CRDs). Consider calico-operator for future management. Run IPAM cleanup (`clean_ipam_blocks.py --apply`) before upgrade.
+    - Linear: [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200)
 
 ### Longer-Term Improvements
 
 4. **Investigate kine/dqlite latency spikes as an independent risk factor** (Medium)
-   - Full IPAM blocks are now cleaned, but any single hanging kine call in a CNI ADD can still create a vulnerability window (even without full blocks) if the hang is long enough. Understand the frequency and duration of dqlite latency events.
-   - Action: Analyse kine API call latency distribution; correlate with dqlite compaction and election events; determine whether EventedPLEG alone is sufficient mitigation or whether dqlite tuning is also required.
-   - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
+    - Full IPAM blocks are now cleaned, but any single hanging kine call in a CNI ADD can still create a vulnerability window (even without full blocks) if the hang is long enough. Understand the frequency and duration of dqlite latency events.
+    - Action: Analyse kine API call latency distribution; correlate with dqlite compaction and election events; determine whether EventedPLEG alone is sufficient mitigation or whether dqlite tuning is also required.
+    - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
 
 5. **Uncordon k8s03 after stability window** (High — follow-on from this incident)
-   - k8s03 is cordoned pending 24h PLEG health confirmation from pleg-detector.service.
-   - Action: After 24h with no deadlock detected, uncordon: `kubectl --context pvek8s uncordon k8s03`.
-   - Linear: [PGM-197](https://linear.app/pgmac-net-au/issue/PGM-197)
+    - k8s03 is cordoned pending 24h PLEG health confirmation from pleg-detector.service.
+    - Action: After 24h with no deadlock detected, uncordon: `kubectl --context pvek8s uncordon k8s03`.
+    - Linear: [PGM-197](https://linear.app/pgmac-net-au/issue/PGM-197)
 
 ---
 

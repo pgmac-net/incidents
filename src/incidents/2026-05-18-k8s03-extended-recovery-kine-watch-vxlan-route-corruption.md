@@ -263,30 +263,30 @@ ssh k8s01 "ip neigh show dev vxlan.calico | grep 10.1.235.133"
 ### Immediate Actions Required
 
 1. **Fix kine/dqlite watch reliability to prevent silent watch stream stalls** (High)
-   - Both the kubelet watch stall and the Felix VTEP staleness have the same root: kine failing to establish a watch during dqlite lock contention. Without a fix, any dqlite lock event during a kubelite restart will produce a silently stalled watch.
-   - Action: Investigate kine watch re-establishment logic; add retry with backoff on `database is locked`; add watch health probe in k8s-dqlite. Alternatively, assess whether dqlite can reduce lock contention window during compaction.
-   - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
+    - Both the kubelet watch stall and the Felix VTEP staleness have the same root: kine failing to establish a watch during dqlite lock contention. Without a fix, any dqlite lock event during a kubelite restart will produce a silently stalled watch.
+    - Action: Investigate kine watch re-establishment logic; add retry with backoff on `database is locked`; add watch health probe in k8s-dqlite. Alternatively, assess whether dqlite can reduce lock contention window during compaction.
+    - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
 
 2. **Add monitoring for kubelet watch stream staleness** (High)
-   - The watch stall is completely silent: node shows Ready, kubelet logs "Watching apiserver", but new pods never appear. There is no built-in detection. A check comparing pod count on `kubectl get --raw /api/v1/nodes/<node>/proxy/pods` vs scheduled pods in the API server would catch stalls within minutes.
-   - Action: Create NRPE check or Nagios service check that detects when a node has scheduler-bound pods not appearing in kubelet's pod list for >120s.
-   - Linear: new ticket
+    - The watch stall is completely silent: node shows Ready, kubelet logs "Watching apiserver", but new pods never appear. There is no built-in detection. A check comparing pod count on `kubectl get --raw /api/v1/nodes/<node>/proxy/pods` vs scheduled pods in the API server would catch stalls within minutes.
+    - Action: Create NRPE check or Nagios service check that detects when a node has scheduler-bound pods not appearing in kubelet's pod list for >120s.
+    - Linear: new ticket
 
 3. **Add monitoring for VXLAN VTEP route gateway correctness** (Medium)
-   - No monitoring exists to verify that `ip route via <addr>` on each node matches the target node's VTEP annotation. A simple script comparing route gateways against `kubectl get node -o jsonpath` annotations would catch this within minutes.
-   - Action: Create NRPE check that verifies VXLAN route gateways match Calico VTEP annotations for all peer nodes. Run on all 3 nodes.
-   - Linear: new ticket
+    - No monitoring exists to verify that `ip route via <addr>` on each node matches the target node's VTEP annotation. A simple script comparing route gateways against `kubectl get node -o jsonpath` annotations would catch this within minutes.
+    - Action: Create NRPE check that verifies VXLAN route gateways match Calico VTEP annotations for all peer nodes. Run on all 3 nodes.
+    - Linear: new ticket
 
 ### Longer-Term Improvements
 
 4. **Document "restart k8s-dqlite before kubelite" as canonical watch stall recovery procedure** (Medium)
-   - The two-step restart (k8s-dqlite first, then kubelite) is required to clear kine's corrupt watch state before the API server re-establishes its watch cache. Restarting kubelite alone is insufficient — as demonstrated by restart #2 failing while restart #3 (preceded by k8s-dqlite restart) succeeded immediately.
-   - Action: Update `pgk8s` runbook and ansible-role-microk8s-maintenance with the canonical 3-step procedure (cordon → k8s-dqlite restart → kubelite restart). Note: memory file `feedback_k8s03_watch_stall_recovery.md` already created.
-   - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) (sub-task)
+    - The two-step restart (k8s-dqlite first, then kubelite) is required to clear kine's corrupt watch state before the API server re-establishes its watch cache. Restarting kubelite alone is insufficient — as demonstrated by restart #2 failing while restart #3 (preceded by k8s-dqlite restart) succeeded immediately.
+    - Action: Update `pgk8s` runbook and ansible-role-microk8s-maintenance with the canonical 3-step procedure (cordon → k8s-dqlite restart → kubelite restart). Note: memory file `feedback_k8s03_watch_stall_recovery.md` already created.
+    - Linear: [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) (sub-task)
 
 5. **Investigate and address Calico VXLAN route staleness after calico-node restart** (Medium)
-   - Felix should reconcile VTEP routes when calico-node re-registers. If the event is missed due to kine watch corruption, the routes stay wrong indefinitely. Felix may need a periodic reconcile pass or a re-registration trigger after calico-node completes startup. Tracked as part of the Calico upgrade (PGM-200).
-   - Linear: [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200)
+    - Felix should reconcile VTEP routes when calico-node re-registers. If the event is missed due to kine watch corruption, the routes stay wrong indefinitely. Felix may need a periodic reconcile pass or a re-registration trigger after calico-node completes startup. Tracked as part of the Calico upgrade (PGM-200).
+    - Linear: [PGM-200](https://linear.app/pgmac-net-au/issue/PGM-200)
 
 ---
 

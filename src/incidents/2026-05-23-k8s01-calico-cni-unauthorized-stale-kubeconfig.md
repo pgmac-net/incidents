@@ -144,10 +144,10 @@ Once the valid kubeconfig was in place, the next `KillPodSandbox` retry succeede
 ### Fix
 
 8. `kubectl debug node/k8s01 --image=busybox`:
-   - Copied `/etc/cni/net.d/calico-kubeconfig` → `/var/snap/microk8s/current/args/cni-network/calico-kubeconfig`
-   - Copied `/etc/cni/net.d/10-calico.conflist` → `/var/snap/microk8s/current/args/cni-network/10-calico.conflist`
-   - Removed real `/etc/cni/net.d` directory
-   - Created symlink: `ln -s /var/snap/microk8s/current/args/cni-network /etc/cni/net.d`
+    - Copied `/etc/cni/net.d/calico-kubeconfig` → `/var/snap/microk8s/current/args/cni-network/calico-kubeconfig`
+    - Copied `/etc/cni/net.d/10-calico.conflist` → `/var/snap/microk8s/current/args/cni-network/10-calico.conflist`
+    - Removed real `/etc/cni/net.d` directory
+    - Created symlink: `ln -s /var/snap/microk8s/current/args/cni-network /etc/cni/net.d`
 9. All 6 Terminating pods self-terminated within ~5 seconds (kubelet retry succeeded on next attempt).
 10. All 6 Pending pods scheduled and reached Running.
 
@@ -178,18 +178,18 @@ kubectl --context pvek8s get pods -A | grep -v Running | grep -v Completed | gre
 ### Immediate Actions Required
 
 1. **Add CNI symlink verification to Calico upgrade playbook** (Medium)
-   - The Calico upgrade playbook (or `ansible-role-microk8s`) should verify that `/etc/cni/net.d` is a symlink to `/var/snap/microk8s/current/args/cni-network/` on every node before and after upgrade. A mismatched node would fail this check and prompt remediation before calico-node restarts invalidate any tokens.
-   - Linear: [PGM-205](https://linear.app/pgmac-net-au/issue/PGM-205)
+    - The Calico upgrade playbook (or `ansible-role-microk8s`) should verify that `/etc/cni/net.d` is a symlink to `/var/snap/microk8s/current/args/cni-network/` on every node before and after upgrade. A mismatched node would fail this check and prompt remediation before calico-node restarts invalidate any tokens.
+    - Linear: [PGM-205](https://linear.app/pgmac-net-au/issue/PGM-205)
 
 2. **Add Ansible task to enforce CNI symlink idempotently on all nodes** (Medium)
-   - An idempotent Ansible task in `ansible-role-microk8s` that creates the `/etc/cni/net.d` symlink if absent (removing any real directory first after backing up its contents). This would retroactively fix any other nodes that share k8s01's pre-2024 provisioning.
-   - Linear: [PGM-206](https://linear.app/pgmac-net-au/issue/PGM-206)
+    - An idempotent Ansible task in `ansible-role-microk8s` that creates the `/etc/cni/net.d` symlink if absent (removing any real directory first after backing up its contents). This would retroactively fix any other nodes that share k8s01's pre-2024 provisioning.
+    - Linear: [PGM-206](https://linear.app/pgmac-net-au/issue/PGM-206)
 
 ### Longer-Term Improvements
 
 3. **Add post-upgrade validation: verify calico-kubeconfig token is valid on all nodes** (Low)
-   - After a Calico upgrade (or any calico-node rolling restart), verify that the JWT in the microk8s cni-network kubeconfig on each node has a `kubernetes.io.pod.name` matching the currently-running calico-node pod. A script or Ansible task could decode the token and cross-check. Catches the mismatch before the first pod deletion triggers it.
-   - Linear: [PGM-207](https://linear.app/pgmac-net-au/issue/PGM-207)
+    - After a Calico upgrade (or any calico-node rolling restart), verify that the JWT in the microk8s cni-network kubeconfig on each node has a `kubernetes.io.pod.name` matching the currently-running calico-node pod. A script or Ansible task could decode the token and cross-check. Catches the mismatch before the first pod deletion triggers it.
+    - Linear: [PGM-207](https://linear.app/pgmac-net-au/issue/PGM-207)
 
 ---
 

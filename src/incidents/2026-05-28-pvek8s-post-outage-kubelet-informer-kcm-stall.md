@@ -261,8 +261,8 @@ There is no deployment smoke test or health check that verifies the application 
 ### Phase 5: Fix dependency-track JDBC URL
 
 1. Changed `ALPINE_DATABASE_URL` in `pgmac.net/ci/templates/dtrack.yaml`:
-   - From: `jdbc:postgresql://dtrack-postgresql.ci:5432/dtrack`
-   - To: `jdbc:postgresql://dtrack-postgresql.ci.svc.cluster.local:5432/dtrack`
+    - From: `jdbc:postgresql://dtrack-postgresql.ci:5432/dtrack`
+    - To: `jdbc:postgresql://dtrack-postgresql.ci.svc.cluster.local:5432/dtrack`
 2. Raised PR #493 against pgmac-net/pgk8s; merged
 3. ArgoCD synced StatefulSet — StatefulSet spec updated but pod revision lagged (CrashLoopBackOff backoff delay)
 4. Deleted pod to trigger StatefulSet rolling update:
