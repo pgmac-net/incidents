@@ -326,12 +326,12 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
 
 ### Longer-Term Improvements
 
-5. **Add alert for RS terminatingReplicas stale state** (Medium)
+1. **Add alert for RS terminatingReplicas stale state** (Medium)
    - Alert when a ReplicaSet's `kube_replicaset_status_observed_generation` shows `terminatingReplicas > 0` but `kube_pod_status_phase{phase="Running"}` for the RS selector is 0, for > 3 minutes
    - Catches the KCM informer stall scenario without requiring manual RS inspection
    - Linear: [PGM-218](https://linear.app/pgmac-net-au/issue/PGM-218)
 
-6. **Add CrashLoopBackOff alert for ci namespace** (Low)
+2. **Add CrashLoopBackOff alert for ci namespace** (Low)
    - dependency-track crashed 501 times over 6d23h with no alert fired
    - Add Nagios/Prometheus alert for `kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace="ci"} > 0`
    - Linear: [PGM-219](https://linear.app/pgmac-net-au/issue/PGM-219)
