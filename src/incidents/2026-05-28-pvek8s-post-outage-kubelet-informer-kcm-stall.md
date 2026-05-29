@@ -261,8 +261,8 @@ There is no deployment smoke test or health check that verifies the application 
 ### Phase 5: Fix dependency-track JDBC URL
 
 1. Changed `ALPINE_DATABASE_URL` in `pgmac.net/ci/templates/dtrack.yaml`:
-   - From: `jdbc:postgresql://dtrack-postgresql.ci:5432/dtrack`
-   - To: `jdbc:postgresql://dtrack-postgresql.ci.svc.cluster.local:5432/dtrack`
+    - From: `jdbc:postgresql://dtrack-postgresql.ci:5432/dtrack`
+    - To: `jdbc:postgresql://dtrack-postgresql.ci.svc.cluster.local:5432/dtrack`
 2. Raised PR #493 against pgmac-net/pgk8s; merged
 3. ArgoCD synced StatefulSet — StatefulSet spec updated but pod revision lagged (CrashLoopBackOff backoff delay)
 4. Deleted pod to trigger StatefulSet rolling update:
@@ -305,36 +305,36 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
 ### Immediate Actions Required
 
 1. **Add Prometheus alert for iSCSI volume manager stall** (High)
-   - Alert when `volume_manager_total_volumes{plugin_name="kubernetes.io/iscsi",state="desired_state_of_world"} > 0` AND `volume_manager_total_volumes{plugin_name="kubernetes.io/iscsi",state="actual_state_of_world"}` is absent for > 5 minutes on any node
-   - This combination directly signals the processorListener stall before pods have been stuck for 33+ minutes
-   - Linear: [PGM-214](https://linear.app/pgmac-net-au/issue/PGM-214)
+    - Alert when `volume_manager_total_volumes{plugin_name="kubernetes.io/iscsi",state="desired_state_of_world"} > 0` AND `volume_manager_total_volumes{plugin_name="kubernetes.io/iscsi",state="actual_state_of_world"}` is absent for > 5 minutes on any node
+    - This combination directly signals the processorListener stall before pods have been stuck for 33+ minutes
+    - Linear: [PGM-214](https://linear.app/pgmac-net-au/issue/PGM-214)
 
 2. **Restart k8s03 kine+kubelite to clear residual processorListener stall** (Medium)
-   - k8s03's kubelet processorListeners are still stalled from the power outage; k8s03 cannot run iSCSI workloads until cleared
-   - Schedule during maintenance: kine restart → kubelite restart using PGM-201 procedure (cordon first)
-   - Linear: [PGM-215](https://linear.app/pgmac-net-au/issue/PGM-215)
+    - k8s03's kubelet processorListeners are still stalled from the power outage; k8s03 cannot run iSCSI workloads until cleared
+    - Schedule during maintenance: kine restart → kubelite restart using PGM-201 procedure (cordon first)
+    - Linear: [PGM-215](https://linear.app/pgmac-net-au/issue/PGM-215)
 
 3. **Kubelet volume manager stall runbook** (High) — created as part of this PIR
-   - No runbook existed; recovery required ad-hoc pprof analysis and multiple diagnostic steps
-   - Runbook: [kubelet-volume-manager-stall.md](../runbooks/kubelet-volume-manager-stall.md)
-   - Linear: [PGM-216](https://linear.app/pgmac-net-au/issue/PGM-216)
+    - No runbook existed; recovery required ad-hoc pprof analysis and multiple diagnostic steps
+    - Runbook: [kubelet-volume-manager-stall.md](../runbooks/kubelet-volume-manager-stall.md)
+    - Linear: [PGM-216](https://linear.app/pgmac-net-au/issue/PGM-216)
 
 4. **KCM stale terminatingReplicas runbook** (Medium) — created as part of this PIR
-   - No runbook existed; K8s 1.35 terminatingReplicas behaviour was undocumented in cluster runbooks
-   - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md)
-   - Linear: [PGM-217](https://linear.app/pgmac-net-au/issue/PGM-217)
+    - No runbook existed; K8s 1.35 terminatingReplicas behaviour was undocumented in cluster runbooks
+    - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md)
+    - Linear: [PGM-217](https://linear.app/pgmac-net-au/issue/PGM-217)
 
 ### Longer-Term Improvements
 
-5. **Add alert for RS terminatingReplicas stale state** (Medium)
-   - Alert when a ReplicaSet's `kube_replicaset_status_observed_generation` shows `terminatingReplicas > 0` but `kube_pod_status_phase{phase="Running"}` for the RS selector is 0, for > 3 minutes
-   - Catches the KCM informer stall scenario without requiring manual RS inspection
-   - Linear: [PGM-218](https://linear.app/pgmac-net-au/issue/PGM-218)
+1. **Add alert for RS terminatingReplicas stale state** (Medium)
+    - Alert when a ReplicaSet's `kube_replicaset_status_observed_generation` shows `terminatingReplicas > 0` but `kube_pod_status_phase{phase="Running"}` for the RS selector is 0, for > 3 minutes
+    - Catches the KCM informer stall scenario without requiring manual RS inspection
+    - Linear: [PGM-218](https://linear.app/pgmac-net-au/issue/PGM-218)
 
-6. **Add CrashLoopBackOff alert for ci namespace** (Low)
-   - dependency-track crashed 501 times over 6d23h with no alert fired
-   - Add Nagios/Prometheus alert for `kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace="ci"} > 0`
-   - Linear: [PGM-219](https://linear.app/pgmac-net-au/issue/PGM-219)
+2. **Add CrashLoopBackOff alert for ci namespace** (Low)
+    - dependency-track crashed 501 times over 6d23h with no alert fired
+    - Add Nagios/Prometheus alert for `kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace="ci"} > 0`
+    - Linear: [PGM-219](https://linear.app/pgmac-net-au/issue/PGM-219)
 
 ---
 
