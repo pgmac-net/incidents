@@ -1,0 +1,22 @@
+[tools]
+python = "3.13"
+uv = "latest"
+
+[tasks.install]
+description = "Create virtual environment and install dependencies"
+run = """
+[ -d .venv ] || uv venv
+uv pip install -r requirements.txt
+"""
+
+[tasks.build]
+description = "Build the MkDocs site"
+run = "uv run mkdocs build"
+
+[tasks.build-strict]
+description = "Build the MkDocs site in strict mode (matches CI)"
+run = "uv run mkdocs build --strict --verbose"
+
+[tasks.serve]
+description = "Serve the MkDocs site locally with live reload"
+run = "uv run mkdocs serve"
