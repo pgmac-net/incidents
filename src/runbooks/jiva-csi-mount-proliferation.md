@@ -147,3 +147,4 @@ This recurs each time kubelite restarts on the node while a Jiva CSI pod is sche
 - [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203) — incident and fix
 - [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) — kubelite restart incidents that caused accumulation
 - [Kubelet Silent Stall runbook](kubelet-silent-stall.md) — related kubelite restart procedures
+- [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — related failure mode: jiva-ctrl pod eviction causes iSCSI session drop and EXT4 read-only remount; both failure modes affect the same jiva-csi-node DaemonSet infrastructure

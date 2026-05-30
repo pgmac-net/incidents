@@ -164,3 +164,7 @@ Cluster is healthy when:
 - `kubectl get nodes` shows all nodes Ready with no taints
 - `kubectl get jobs --all-namespaces` shows no accumulation of Complete/Failed jobs
 - No `database is locked` in kcm logs for 5+ minutes
+
+## References
+
+- Script: [pvek8s-outage-recovery.sh](pvek8s-outage-recovery.sh) — full post-outage recovery sequence; dqlite+kubelite restart ordering (phases 4 and 6) follows the safe restart procedure in this runbook
