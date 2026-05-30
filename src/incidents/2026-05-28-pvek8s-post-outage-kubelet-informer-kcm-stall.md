@@ -659,6 +659,7 @@ kubectl --context pvek8s wait pod <statefulset-pod-name> -n <namespace> --for=co
 - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md) — stale terminatingReplicas after kine watch disruption
 - Runbook: [kubelet-silent-stall.md](../runbooks/kubelet-silent-stall.md) — related failure modes (pod watch goroutine stall, PLEG stall)
 - Runbook: [dqlite-write-contention.md](../runbooks/dqlite-write-contention.md) — kine restart ordering and safety procedure
+- Script: [recover-post-outage.sh](recover-post-outage.sh) — recovery script executed during this incident (archived; for future outages use [pvek8s-outage-recovery.sh](../runbooks/pvek8s-outage-recovery.sh))
 
 ---
 

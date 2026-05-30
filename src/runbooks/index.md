@@ -16,3 +16,9 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | [Jiva CSI Mount Proliferation](jiva-csi-mount-proliferation.md) | openebs-jiva-csi | Duplicate bind mounts accumulate per kubelite restart, causing findmnt/Ansible hangs |
 | [Jiva-ctrl Eviction → iSCSI → EXT4 Read-Only](jiva-ctrl-eviction-iscsi-ro-filesystem.md) | openebs-jiva-csi | Pod filesystem goes read-only after jiva-ctrl pod evicted, dropping iSCSI session and triggering EXT4 journal abort |
 | [dqlite Write Contention](dqlite-write-contention.md) | microk8s/dqlite | `database is locked (try:500)` under kubelite restart storms — prevention, recovery, phantom RS fix |
+
+## Scripts
+
+| Script | When to use | Description |
+|--------|-------------|-------------|
+| [pvek8s-outage-recovery.sh](pvek8s-outage-recovery.sh) | Post-power-outage or full-cluster restart | 10-phase recovery: cordon k8s03, jiva CSI cleanup, orphaned shim kill, dqlite+kubelite restart on k8s03 and k8s01, stuck pod sweep, CoreDNS fix, OpenEBS reset, uncordon |

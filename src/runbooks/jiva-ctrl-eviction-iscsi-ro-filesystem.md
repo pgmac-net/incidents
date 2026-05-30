@@ -275,3 +275,4 @@ See [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) for the full rollin
 - Related: [jiva-csi-mount-proliferation.md](jiva-csi-mount-proliferation.md) — duplicate CSI mounts from kubelite restarts (separate but related failure mode affecting same jiva-csi-node DaemonSet)
 - Related: [kubelet-volume-manager-stall.md](kubelet-volume-manager-stall.md) — iSCSI attach failure where pods are stuck ContainerCreating (vs this runbook: pod was already Running then lost storage)
 - Related: [dqlite-write-contention.md](dqlite-write-contention.md) — KCM dqlite reconnect behaviour that causes batched evictions
+- Script: [pvek8s-outage-recovery.sh](pvek8s-outage-recovery.sh) — full post-outage cluster recovery; phases 4 and 6 include jiva-ctrl pre-check before restarting nodes

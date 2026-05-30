@@ -63,6 +63,7 @@ nav:
   - Incidents:
     - incidents/index.md
     - PIR Structure Template: incidents/pir-template.md
+    - incidents/2026-05-28-pvek8s-post-outage-kubelet-informer-kcm-stall.md
     - incidents/2026-05-23-k8s01-calico-cni-unauthorized-stale-kubeconfig.md
     - incidents/2026-05-18-k8s03-extended-recovery-kine-watch-vxlan-route-corruption.md
     - incidents/2026-05-17-k8s03-pleg-deadlock-stale-ipam-blocks.md
@@ -78,8 +79,13 @@ nav:
   - Runbooks:
     - runbooks/index.md
     - runbooks/dqlite-write-contention.md
+    - runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md
     - runbooks/jiva-csi-mount-proliferation.md
+    - runbooks/kcm-stale-terminating-replicas.md
+    - runbooks/kubelet-volume-manager-stall.md
     - runbooks/kubelet-silent-stall.md
+    - runbooks/calico-cni-unauthorized.md
+    - runbooks/k8s-upgrade-validation.md
   - Tags: tags.md
 
 extra:
