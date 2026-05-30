@@ -655,6 +655,7 @@ kubectl --context pvek8s wait pod <statefulset-pod-name> -n <namespace> --for=co
 - Related PIR: [k8s03 Extended Recovery — kine Watch Corruption, VXLAN Route Corruption, and Kubelet Watch Stream Stall](2026-05-18-k8s03-extended-recovery-kine-watch-vxlan-route-corruption.md)
 - Related PIR: [dqlite Snapshot Bloat → Watch Stream Failure](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
 - Runbook: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) — jiva-ctrl eviction → iSCSI drop → EXT4 ro cascade (new, from this PIR)
+- Runbook: [jiva-ctrl-node-rolling-restart.md](../runbooks/jiva-ctrl-node-rolling-restart.md) — safe pre-restart migration procedure to prevent this failure mode
 - Runbook: [kubelet-volume-manager-stall.md](../runbooks/kubelet-volume-manager-stall.md) — iSCSI WaitForAttachAndMount hang from processorListener stall
 - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md) — stale terminatingReplicas after kine watch disruption
 - Runbook: [kubelet-silent-stall.md](../runbooks/kubelet-silent-stall.md) — related failure modes (pod watch goroutine stall, PLEG stall)

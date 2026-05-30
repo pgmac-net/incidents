@@ -80,6 +80,7 @@ nav:
     - runbooks/index.md
     - runbooks/dqlite-write-contention.md
     - runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md
+    - runbooks/jiva-ctrl-node-rolling-restart.md
     - runbooks/jiva-csi-mount-proliferation.md
     - runbooks/kcm-stale-terminating-replicas.md
     - runbooks/kubelet-volume-manager-stall.md

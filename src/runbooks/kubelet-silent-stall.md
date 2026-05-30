@@ -449,3 +449,4 @@ ssh <node> "sudo journalctl -u snap.microk8s.daemon-kubelite --since '24 hours a
 - PIR: [microk8s 1.34 → 1.35 Upgrade](../incidents/2026-05-16-microk8s-1.35-upgrade-cgroup-v2-containerd-disk-pressure.md) — Phases 4 and 8
 - Linear: [PGM-187](https://linear.app/pgmac-net-au/issue/PGM-187), [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203), [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201)
 - Related: [dqlite-write-contention runbook](dqlite-write-contention.md) — k8s-dqlite restart context
+- Related: [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) — uses the cordon-before-restart requirement from Failure Mode 2; adds jiva-ctrl iSCSI session migration before the restart

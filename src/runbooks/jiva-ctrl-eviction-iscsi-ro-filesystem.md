@@ -255,7 +255,7 @@ Before applying a `NoExecute` taint to or draining a node:
 
 4. **If no sessions exist:** Safe to proceed directly.
 
-See [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) for the full rolling restart runbook (to be written).
+See [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) for the full step-by-step procedure including commands to identify sessions, migrate workloads, and verify logout before restarting.
 
 ### Structural mitigations (not yet implemented)
 
@@ -271,7 +271,7 @@ See [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) for the full rollin
 - Linear: [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224) — this runbook
 - Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) — log-based alerts (planned)
 - Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) — extended jiva-ctrl tolerations (planned)
-- Linear: [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) — rolling restart runbook for jiva-ctrl nodes (planned)
+- Runbook: [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) — safe pre-restart migration procedure for nodes hosting jiva-ctrl pods (prevents this failure mode)
 - Related: [jiva-csi-mount-proliferation.md](jiva-csi-mount-proliferation.md) — duplicate CSI mounts from kubelite restarts (separate but related failure mode affecting same jiva-csi-node DaemonSet)
 - Related: [kubelet-volume-manager-stall.md](kubelet-volume-manager-stall.md) — iSCSI attach failure where pods are stuck ContainerCreating (vs this runbook: pod was already Running then lost storage)
 - Related: [dqlite-write-contention.md](dqlite-write-contention.md) — KCM dqlite reconnect behaviour that causes batched evictions
