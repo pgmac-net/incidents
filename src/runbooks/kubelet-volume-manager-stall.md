@@ -187,3 +187,4 @@ ssh <new-node> "sudo iscsiadm -m session"
 - Related: [kubelet-silent-stall.md](kubelet-silent-stall.md) — Failure Mode 2 (pod watch goroutine stall, same kine root cause; pods stuck Pending instead of ContainerCreating)
 - Related: [dqlite-write-contention.md](dqlite-write-contention.md) — kine restart safety procedure and ordering
 - Related: [kcm-stale-terminating-replicas.md](kcm-stale-terminating-replicas.md) — often occurs alongside this failure (same kine disruption stalls KCM informer)
+- Related: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — the inverse failure: pod was already Running but iSCSI target was evicted, causing EXT4 remount to read-only

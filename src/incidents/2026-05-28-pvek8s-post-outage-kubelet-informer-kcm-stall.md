@@ -1,6 +1,7 @@
 ---
 tags:
   - k8s01
+  - k8s02
   - k8s03
   - kine
   - dqlite
@@ -10,6 +11,8 @@ tags:
   - watch-stream
   - storage
   - scheduling
+  - iscsi
+  - ro-filesystem
 ---
 
 # Post Incident Review: pvek8s Post-Power-Outage Recovery — kubelet Volume Manager Stall and KCM Stale terminatingReplicas
@@ -38,6 +41,16 @@ As a separate issue discovered during this session, `dependency-track-api-server
 | Time | Event |
 |------|-------|
 | **~2026-05-28** | Power outage disrupts pvek8s nodes; k8s-dqlite crashes and restarts, breaking existing kine watch streams on k8s01 and k8s03 |
+| **~20:10 AEST** | k8s02 k8s-dqlite begins intermittent kine.sock failures (closed connection errors in kubelite log at 20:10, 20:15, 20:20, 20:20); KCM on k8s02 is periodically disconnected from control plane |
+| **~20:21 AEST** | k8s01 goes NotReady or receives NoExecute taint during rolling recovery; `topologycache` logs "Can't get CPU or zone information for node k8s01" |
+| **20:21:03 AEST** | k8s02 KCM reconnects to dqlite ("quota admission added evaluator for daemonsets.apps"); immediately processes pending eviction backlog |
+| **20:21:04 AEST** | taint-eviction-controller fires: **6 jiva-ctrl pods evicted from k8s01 simultaneously**, including `pvc-746b2837-jiva-ctrl` (seerr, ClusterIP 10.152.183.57) and `pvc-a3a7e012-ctrl` (survive/minecraft, ClusterIP 10.152.183.22) |
+| **20:21:08 AEST** | Jiva-ctrl containers exit on k8s01; TCP RST sent to iSCSI initiators on k8s02 |
+| **20:21:09 AEST** | `connection1:0: detected conn error (1020)` in k8s02 dmesg for both seerr (sdb) and survive (sdc) iSCSI sessions |
+| **20:23:09 AEST** | `session recovery timed out after 120 secs` — iSCSI sessions declared dead; SCSI devices go offline on k8s02 |
+| **~20:23–20:28 AEST** | EXT4 journal aborts on sdb (seerr) and sdc (survive); both filesystems remounted read-only on k8s02 |
+| **~20:27 AEST** | survive-minecraft pod on k8s02 begins I/O errors against sdc; pod becomes unavailable |
+| **~20:28 AEST** | seerr pod on k8s02 begins I/O errors against sdb; pod enters read-only mode |
 | **~20:55 AEST 2026-05-28** | Session started; cluster review shows radarr, sonarr, readarr, calibreweb stuck in ContainerCreating on k8s03 |
 | **~21:00 AEST** | `kubectl get node k8s03 -o jsonpath='{.status.volumesInUse}'` shows 4 iSCSI volumes; `iscsiadm -m session` returns empty — iSCSI sessions not established despite node Ready |
 | **~21:15 AEST** | Volume manager metrics checked: `desired_state_of_world{plugin_name="kubernetes.io/iscsi"}=4` present; `actual_state_of_world` entry absent; no `storage_operation_duration_seconds` for iSCSI — reconciler never ran |
@@ -57,6 +70,8 @@ As a separate issue discovered during this session, `dependency-track-api-server
 | **~02:15 AEST** | Session notes confirm cluster stable; k8s03 processorListener stall acknowledged as deferred (node remains cordoned) |
 | **~2026-05-29 (separate)** | dependency-track-api-server-0 CrashLoopBackOff investigated; JDBC URL `dtrack-postgresql.ci` identified as root cause |
 | **~10:35 AEST 2026-05-29** | JDBC URL changed to FQDN; PR #493 merged; pod deleted to trigger StatefulSet rolling update; pod reaches 1/1 Running with 0 restarts |
+| **~09:40 AEST 2026-05-30** | Seerr pod investigated: found Failed/Terminating on cordoned k8s02 with read-only filesystem; stale CSI mounts blocking deletion; iSCSI session still logged in from k8s02 blocking mount on k8s01; JivaVolume CR `spec.mountInfo` stale from k8s02; k8s01 cordoned; pod rescheduled to k8s03 where iSCSI attached successfully; seerr 1/1 Running |
+| **~10:30 AEST 2026-05-30** | Root cause traced via k8s02 syslog.2.gz: jiva-ctrl eviction at 20:21:04 confirmed as trigger; iSCSI → EXT4 cascade fully documented |
 
 ---
 
@@ -126,6 +141,48 @@ K8s 1.35 introduced `terminatingReplicas` as a new RS status field. Prior K8s ve
 
 ---
 
+---
+
+#### Chain 4: seerr and survive Read-Only Filesystems — jiva-ctrl Eviction → iSCSI Session Drop → EXT4 Journal Abort
+
+##### How did seerr and survive get read-only filesystems on k8s02?
+
+Both pods ran on k8s02 with iSCSI-backed PVCs (seerr: `pvc-746b2837`, sdb; survive: `pvc-a3a7e012`, sdc). At 20:23–20:28 AEST, the ext4 kernel driver aborted the journal on both devices after pending writes failed, and remounted the filesystems read-only.
+
+##### How did the filesystem writes fail?
+
+The SCSI block devices (sdb, sdc) went offline. The kernel reported `blk_update_request: I/O error` for both devices. Once the block device is offline, in-flight journal commits fail, causing `jbd2` to abort the journal with the `-EIO` error path.
+
+##### How did the SCSI devices go offline?
+
+The iSCSI sessions for both volumes declared recovery failure at 20:23:09 AEST (`session recovery timed out after 120 secs`). The iSCSI initiator had detected TCP connection errors (`connection error 1020 = ISCSI_ERR_CONN_FAILED`) at 20:21:09 AEST, started 120-second session recovery, and gave up when the target did not reappear within that window. A lost iSCSI session causes the kernel to mark the SCSI device as offline.
+
+##### How did the iSCSI TCP connections fail at 20:21:09?
+
+The TCP connections ran from k8s02's iSCSI initiator to the jiva-ctrl pod IPs, reached via kube-proxy ClusterIP iptables rules. When the jiva-ctrl containers on k8s01 exited at 20:21:08, the kernel sent TCP RST to the existing connections — immediately triggering error 1020 on k8s02's initiator.
+
+##### How did the jiva-ctrl pods exit at 20:21:08?
+
+At 20:21:04 AEST, the taint-eviction-controller running on k8s02's kube-controller-manager issued deletion for 6 jiva-ctrl pods simultaneously. The pods were running on k8s01, which was in a NotReady state (confirmed by `topologycache: Can't get CPU or zone information for node k8s01` at 20:21:02). By default, pods receive `node.kubernetes.io/not-ready:NoExecute` toleration with `tolerationSeconds=300` — after 5 minutes of NotReady, they are eligible for eviction.
+
+##### Why did all 6 evictions fire at exactly 20:21:04 rather than spreading over time?
+
+The taint-eviction-controller on k8s02 was intermittently disconnected from k8s-dqlite throughout the recovery (kine.sock connection errors at 20:10, 20:15, 20:20). During disconnection, the controller could not process evictions. At 20:21:03, the kube-controller-manager reconnected to dqlite ("quota admission added evaluator for daemonsets.apps") and immediately processed its entire backlog of pending evictions — firing all 6 deletions within a single second. This **batched eviction** removed all iSCSI targets simultaneously, giving the initiator no time to fail over to individual session recovery.
+
+##### How did the earlier 19:16 AEST iSCSI error differ?
+
+At 19:16:07 AEST, iSCSI session errors also appeared (same error 1020), but the sessions recovered. The dmesg shows `eth0: link becomes ready` at 19:16:14 — a physical link flap that lasted only 7 seconds. Because the iSCSI targets (jiva-ctrl pods) were still alive, the TCP connections re-established after the link recovered. In the 20:21 case, the targets themselves were killed, so no recovery was possible.
+
+##### How was this not detected or prevented?
+
+- No alert exists for kernel-level iSCSI connection errors (`connection error 1020` in dmesg / kern.log)
+- No alert exists for EXT4 filesystem remount-to-read-only (`Remounting filesystem read-only` in kern.log)
+- The pvek8s rolling restart recovery procedure does not include a step to check whether the node being restarted hosts jiva-ctrl pods before applying taints
+- jiva-ctrl pods have the default `tolerationSeconds=300` with no extended toleration to survive brief node NotReady transitions during recovery
+- After the jiva-ctrl pods were evicted, no automated remediation attempted to restart affected workloads or alert on their read-only state
+
+---
+
 #### Chain 3: dependency-track API Server 6-Day CrashLoop — Java JVM DNS Resolution Failure
 
 ##### How did dependency-track-api-server fail to connect to PostgreSQL for 6+ days?
@@ -157,6 +214,8 @@ There is no deployment smoke test or health check that verifies the application 
 | readarr (k8s03) | ContainerCreating, fully unavailable | ~5h 20m |
 | calibreweb (k8s03) | ContainerCreating, fully unavailable | ~5h 20m |
 | k8s03 kubelet volume manager | iSCSI attach broken; processorListeners stalled | Persists (node cordoned; workloads rescheduled) |
+| seerr (k8s02) | Filesystem read-only at 20:23 AEST; pod Failed/Terminating on cordoned k8s02; unable to reschedule for ~14h | ~14h (20:23 2026-05-28 → ~09:40 2026-05-30 when recovered on k8s03) |
+| survive/minecraft (k8s02) | Filesystem read-only at 20:27 AEST; pod unavailable until rescheduled to k8s01 | ~hours (resolved during primary recovery session) |
 | dependency-track API server | CrashLoopBackOff (501 restarts), fully unavailable | ~6d 23h |
 
 ### Duration
@@ -258,7 +317,40 @@ There is no deployment smoke test or health check that verifies the application 
    ```
 6. KCM immediately re-listed pods; terminatingReplicas cleared; RS created new pods within 30 seconds
 
-### Phase 5: Fix dependency-track JDBC URL
+### Phase 5: Recovery of seerr from k8s02 Read-Only Filesystem (2026-05-30)
+
+1. Confirmed seerr pod stuck in `Failed` / `Terminating` on cordoned k8s02 — filesystem had gone read-only, preventing jiva-csi from running `chmod` on the mount directory during pod teardown
+2. Unmounted stale CSI mounts from inside `openebs-jiva-csi-node-v2pjb` container on k8s02:
+   ```bash
+   kubectl exec -n openebs openebs-jiva-csi-node-v2pjb -c jiva-csi-plugin -- \
+     umount /var/snap/microk8s/common/var/lib/kubelet/pods/<pod-uid>/volumes/kubernetes.io~csi/pvc-746b2837.../mount
+   kubectl exec -n openebs openebs-jiva-csi-node-v2pjb -c jiva-csi-plugin -- \
+     umount /var/snap/microk8s/common/var/lib/kubelet/plugins/jiva.csi.openebs.io/<vol-id>/globalmount
+   ```
+3. Deleted the stuck pod:
+   ```bash
+   kubectl delete pod seerr-seerr-chart-0 -n media
+   ```
+4. New pod on k8s01 reported "already mounted at more than one place" — k8s02 still had active iSCSI session:
+   ```bash
+   kubectl exec -n openebs openebs-jiva-csi-node-v2pjb -c jiva-csi-plugin -- \
+     iscsiadm -m node -T iqn.2016-09.com.openebs.jiva:pvc-746b2837-... \
+     -p 10.152.183.57:3260 --logout
+   ```
+5. JivaVolume CR `spec.mountInfo` was still stale (pointing at k8s02 staging path) — patched to clear:
+   ```bash
+   kubectl patch jivavolume pvc-746b2837-ca3c-4b95-9168-7b767573f799 -n openebs \
+     --type=merge -p '{"spec":{"mountInfo":{"devicePath":"","stagingPath":""}}}'
+   ```
+6. Cordoned k8s01; force-deleted pod to reschedule to k8s03:
+   ```bash
+   kubectl cordon k8s01
+   kubectl delete pod seerr-seerr-chart-0 -n media --force --grace-period=0
+   ```
+7. Pod rescheduled to k8s03; jiva-csi on k8s03 successfully logged in iSCSI, mounted volume rw; seerr reached 1/1 Running
+8. Uncordoned k8s01
+
+### Phase 6: Fix dependency-track JDBC URL
 
 1. Changed `ALPINE_DATABASE_URL` in `pgmac.net/ci/templates/dtrack.yaml`:
     - From: `jdbc:postgresql://dtrack-postgresql.ci:5432/dtrack`
@@ -324,6 +416,20 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
     - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md)
     - Linear: [PGM-217](https://linear.app/pgmac-net-au/issue/PGM-217)
 
+5. **jiva-ctrl eviction → iSCSI read-only filesystem runbook** (High) — created as part of this PIR
+    - No runbook existed; recovery required ad-hoc investigation across dmesg, syslog, JivaVolume CRs, and iSCSI session state
+    - Runbook: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md)
+    - Linear: [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224)
+
+6. **Add log-based alerts for EXT4 read-only remount and iSCSI session failure** (High)
+    - Alert on `EXT4-fs.*Remounting filesystem read-only`, `session recovery timed out`, `ISCSI_ERR_CONN_FAILED` in kern.log via Alloy/Promtail
+    - These patterns appear in the kernel log before any pod-level signal — earliest possible detection point
+    - Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221)
+
+7. **Uncordon k8s02** (Medium)
+    - Verify stale mounts and iSCSI sessions are fully cleaned up; then uncordon
+    - Linear: [PGM-225](https://linear.app/pgmac-net-au/issue/PGM-225)
+
 ### Longer-Term Improvements
 
 1. **Add alert for RS terminatingReplicas stale state** (Medium)
@@ -331,7 +437,16 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
     - Catches the KCM informer stall scenario without requiring manual RS inspection
     - Linear: [PGM-218](https://linear.app/pgmac-net-au/issue/PGM-218)
 
-2. **Add CrashLoopBackOff alert for ci namespace** (Low)
+2. **Add extended NoExecute toleration to jiva-ctrl pods** (Medium)
+    - Increase `tolerationSeconds` from default 300 to 600 for `node.kubernetes.io/not-ready` and `unreachable` taints
+    - Gives more time for transient node issues to resolve before evicting storage infrastructure
+    - Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222)
+
+3. **Create rolling node restart runbook for nodes hosting jiva-ctrl pods** (Medium)
+    - Before tainting/draining a node: identify hosted jiva-ctrl pods, migrate dependent workloads away first, verify iSCSI sessions logged out, then proceed with restart
+    - Linear: [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223)
+
+4. **Add CrashLoopBackOff alert for ci namespace** (Low)
     - dependency-track crashed 501 times over 6d23h with no alert fired
     - Add Nagios/Prometheus alert for `kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace="ci"} > 0`
     - Linear: [PGM-219](https://linear.app/pgmac-net-au/issue/PGM-219)
@@ -354,11 +469,17 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
 - dependency-track had been crashing for 7 days with no alert; it was noticed only incidentally during media app recovery
 - k8s03's processorListener stall was not cleared as part of this incident — a future scheduled maintenance restart will be needed
 
+- The seerr pod was stuck in `Failed`/`Terminating` for ~36 hours because the read-only filesystem prevented jiva-csi from running `chmod` during pod teardown — `pod.deletionTimestamp` was set but the finalizer was never cleared. The fix required manually unmounting the stale CSI mounts from inside the jiva-csi-node DaemonSet container.
+- Clearing stale `spec.mountInfo` on the JivaVolume CR was necessary because jiva-csi on the new node saw the k8s02 staging path and device still set, and refused to proceed (treating it as "already mounted elsewhere").
+
 ### Surprise Findings
 
 - **K8s 1.35 terminatingReplicas RS field**: New in K8s 1.35, this field prevents RS from creating replacement pods when it believes a pod is still terminating. With a stale informer, this field gets stuck and scale-to-0/scale-to-1 cannot bypass it — a full KCM informer flush (via kine+kubelite restart) is required.
 - **kubelet heartbeats are independent of informer health**: A node can show `Ready: True` with completely stalled informers. The heartbeat mechanism uses a separate HTTPS POST to `/api/v1/nodes/<name>/status` that does not traverse the informer event queue.
 - **kine watch stream corruption is silent**: No error is logged by kubelet, kube-controller-manager, or kine when watch events stop flowing after a kine crash-restart. The only observables are stalled goroutines (pprof) and absent metrics (volume manager, RS status).
+- **Batched taint eviction is more destructive than staggered**: When the KCM reconnects to dqlite after a disconnect, it processes pending evictions in a burst. Six jiva-ctrl pods deleted in one second is more damaging than one every 30 seconds because all iSCSI initiators lose their targets simultaneously, preventing session recovery.
+- **iSCSI session recovery (120s default) is too short for pod restart**: If a jiva-ctrl pod is evicted and rescheduled, it may take >120 seconds to start and register — especially if the node it moves to is also recovering. The 120s timeout causes the EXT4 journal to abort before the new target becomes available.
+- **JivaVolume CR `spec.mountInfo` is not cleaned up on pod deletion**: When a pod is force-deleted or fails ungracefully, the JivaVolume CR retains the last node's staging path and device in `spec.mountInfo`. On the next mount attempt from a different node, jiva-csi treats this as an active mount elsewhere and refuses. This requires manual patching to clear.
 - **Java JVM DNS does not always honour OS ndots**: `<service>.<namespace>` hostnames (one dot, ndots:5) that glibc would expand correctly via search domains may fail in Java's JVM DNS resolver. Always use full FQDNs (`<service>.<namespace>.svc.cluster.local`) in Java application database URLs.
 
 ---
@@ -367,12 +488,17 @@ kubectl --context pvek8s get pod dependency-track-api-server-0 -n ci \
 
 | # | Action | Priority | Linear |
 |---|--------|----------|--------|
-| 1 | Add Prometheus alert for iSCSI volume manager stall | High | [PGM-214](https://linear.app/pgmac-net-au/issue/PGM-214) |
+| 1 | Add Prometheus alert for iSCSI volume manager stall | High | [PGM-214](https://linear.app/pgmac-net-au/issue/PGM-214) ✅ Done |
 | 2 | Restart k8s03 kine+kubelite to clear residual processorListener stall | Medium | [PGM-215](https://linear.app/pgmac-net-au/issue/PGM-215) |
-| 3 | Kubelet volume manager stall runbook (created) | High | [PGM-216](https://linear.app/pgmac-net-au/issue/PGM-216) |
-| 4 | KCM stale terminatingReplicas runbook (created) | Medium | [PGM-217](https://linear.app/pgmac-net-au/issue/PGM-217) |
+| 3 | Kubelet volume manager stall runbook (created) | High | [PGM-216](https://linear.app/pgmac-net-au/issue/PGM-216) ✅ Done |
+| 4 | KCM stale terminatingReplicas runbook (created) | Medium | [PGM-217](https://linear.app/pgmac-net-au/issue/PGM-217) ✅ Done |
 | 5 | Add alert for RS terminatingReplicas stale state | Medium | [PGM-218](https://linear.app/pgmac-net-au/issue/PGM-218) |
 | 6 | Add CrashLoopBackOff alert for ci namespace | Low | [PGM-219](https://linear.app/pgmac-net-au/issue/PGM-219) |
+| 7 | jiva-ctrl eviction → iSCSI ro filesystem runbook (created) | High | [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224) ✅ Done |
+| 8 | Add log-based alerts: EXT4 ro remount + iSCSI session failure | High | [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) |
+| 9 | Add extended NoExecute toleration to jiva-ctrl pods | Medium | [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) |
+| 10 | Create rolling node restart runbook for jiva-ctrl nodes | Medium | [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) |
+| 11 | Uncordon k8s02 | Medium | [PGM-225](https://linear.app/pgmac-net-au/issue/PGM-225) |
 
 ---
 
@@ -424,6 +550,68 @@ Caused by: org.postgresql.util.PSQLException: The connection attempt failed.
 Caused by: java.net.UnknownHostException: dtrack-postgresql.ci
 ```
 
+### Key Error Signatures — iSCSI/EXT4 Read-Only Cascade (Chain 4)
+
+**dmesg / kern.log — iSCSI connection failure:**
+```
+iscsid: connection1:0: detected conn error (1020)
+iscsid: session1: session recovery timed out after 120 secs
+sd X:0:0:0: [sdX] rejecting I/O to offline device
+blk_update_request: I/O error, dev sdX, sector NNNN op 0x1:(WRITE)
+```
+
+**dmesg / kern.log — EXT4 journal abort and ro remount:**
+```
+JBD2: Detected IO errors while flushing file data on sdX-8
+Aborting journal on device sdX-8.
+EXT4-fs (sdX): I/O error while writing superblock
+EXT4-fs error (device sdX): ext4_journal_check_start:61: Detected aborted journal
+EXT4-fs (sdX): Remounting filesystem read-only
+```
+
+**syslog — taint eviction batch (root cause):**
+```
+taint_eviction.go:111] "Deleting pod" controller="taint-eviction-controller" pod="openebs/pvc-XXXXXXXX-jiva-ctrl-YYYY-ZZZZ"
+```
+Six lines at identical timestamps = batched eviction after KCM reconnect.
+
+**syslog — KCM reconnect marker (immediately before eviction burst):**
+```
+controller.go:667] quota admission added evaluator for: daemonsets.apps
+```
+This line signals that kube-controller-manager just became active after a dqlite disconnect.
+
+**JivaVolume CR — stale mountInfo blocking remount:**
+```bash
+kubectl get jivavolume <pvc-name> -n openebs -o jsonpath='{.spec.mountInfo}'
+# → {"devicePath":"/dev/disk/by-path/ip-10.152.183.57:3260-iscsi-...", "fsType":"ext4",
+#    "stagingPath":"/var/snap/microk8s/.../globalmount", "nodeID":"k8s02"}
+# If nodeID does not match current scheduling node → stale, needs patching
+```
+
+**Clear stale JivaVolume mountInfo:**
+```bash
+kubectl patch jivavolume <pvc-name> -n openebs --type=merge \
+  -p '{"spec":{"mountInfo":{"devicePath":"","stagingPath":""}}}'
+```
+
+**Log out stale iSCSI session from old node (via jiva-csi-node container):**
+```bash
+kubectl exec -n openebs openebs-jiva-csi-node-<id> -c jiva-csi-plugin -- \
+  iscsiadm -m node \
+  -T iqn.2016-09.com.openebs.jiva:<pvc-name> \
+  -p <controller-clusterip>:3260 --logout
+```
+
+**Unmount stale CSI mounts from old node (needed when ro fs blocks pod finalizer):**
+```bash
+# Inside jiva-csi-node container on the affected node:
+kubectl exec -n openebs openebs-jiva-csi-node-<id> -c jiva-csi-plugin -- \
+  umount /var/snap/microk8s/common/var/lib/kubelet/pods/<pod-uid>/volumes/kubernetes.io~csi/<pvc>/mount
+kubectl exec -n openebs openebs-jiva-csi-node-<id> -c jiva-csi-plugin -- \
+  umount /var/snap/microk8s/common/var/lib/kubelet/plugins/jiva.csi.openebs.io/<vol-id>/globalmount
+```
+
 ### Patch volumesAttached and volumesInUse on Stalled Node
 
 ```bash
@@ -459,8 +647,14 @@ kubectl --context pvek8s wait pod <statefulset-pod-name> -n <namespace> --for=co
 ## References
 
 - Linear: [PGM-213](https://linear.app/pgmac-net-au/issue/PGM-213) — dependency-track JDBC URL fix (fix/dtrack-db-url-pgm-213, PR #493)
+- Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) — Add log-based alerts for EXT4 ro remount and iSCSI session failure
+- Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) — Add extended NoExecute toleration to jiva-ctrl pods
+- Linear: [PGM-223](https://linear.app/pgmac-net-au/issue/PGM-223) — Create safe rolling node restart runbook for jiva-ctrl nodes
+- Linear: [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224) — jiva-ctrl eviction runbook (created)
+- Linear: [PGM-225](https://linear.app/pgmac-net-au/issue/PGM-225) — Uncordon k8s02
 - Related PIR: [k8s03 Extended Recovery — kine Watch Corruption, VXLAN Route Corruption, and Kubelet Watch Stream Stall](2026-05-18-k8s03-extended-recovery-kine-watch-vxlan-route-corruption.md)
 - Related PIR: [dqlite Snapshot Bloat → Watch Stream Failure](2026-04-02-dqlite-snapshot-crash-loop-watch-stream-failure.md)
+- Runbook: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) — jiva-ctrl eviction → iSCSI drop → EXT4 ro cascade (new, from this PIR)
 - Runbook: [kubelet-volume-manager-stall.md](../runbooks/kubelet-volume-manager-stall.md) — iSCSI WaitForAttachAndMount hang from processorListener stall
 - Runbook: [kcm-stale-terminating-replicas.md](../runbooks/kcm-stale-terminating-replicas.md) — stale terminatingReplicas after kine watch disruption
 - Runbook: [kubelet-silent-stall.md](../runbooks/kubelet-silent-stall.md) — related failure modes (pod watch goroutine stall, PLEG stall)
