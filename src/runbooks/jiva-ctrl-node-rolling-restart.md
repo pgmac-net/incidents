@@ -216,3 +216,72 @@ kubectl --context pvek8s exec -n openebs "$NEW_JIVA_POD" -c jiva-csi-plugin -- \
 - Related: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — recovery if the filesystem has already gone read-only (use when it's too late to migrate first)
 - Related: [kubelet-volume-manager-stall.md](kubelet-volume-manager-stall.md) — Option B: full dqlite+kubelite restart procedure and lock-contention safety checks
 - Related: [kubelet-silent-stall.md](kubelet-silent-stall.md) — Failure Mode 2: why cordon-before-restart is required for kubelite restarts
+
+---
+
+## Automated Option — Ansible
+
+The manual procedure above remains the canonical reference and should be
+used when the automation is unavailable or when a volume is already
+degraded. For routine maintenance, the whole pre-restart migration and
+reboot is automated.
+
+### Option A — full reboot flow (recommended for kernel updates)
+
+`k8s-reboot.yml` runs the controller shuffle automatically as part of its
+pre-flight: if jiva-ctrl pods are found on the target node it announces the
+migration, moves the controllers off one at a time (waiting for each
+JivaVolume to return to `Ready`), re-validates volume quorum, and only then
+proceeds to cordon, drain, and reboot.
+
+```bash
+cd ansible
+ansible-playbook -i inventory/hosts.ini k8s-reboot.yml --limit <node>
+```
+
+### Option B — shuffle only (no reboot)
+
+The migration is also available standalone via the
+`ansible-role-microk8s` role, gated behind an explicit tag so it can never
+run as part of a normal role application:
+
+```bash
+cd ansible
+ansible-playbook -i inventory/hosts.ini update/home.yml \
+  --limit <node> --tags jiva-ctrl-shuffle
+```
+
+Or from another playbook:
+
+```yaml
+- name: Shuffle jiva-ctrl pods off the target node
+  ansible.builtin.include_role:
+    name: ansible-role-microk8s
+    tasks_from: jiva_ctrl_shuffle
+```
+
+### What the automation does (and does not do)
+
+- Finds controllers by **label** (`openebs.io/controller=jiva-controller`
+  for legacy 2.12 volumes, `openebs.io/component=jiva-controller` for
+  3.6 CSI volumes) — do not rely on `jiva.*ctrl` pod-name matching; legacy
+  controller pods are named `pvc-...-ctrl-...` without "jiva"
+- Aborts if any JivaVolume is `Syncing`/`Error`/`Unknown` before starting
+- Cordons the node so controllers cannot reschedule back, and **leaves it
+  cordoned** — Option A's reboot flow uncordons at the end; after a
+  standalone Option B run you must `kubectl uncordon <node>` yourself
+- Moves one controller at a time: delete pod → wait for the Deployment
+  rollout → replacement `2/2 Running` on another node → JivaVolume `Ready`
+  (CSI volumes; legacy volumes have no JivaVolume CR and get a settle
+  pause instead)
+- Fails if any controller remains on the node afterwards
+- It does **not** migrate workload pods (runbook Steps 2–3): moving the
+  controller itself means the iSCSI target is re-homed before the node
+  restart, so workload sessions reconnect to the same ClusterIP. If a
+  filesystem has already gone read-only, use
+  [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md)
+  instead — it is too late to shuffle
+
+Implementation: `tasks/jiva_ctrl_shuffle.yml` in
+[ansible-role-microk8s](https://github.com/pgmac-net/ansible-role-microk8s)
+(PGM-240); reboot integration in `ansible/k8s-reboot.yml` (PGM-239/PGM-240).
