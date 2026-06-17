@@ -375,14 +375,14 @@ kubectl --context pvek8s [command]
 ### Immediate Actions Required
 
 1. **[Action title]** (High / Medium / Low)
-   - [Why needed — link to root cause chain]
-   - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+    - [Why needed — link to root cause chain]
+    - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
 
 ### Longer-Term Improvements
 
 2. **[Action title]** (Medium / Low)
-   - [Why needed]
-   - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+    - [Why needed]
+    - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
 
 ---
 
