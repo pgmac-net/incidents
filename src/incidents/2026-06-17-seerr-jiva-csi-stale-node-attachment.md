@@ -374,6 +374,7 @@ kubectl delete pod/<app-pod> -n <namespace> --context pvek8s --force --grace-per
 ## References
 
 - Linear tickets: [PGM-254](https://linear.app/pgmac-net-au/issue/PGM-254), [PGM-255](https://linear.app/pgmac-net-au/issue/PGM-255), [PGM-256](https://linear.app/pgmac-net-au/issue/PGM-256), [PGM-257](https://linear.app/pgmac-net-au/issue/PGM-257)
+- Runbook: [Jiva CSI PVC Stuck After Pod Rescheduled to Different Node](../runbooks/jiva-csi-stale-node-attachment.md)
 - Related runbook: [Jiva CSI Mount Proliferation](../runbooks/jiva-csi-mount-proliferation.md)
 - Related runbook: [Jiva Ctrl Eviction — iSCSI Drop and EXT4 Read-Only](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md)
 

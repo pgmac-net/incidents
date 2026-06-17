@@ -15,6 +15,7 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | [Control-Plane Watch-Cache Freeze](control-plane-watch-cache-freeze.md) | microk8s | Zero pod creations / stalled reflectors — apiserver watch cache frozen by broken kine feed; RV=0 test; restart k8s-dqlite before kubelite |
 | [KCM Stale terminatingReplicas](kcm-stale-terminating-replicas.md) | microk8s/kube-controller-manager | ReplicaSet refuses to create pods — KCM pod informer stale after kine disruption; terminatingReplicas stuck |
 | [Jiva CSI Mount Proliferation](jiva-csi-mount-proliferation.md) | openebs-jiva-csi | Duplicate bind mounts accumulate per kubelite restart, causing findmnt/Ansible hangs |
+| [Jiva CSI Stale Node Attachment](jiva-csi-stale-node-attachment.md) | openebs-jiva-csi | PVC stuck ContainerCreating after pod force-deleted and rescheduled to different node — stale nodeID label, mountInfo, and iSCSI session on old node |
 | [Jiva-ctrl Eviction → iSCSI → EXT4 Read-Only](jiva-ctrl-eviction-iscsi-ro-filesystem.md) | openebs-jiva-csi | Pod filesystem goes read-only after jiva-ctrl pod evicted, dropping iSCSI session and triggering EXT4 journal abort |
 | [Safe Node Restart (jiva-ctrl hosted)](jiva-ctrl-node-rolling-restart.md) | openebs-jiva-csi | Pre-restart procedure for nodes hosting jiva-ctrl pods — migrate workloads and verify iSCSI sessions clear before restarting |
 | [dqlite Write Contention](dqlite-write-contention.md) | microk8s/dqlite | `database is locked (try:500)` under kubelite restart storms — prevention, recovery, phantom RS fix |
