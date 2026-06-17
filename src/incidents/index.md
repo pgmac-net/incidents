@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Title | Severity | Duration |
 |------|-------|----------|----------|
+| 2026-06-17 | [seerr Jiva CSI Stale Node Attachment — PVC Stuck After Cross-Node Rescheduling](2026-06-17-seerr-jiva-csi-stale-node-attachment.md) | Medium | ~31m |
 | 2026-06-05 | [pvek8s Kernel Update — Simultaneous 3-Node Reboot Cascade](2026-06-05-pvek8s-kernel-reboot-cluster-recovery-failure.md) | P1 | ~6h 58m |
 | 2026-05-28 | [pvek8s Post-Power-Outage Recovery — kubelet Volume Manager Stall and KCM Stale terminatingReplicas](2026-05-28-pvek8s-post-outage-kubelet-informer-kcm-stall.md) | High | ~5h 20m |
 | 2026-05-23 | [k8s01 Calico CNI Unauthorized — Stale Pod-Bound Token After Calico Upgrade](2026-05-23-k8s01-calico-cni-unauthorized-stale-kubeconfig.md) | Medium | ~1h |
