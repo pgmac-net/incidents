@@ -234,22 +234,22 @@ kubectl --context pvek8s get pods -n openebs | grep 746b2837
 ### Immediate Actions Required
 
 1. **Create runbook: Jiva CSI PVC stuck after pod rescheduled to different node** (High)
-   - Chain 2 required multi-step manual CSI state surgery with no documented procedure. On-call would need to rediscover every step under pressure.
-   - Linear: [PGM-254](https://linear.app/pgmac-net-au/issue/PGM-254)
+    - Chain 2 required multi-step manual CSI state surgery with no documented procedure. On-call would need to rediscover every step under pressure.
+    - Linear: [PGM-254](https://linear.app/pgmac-net-au/issue/PGM-254)
 
 2. **Add Nagios alert for pods with deletionTimestamp older than 5 minutes** (Medium)
-   - Chain 1: the stuck pod was not detected by any monitoring; discovered only when investigating the chart update. A pod stuck in deletion for > 5 minutes is always a symptom of a deeper problem.
-   - Linear: [PGM-255](https://linear.app/pgmac-net-au/issue/PGM-255)
+    - Chain 1: the stuck pod was not detected by any monitoring; discovered only when investigating the chart update. A pod stuck in deletion for > 5 minutes is always a symptom of a deeper problem.
+    - Linear: [PGM-255](https://linear.app/pgmac-net-au/issue/PGM-255)
 
 ### Longer-Term Improvements
 
 3. **Evaluate StatefulSet node affinity for Jiva-backed workloads** (Low)
-   - Rescheduling a StatefulSet pod to a different node while it uses a Jiva PVC causes the entire Chain 2 failure. Adding soft node affinity (prefer same node) would reduce the probability of cross-node reschedule incidents.
-   - Linear: [PGM-257](https://linear.app/pgmac-net-au/issue/PGM-257)
+    - Rescheduling a StatefulSet pod to a different node while it uses a Jiva PVC causes the entire Chain 2 failure. Adding soft node affinity (prefer same node) would reduce the probability of cross-node reschedule incidents.
+    - Linear: [PGM-257](https://linear.app/pgmac-net-au/issue/PGM-257)
 
 4. **Document force-delete procedure with Jiva CSI cleanup steps** (Medium)
-   - Any time `kubectl delete --force` is used on a pod with a Jiva CSI PVC, the CSI teardown must be performed manually. This should be a noted prerequisite in any runbook that calls for force-deleting pods.
-   - Linear: [PGM-256](https://linear.app/pgmac-net-au/issue/PGM-256)
+    - Any time `kubectl delete --force` is used on a pod with a Jiva CSI PVC, the CSI teardown must be performed manually. This should be a noted prerequisite in any runbook that calls for force-deleting pods.
+    - Linear: [PGM-256](https://linear.app/pgmac-net-au/issue/PGM-256)
 
 ---
 
