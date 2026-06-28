@@ -18,6 +18,7 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | [Jiva CSI Stale Node Attachment](jiva-csi-stale-node-attachment.md) | openebs-jiva-csi | PVC stuck ContainerCreating after pod force-deleted and rescheduled to different node — stale nodeID label, mountInfo, and iSCSI session on old node |
 | [Jiva-ctrl Eviction → iSCSI → EXT4 Read-Only](jiva-ctrl-eviction-iscsi-ro-filesystem.md) | openebs-jiva-csi | Pod filesystem goes read-only after jiva-ctrl pod evicted, dropping iSCSI session and triggering EXT4 journal abort |
 | [Safe Node Restart (jiva-ctrl hosted)](jiva-ctrl-node-rolling-restart.md) | openebs-jiva-csi | Pre-restart procedure for nodes hosting jiva-ctrl pods — migrate workloads and verify iSCSI sessions clear before restarting |
+| [Jiva Controller Endpoint Deadlock](jiva-ctrl-endpoint-deadlock.md) | openebs-jiva/kcm | Replica CrashLoopBackOff with controller endpoints stuck in `notReadyAddresses` — CM write failure creates self-sustaining deadlock; fix by restarting k8s-dqlite (follower then leader) |
 | [dqlite Write Contention](dqlite-write-contention.md) | microk8s/dqlite | `database is locked (try:500)` under kubelite restart storms — prevention, recovery, phantom RS fix |
 | [k8s Upgrade Post-Upgrade Validation](k8s-upgrade-validation.md) | microk8s | Post-rolling-upgrade checks for stale EndpointSlice IPs and stale Calico IPAM blocks that silently cause service disruptions |
 

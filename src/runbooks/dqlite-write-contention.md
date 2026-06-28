@@ -21,7 +21,7 @@ kine logs on a node show:
 grpc: addrConn.createTransport failed ... kine.sock:12379: use of closed network connection
 ```
 
-Downstream effects: kcm/scheduler informer caches go stale, deployments stop reconciling, new pods fail to schedule or miss calico host routes.
+Downstream effects: kcm/scheduler informer caches go stale, deployments stop reconciling, new pods fail to schedule or miss calico host routes. If Jiva controller pods become Ready during the write storm, their endpoint update will fail — see [jiva-ctrl-endpoint-deadlock.md](jiva-ctrl-endpoint-deadlock.md) for the self-sustaining deadlock that results.
 
 ## Root cause
 
