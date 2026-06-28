@@ -55,11 +55,12 @@ At 2048+ duplicates, `findmnt` scanning `/proc/mounts` hangs, causing Ansible fa
 Only volumes using `openebs-jiva-csi-default` storage class (provisioner: `jiva.csi.openebs.io`) are affected.
 Volumes using the older `openebs-jiva-default` (provisioner: `openebs.io/provisioner-iscsi`) are **not** affected.
 
-As of 2026-05-21, only one PVC uses the CSI storage class:
+As of 2026-06-28, the following PVCs use the CSI storage class:
 
 | PVC | Namespace | Pod |
 |-----|-----------|-----|
-| `seerr-seerr-chart-config` (`pvc-746b2837`) | `media` | `seerr-seerr-chart-0` (k8s02) |
+| `seerr-seerr-chart-config` (`pvc-746b2837`) | `media` | `seerr-seerr-chart-0` |
+| coder workspace home (`pvc-8eccb718`) | `coder` | coder workspace pod |
 
 ---
 
@@ -82,20 +83,29 @@ A healthy node shows exactly 1 occurrence per Jiva CSI volume.
 
 ## Remediation
 
-The cleanup is non-disruptive — the workload pod continues running throughout.
+!!! warning "Overshoot risk: cleanup can remove the live mount"
+    The loop below stops when `/proc/mounts` count reaches 1. This assumes the count
+    decrements one-by-one. **It does not always.** When the stacked mounts form a
+    parent-child kernel hierarchy, a single `umount` can collapse many `/proc/mounts`
+    entries at once — dropping the count past 1 directly to 0. When that happens the
+    live mount is removed and the pod immediately loses filesystem access.
 
-The original active mount (added when the pod first started) sits at the bottom of the stack; `umount` removes from the top, so a single call clears the entire stale stack through kernel shared-namespace propagation.
+    The loop below detects this and prints a warning. If you see `DANGER: live mount
+    removed`, stop immediately and follow the **If live mount removed** section below.
+
+Identify paths to clean:
 
 ```bash
-# Identify paths to clean
+# Globalmount paths (one per PVC)
 ssh <node> "grep 'jiva.csi.openebs.io' /proc/mounts | awk '{print \$2}' | grep globalmount | sort -u"
-# This gives you the GLOBAL_PATH value(s) needed below.
 
-# Find the corresponding pod volume mount path
+# Pod volume mount paths (one per PVC)
 ssh <node> "grep '<vol-id>' /proc/mounts | awk '{print \$2}' | grep -v globalmount | sort -u"
-# This gives you the POD_PATH value(s) needed below.
+```
 
-# Run cleanup on the affected node as root
+Run cleanup on the affected node as root:
+
+```bash
 ssh <node> 'sudo bash -s' << 'EOF'
 POD_PATH="<full pod volume mount path>"
 GLOBAL_PATH="<full globalmount path>"
@@ -104,18 +114,89 @@ echo "Before: pod=$(grep -c "$POD_PATH" /proc/mounts) global=$(grep -c "$GLOBAL_
 
 COUNT=$(grep -c "$POD_PATH" /proc/mounts)
 while [ "$COUNT" -gt 1 ]; do
-    umount "$POD_PATH" 2>/dev/null
-    COUNT=$(grep -c "$POD_PATH" /proc/mounts)
+    umount "$POD_PATH" 2>/dev/null || true
+    NEW=$(grep -c "$POD_PATH" /proc/mounts)
+    if [ "$NEW" -eq 0 ]; then
+        echo "DANGER: live mount removed (count $COUNT → 0). Pod volume lost. Run recovery."
+        break
+    fi
+    COUNT=$NEW
 done
 
 COUNT=$(grep -c "$GLOBAL_PATH" /proc/mounts)
 while [ "$COUNT" -gt 1 ]; do
-    umount "$GLOBAL_PATH" 2>/dev/null
-    COUNT=$(grep -c "$GLOBAL_PATH" /proc/mounts)
+    umount "$GLOBAL_PATH" 2>/dev/null || true
+    NEW=$(grep -c "$GLOBAL_PATH" /proc/mounts)
+    if [ "$NEW" -eq 0 ]; then
+        echo "DANGER: live globalmount removed (count $COUNT → 0). Run recovery."
+        break
+    fi
+    COUNT=$NEW
 done
 
 echo "After: pod=$(grep -c "$POD_PATH" /proc/mounts) global=$(grep -c "$GLOBAL_PATH" /proc/mounts) total=$(wc -l < /proc/mounts)"
 EOF
+```
+
+When the loop terminates normally (count reaches 1), cleanup is complete and the pod continues running.
+
+---
+
+## If live mount was accidentally removed
+
+This happens when the count jumps from >1 to 0, meaning the live kernel mount was removed along with the stale duplicates. The pod's volume becomes inaccessible but the pod itself keeps running (it will error when it next tries to write or read the volume).
+
+**Recovery requires three steps:**
+
+### 1 — Log out the iSCSI session on the old node
+
+The PVC's iSCSI session is still attached to the node where cleanup ran. The volume cannot attach elsewhere until this is cleared:
+
+```bash
+# Find the iSCSI target for the PVC
+ssh <old-node> "sudo iscsiadm -m session"
+# Output: tcp: [<N>] <target-portal>:3260,1 <iqn>
+
+# Log out
+ssh <old-node> "sudo iscsiadm -m node -T <iqn> -p <portal> --logout"
+```
+
+### 2 — Patch the JivaVolume CR to clear stale node attachment
+
+```bash
+# Find the JivaVolume for the PVC
+kubectl --context pvek8s get jivavolume -n openebs
+
+# Patch to clear mountInfo and nodeID
+kubectl --context pvek8s patch jivavolume <pvc-name> -n openebs \
+  --type=json \
+  -p '[
+    {"op":"remove","path":"/spec/mountInfo"},
+    {"op":"remove","path":"/metadata/labels/nodeID"}
+  ]'
+```
+
+If the `remove` op fails because the field doesn't exist, that field is already clear — skip it.
+
+### 3 — Restart the pod to trigger CSI re-attachment
+
+```bash
+kubectl --context pvek8s -n <namespace> delete pod <pod-name>
+```
+
+The pod will reschedule (possibly to a different node). The Jiva CSI node plugin will call `NodeStageVolume` + `NodePublishVolume` on the new node, establishing a fresh iSCSI session and clean globalmount.
+
+Verify:
+
+```bash
+# Pod running on new node
+kubectl --context pvek8s -n <namespace> get pod <pod-name> -o wide
+
+# Exactly 1 globalmount on new node (not the old one)
+ssh <new-node> "grep 'jiva.csi.openebs.io' /proc/mounts | grep <vol-id>"
+
+# No residual iSCSI session on old node
+ssh <old-node> "sudo iscsiadm -m session | grep <iqn> || echo clean"
 ```
 
 ---
@@ -146,5 +227,7 @@ This recurs each time kubelite restarts on the node while a Jiva CSI pod is sche
 
 - [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203) — incident and fix
 - [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) — kubelite restart incidents that caused accumulation
+- PIR: [pvek8s dqlite WAL Lock Storm — Jiva Controller Endpoint Deadlock](../incidents/2026-06-28-dqlite-lock-storm-jiva-endpoint-deadlock.md) — incident where overshoot removed live seerr mount; iSCSI logout + JivaVolume patch recovery documented here
+- [Jiva CSI Stale Node Attachment runbook](jiva-csi-stale-node-attachment.md) — the "If live mount removed" recovery above produces the same stale attachment state
 - [Kubelet Silent Stall runbook](kubelet-silent-stall.md) — related kubelite restart procedures
 - [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — related failure mode: jiva-ctrl pod eviction causes iSCSI session drop and EXT4 read-only remount; both failure modes affect the same jiva-csi-node DaemonSet infrastructure
