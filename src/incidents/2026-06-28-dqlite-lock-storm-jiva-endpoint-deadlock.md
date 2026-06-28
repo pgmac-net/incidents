@@ -285,17 +285,17 @@ kubectl --context pvek8s get endpoints -n openebs | grep jiva-ctrl-svc
 
 1. **Add Nagios alert: Jiva controller service endpoints stuck in notReadyAddresses** (High)
     - Alert when any `-jiva-ctrl-svc` Endpoint object has one or more entries in `notReadyAddresses` for > 5 minutes. This directly detects the endpoint deadlock before it becomes a multi-hour outage.
-    - Linear: [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX)
+    - Issue: [#47](https://github.com/pgmac-net/incidents/issues/47)
 
 2. **Add Nagios alert: Jiva replica pods in CrashLoopBackOff** (High)
     - Alert when any Jiva replica pod (`-rep-`) has `restartCount > 5` or is in `CrashLoopBackOff` status. Catches replica failures early, before extended deadlock sets in.
-    - Linear: [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX)
+    - Issue: [#48](https://github.com/pgmac-net/incidents/issues/48)
 
 ### Longer-Term Improvements
 
 3. **Investigate: why jiva-operator failed to reconcile for ~10 hours** (Medium)
     - The original controller failure at ~12:46 AEST went undetected for 10 hours. Determine whether the jiva-operator lost its API server watch, crashed silently, or was otherwise degraded. Review jiva-operator pod logs and events around that time.
-    - Linear: [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX)
+    - Issue: [#49](https://github.com/pgmac-net/incidents/issues/49)
 
 4. **Add Nagios alert: kine.sock `use of closed network connection` reconnection failures** (Medium)
     - Tracks persistent gRPC channel pool failures on individual nodes — an early-warning signal before the kine watch stream breaks entirely. This was previously identified in the 2026-06-24 PIR (PGM-281 subtask) and is reinforced by this incident, where the broken kine.sock on k8s03 was the blocking factor for endpoint writes post-storm.
@@ -332,9 +332,9 @@ kubectl --context pvek8s get endpoints -n openebs | grep jiva-ctrl-svc
 
 | # | Action | Priority | Linear |
 |---|--------|----------|--------|
-| 1 | Add Nagios alert: Jiva controller service endpoints stuck in notReadyAddresses > 5min | High | [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX) |
-| 2 | Add Nagios alert: Jiva replica pod CrashLoopBackOff restart count > 5 | High | [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX) |
-| 3 | Investigate why jiva-operator failed to reconcile for ~10h (original failure trigger) | Medium | [PGM-XXX](https://linear.app/pgmac-net-au/issue/PGM-XXX) |
+| 1 | Add Nagios alert: Jiva controller service endpoints stuck in notReadyAddresses > 5min | High | [#47](https://github.com/pgmac-net/incidents/issues/47) |
+| 2 | Add Nagios alert: Jiva replica pod CrashLoopBackOff restart count > 5 | High | [#48](https://github.com/pgmac-net/incidents/issues/48) |
+| 3 | Investigate why jiva-operator failed to reconcile for ~10h (original failure trigger) | Medium | [#49](https://github.com/pgmac-net/incidents/issues/49) |
 | 4 | Add Nagios alert: kine.sock `use of closed network connection` reconnection failures (existing PGM-281 subtask) | Medium | PGM-281 subtask |
 
 ---
@@ -428,6 +428,9 @@ kubectl --context pvek8s get pods -n openebs | grep rep | grep -v Running | \
 - Runbook: [dqlite-write-contention.md](../runbooks/dqlite-write-contention.md) — write contention recovery and prevention
 - Runbook: [control-plane-watch-cache-freeze.md](../runbooks/control-plane-watch-cache-freeze.md) — broader CM/apiserver freeze recovery
 - Related PIR: [2026-06-24 k8s02 watch-cache freeze](2026-06-24-k8s02-watch-cache-freeze-dqlite-leadership-disruption.md) — previous dqlite lock storm incident; same kine.sock drop pattern on k8s03
+- Issue [#47](https://github.com/pgmac-net/incidents/issues/47) — Nagios alert: Jiva controller notReadyAddresses
+- Issue [#48](https://github.com/pgmac-net/incidents/issues/48) — Nagios alert: Jiva replica CrashLoopBackOff
+- Issue [#49](https://github.com/pgmac-net/incidents/issues/49) — Investigate jiva-operator 10h reconciliation gap
 - Linear: PGM-281 — kine.sock reconnection failure monitoring (existing subtask)
 
 ---
