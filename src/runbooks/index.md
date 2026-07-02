@@ -20,6 +20,7 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | [Safe Node Restart (jiva-ctrl hosted)](jiva-ctrl-node-rolling-restart.md) | openebs-jiva-csi | Pre-restart procedure for nodes hosting jiva-ctrl pods — migrate workloads and verify iSCSI sessions clear before restarting |
 | [Jiva Controller Endpoint Deadlock](jiva-ctrl-endpoint-deadlock.md) | openebs-jiva/kcm | Replica CrashLoopBackOff with controller endpoints stuck in `notReadyAddresses` — CM write failure creates self-sustaining deadlock; fix by restarting k8s-dqlite (follower then leader) |
 | [dqlite Write Contention](dqlite-write-contention.md) | microk8s/dqlite | `database is locked (try:500)` under kubelite restart storms — prevention, recovery, phantom RS fix |
+| [dqlite Datastore Vacuum](dqlite-datastore-vacuum.md) | microk8s/dqlite | Freelist bloat makes every raft snapshot a 200MB+ fsync burst feeding lock storms — full export/rebuild/rejoin procedure; `dbctl backup` silently broken on 1.35 |
 | [k8s Upgrade Post-Upgrade Validation](k8s-upgrade-validation.md) | microk8s | Post-rolling-upgrade checks for stale EndpointSlice IPs and stale Calico IPAM blocks that silently cause service disruptions |
 
 ## Scripts

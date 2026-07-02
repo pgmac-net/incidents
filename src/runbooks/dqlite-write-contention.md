@@ -29,6 +29,11 @@ dqlite uses SQLite as its storage backend, which is single-writer. All Kubernete
 
 The `try: 500` threshold means kine exhausted its maximum retry budget (~500 attempts with backoff). At that point kine drops the connection, which breaks the API server's watch stream and causes informer caches on the kcm, scheduler, and calico-node to go stale.
 
+Two structural amplifiers make storms far more likely (analysis: [pgk8s#577](https://github.com/pgmac-net/pgk8s/issues/577)):
+
+1. **Retry amplification bug** ([canonical/microk8s#5153](https://github.com/canonical/microk8s/issues/5153), v1.32+, unfixed) — on a transient `SQLITE_BUSY`, k8s-dqlite re-executes each blocked write up to 500 times with minimal backoff; one lease update can become ~327 duplicate queries in a second, so any brief stall multiplies its own load.
+2. **Freelist bloat → snapshot amplification** — the SQLite file never shrinks (`auto_vacuum=0`; dqlite cannot replicate `VACUUM`). Once the file is mostly freelist, every raft snapshot (each 512 raft entries) serialises the whole bloated image — a 200MB+ fsync burst that itself creates the `SQLITE_BUSY` windows feeding amplifier 1. Check with `PRAGMA page_count; PRAGMA freelist_count` and see [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md) when snapshots exceed ~50MB.
+
 ## Prevention
 
 ### Before any kubelite restart
@@ -168,3 +173,5 @@ Cluster is healthy when:
 ## References
 
 - Script: [pvek8s-outage-recovery.sh](pvek8s-outage-recovery.sh) — full post-outage recovery sequence; dqlite+kubelite restart ordering (phases 4 and 6) follows the safe restart procedure in this runbook
+- Runbook: [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md) — structural mitigation for the snapshot-amplification driver; run when snapshot files exceed ~50MB
+- Upstream: [canonical/microk8s#5153](https://github.com/canonical/microk8s/issues/5153) — retry amplification on lease updates (open)

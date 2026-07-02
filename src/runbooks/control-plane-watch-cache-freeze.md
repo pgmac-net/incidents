@@ -42,6 +42,19 @@ Symptoms depend on which component is homed on the frozen node:
 | kubelet | Pods assigned to the node sit Pending forever; `Scheduled` is the last event |
 | ARC controller | Runner pods not created; stale `Running` EphemeralRunner CRs; GH Actions jobs queue for hours |
 
+**Triggers observed so far:**
+
+1. **Sustained dqlite write-contention storm** (PGM-241 and most recurrences) —
+   `database is locked` errors visible around the freeze onset.
+2. **dqlite leader election / brief member outage** (2026-07-03, k8s01+k8s02) —
+   a `no known leader` blip of a few seconds broke the watch streams on two
+   nodes at once. **No sustained lock storm**: by the time the alert fires,
+   lock counts are zero and the cluster looks healthy. Do not rule out a
+   frozen cache because the dqlite metrics are quiet — the freeze persists
+   silently until manually cleared, because microk8s ships the apiserver
+   with `DetectCacheInconsistency=false` (kine can't support the probes),
+   disabling upstream's self-healing for exactly this state.
+
 ## Diagnosis — the RV=0 test
 
 Create any object, then compare a watch-cache read against a quorum read
@@ -71,6 +84,16 @@ sudo journalctl -u snap.microk8s.daemon-kubelite --since "-5 minutes" --no-pager
 # the moment a controller's informers died (e.g. ARC)
 kubectl logs -n arc-systems <gharc-pod> | grep "Unexpected EOF during watch stream"
 ```
+
+## Recovery-time gotcha: frozen caches poison plain kubectl
+
+While any node is frozen, `kubectl` through the cluster VIP can hit the
+frozen apiserver and serve **stale reads for single GETs too** (consistent
+reads from cache) — e.g. `kubectl wait` on a pod you just created can
+return `NotFound` even though the pod exists and runs. During recovery,
+treat unexpected `NotFound`/stale answers as more evidence, not as a
+failure of your recovery step: verify against a healthy node's apiserver
+or a quorum read (`?resourceVersion=` empty forces etcd).
 
 ## What does NOT work
 
@@ -138,3 +161,4 @@ drain; jiva replica pods may briefly go Pending while rescheduling.
 - Related: [kcm-stale-terminating-replicas.md](kcm-stale-terminating-replicas.md) — earlier, narrower KCM informer staleness
 - Related: [kubelet-volume-manager-stall.md](kubelet-volume-manager-stall.md) — processorListener variant; dqlite restart safety checks
 - Related: [dqlite-write-contention.md](dqlite-write-contention.md) — the write-storm conditions (PGM-237) that break kine watch streams in the first place
+- Related: [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md) — structural mitigation; freelist bloat makes every raft snapshot a 200MB+ fsync burst that feeds the storms (pgk8s#577)
