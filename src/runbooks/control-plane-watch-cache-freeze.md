@@ -104,7 +104,30 @@ or a quorum read (`?resourceVersion=` empty forces etcd).
   alive and re-wins the election within seconds.
 - **Waiting.** The cache does not self-heal; KCM was dead 16h.
 
-## Recovery
+## Automated recovery (since 2026-07-04)
+
+Single-node freezes are **auto-remediated**: a Nagios event handler on
+`microk8s-watch-cache` HARD CRITICAL fires `event_watch_cache_remediate`
+via NRPE on the affected node, which runs this runbook's procedure as
+code (`/etc/nagios/remediate_watch_cache.sh`, shipped by ansible).
+Audit trail: `journalctl -u watch-cache-remediate` on the node, plus
+nagios.log event-handler entries.
+
+**A human is needed only when the automation defers or fails:**
+
+- `DEFERRED: only N/2 other nodes Ready+schedulable` — multi-node
+  incident; run the manual procedure below.
+- `REFUSED: remediation ran <2h ago` — recurring freeze; investigate the
+  trigger (write storms, snapshot bloat — see
+  [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md)) instead of
+  restarting again.
+- `FAILED: ... leaving <node> CORDONED` — the script never uncordons
+  without a verified canary in the RV=0 cache read; pick up from
+  whichever step it failed at.
+- Kill switch: remove the `event_handler` line from the
+  `microk8s-watch-cache` service in nagios-config and reload nagios.
+
+## Manual recovery
 
 Per affected node, **non-dqlite-leader nodes first, leader last**
 (find the leader with `.leader` via the dqlite client, or
