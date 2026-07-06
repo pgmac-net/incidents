@@ -10,6 +10,7 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | Runbook | Service | Description |
 |---------|---------|-------------|
 | [Calico CNI Unauthorized](calico-cni-unauthorized.md) | calico/cni | Pods stuck ContainerCreating — expired or wrong-SA calico-kubeconfig JWT causes Unauthorized on pod sandbox creation |
+| [Calico Orphaned Pod Route](calico-orphaned-pod-route.md) | calico/networking | Healthy container CrashLoops — liveness probe fails with `connect: invalid argument` because the pod's host route is missing and traffic hits the IPAM blackhole route |
 | [Kubelet Silent Stall](kubelet-silent-stall.md) | microk8s | Node shows Ready but pods never schedule — eviction manager stall or pod watch goroutine stall |
 | [Kubelet Volume Manager Stall](kubelet-volume-manager-stall.md) | microk8s/openebs | Pods stuck ContainerCreating with no iSCSI sessions — processorListener goroutine blocked after kine watch disruption |
 | [Control-Plane Watch-Cache Freeze](control-plane-watch-cache-freeze.md) | microk8s | Zero pod creations / stalled reflectors — apiserver watch cache frozen by broken kine feed; RV=0 test; restart k8s-dqlite before kubelite |
