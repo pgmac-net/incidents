@@ -127,6 +127,36 @@ nagios.log event-handler entries.
 - Kill switch: remove the `event_handler` line from the
   `microk8s-watch-cache` service in nagios-config and reload nagios.
 
+### Delivery failure: empty journal does NOT mean the handler never fired
+
+Confirmed 2026-07-09 (5h13m outage): the event handler can fire correctly
+nagios-side while the remediation never runs on the node. Nagios fires
+handlers only on state transitions (SOFT 1, SOFT 2, SOFT→HARD) — three
+attempts total, no refire during steady HARD CRITICAL — and all three NRPE
+calls can be lost while the node's NRPE is saturated by sibling checks each
+running 30–40s against the frozen apiserver (nagios `check_nrpe` gives up at
+15s; the watch-cache check itself shows `Socket timeout after 15 seconds`
+instead of real output).
+
+Triage to distinguish the cases:
+
+```bash
+# Did nagios fire the handler?
+ssh macro 'docker exec nagios4 grep -a "EVENT HANDLER" /opt/nagios/var/nagios.log | tail'
+# → SERVICE EVENT HANDLER: <node>;microk8s-watch-cache;CRITICAL;HARD;3;event_watch_cache_remediate
+
+# Did the node run it?
+ssh <node> 'sudo journalctl -u watch-cache-remediate --since "-6 hours" --no-pager'
+# → empty + handler entries above = DELIVERY FAILED: go straight to the
+#   manual procedure below; do not wait for the automation.
+```
+
+A `microk8s-watch-cache` result of `Socket timeout after 15 seconds` (rather
+than a proper CRITICAL message) is itself a saturation indicator — assume
+lost remediation. Fix tracked in
+[homelabia#134](https://github.com/pgmac-net/homelabia/issues/134)
+(node-local systemd-timer dead-man switch).
+
 ## Manual recovery
 
 Per affected node, **non-dqlite-leader nodes first, leader last**
@@ -166,6 +196,27 @@ when the apiserver bounced: restart any controller-runtime operator pods
 (e.g. `gharc-controller` in `arc-systems`) whose logs end in watch EOF
 errors, and clean up stale CRs (EphemeralRunners claiming `Running` against
 Completed/missing pods).
+
+Also check for **PVs provisioned during the freeze with empty nodeAffinity**
+(2026-07-09): the hostpath provisioner records an empty hostname when its
+helper pods can't schedule, producing PVs with
+`kubernetes.io/hostname In [""]` — permanently unschedulable claims, and PV
+nodeAffinity is immutable. Any pod stuck Pending after recovery with
+`didn't match PersistentVolume's node affinity` on all nodes:
+
+```bash
+kubectl --context pvek8s get pv -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}{"\n"}{end}'
+# → any PV showing an empty value is broken; do NOT try to patch it
+
+# Recycle the claimant instead (ephemeral workloads):
+kubectl --context pvek8s -n arc-runners delete ephemeralrunner <runner>
+# ARC recreates runner + PVC; the healthy provisioner produces a correct PV in ~80s
+```
+
+Expect leftover provisioner helper pods (one per ~8min retry during the
+freeze) — delete the Completed ones; the `microk8s-hostpath-orphans` check
+catches any orphaned backing directories they leave behind
+([homelabia#135](https://github.com/pgmac-net/homelabia/issues/135)).
 
 ## Post-Recovery Verification
 
