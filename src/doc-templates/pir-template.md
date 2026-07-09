@@ -19,7 +19,7 @@ A PIR is not a blame document — it is an investment in reliability. Its purpos
 - Monitoring and runbook gaps get tracked and closed
 - The cluster's failure modes are collectively understood rather than held in one person's head
 
-Every PIR should end with concrete, trackable action items (Linear tickets). If an incident generates no action items, it was either trivial or not investigated deeply enough.
+Every PIR should end with concrete, trackable action items (GitHub Issues). If an incident generates no action items, it was either trivial or not investigated deeply enough.
 
 ---
 
@@ -214,7 +214,7 @@ Each item should:
 
 1. State what the action is
 2. Explain why it's needed (link back to the root cause chain)
-3. Link to the Linear ticket
+3. Link to the GitHub Issue
 
 ---
 
@@ -234,15 +234,17 @@ Each item should:
 
 ### Action Items table
 
-**Why:** The action items table is the machine-readable contract. It maps to Linear tickets, enabling tracking and prioritisation outside the PIR document. The table format (number, description, priority, Linear link) is consistent across all PIRs so the incidents site can eventually auto-generate a backlog view.
+**Why:** The action items table is the machine-readable contract. It maps to GitHub Issues, enabling tracking and prioritisation outside the PIR document. The table format (number, description, priority, GitHub link) is consistent across all PIRs so the incidents site can eventually auto-generate a backlog view.
 
 **Format:**
 
 ```markdown
-| #   | Action                   | Priority | Linear                                                   |
-| --- | ------------------------ | -------- | -------------------------------------------------------- |
-| 1   | Short action description | High     | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
+| #   | Action                   | Priority | GitHub                                                            |
+| --- | ------------------------ | -------- | ----------------------------------------------------------------- |
+| 1   | Short action description | High     | [owner/repo#NN](https://github.com/owner/repo/issues/NN)          |
 ```
+
+Issues live in the repo whose code/config the action touches; `pgmac-net/homelabia` is the fallback for cluster-operational items with no single owning repo. Historical PIRs reference Linear tickets (`PGM-NNN`) — those links remain valid as past-incident pointers; do not rewrite them.
 
 Priority: High / Medium / Low (matching the PIR text).
 
@@ -262,7 +264,7 @@ Priority: High / Medium / Low (matching the PIR text).
 
 ### References
 
-List all Linear tickets, related PIRs, and runbooks referenced by the document. This enables navigation between related incidents.
+List all GitHub Issues, related PIRs, and runbooks referenced by the document. This enables navigation between related incidents.
 
 ---
 
@@ -376,13 +378,13 @@ kubectl --context pvek8s [command]
 
 1. **[Action title]** (High / Medium / Low)
     - [Why needed — link to root cause chain]
-    - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+    - Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN)
 
 ### Longer-Term Improvements
 
 2. **[Action title]** (Medium / Low)
     - [Why needed]
-    - Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+    - Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN)
 
 ---
 
@@ -404,9 +406,9 @@ kubectl --context pvek8s [command]
 
 ## Action Items
 
-| #   | Action   | Priority | Linear                                                   |
-| --- | -------- | -------- | -------------------------------------------------------- |
-| 1   | [Action] | High     | [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) |
+| #   | Action   | Priority | GitHub                                                    |
+| --- | -------- | -------- | --------------------------------------------------------- |
+| 1   | [Action] | High     | [owner/repo#NN](https://github.com/owner/repo/issues/NN)  |
 
 ---
 
@@ -437,7 +439,7 @@ kubectl --context pvek8s [command]
 
 ## References
 
-- Linear ticket: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN) — [description]
+- GitHub Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN) — [description]
 - Related incident: [Title](filename.md)
 
 ---
