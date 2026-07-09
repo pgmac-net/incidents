@@ -104,14 +104,30 @@ or a quorum read (`?resourceVersion=` empty forces etcd).
   alive and re-wins the election within seconds.
 - **Waiting.** The cache does not self-heal; KCM was dead 16h.
 
-## Automated recovery (since 2026-07-04)
+## Automated recovery (since 2026-07-04; watchdog since 2026-07-09)
 
-Single-node freezes are **auto-remediated**: a Nagios event handler on
-`microk8s-watch-cache` HARD CRITICAL fires `event_watch_cache_remediate`
-via NRPE on the affected node, which runs this runbook's procedure as
-code (`/etc/nagios/remediate_watch_cache.sh`, shipped by ansible).
-Audit trail: `journalctl -u watch-cache-remediate` on the node, plus
-nagios.log event-handler entries.
+Single-node freezes are **auto-remediated** via two independent trigger
+paths, both landing on the same guarded remediation
+(`/etc/nagios/remediate_watch_cache.sh`, shipped by ansible; cluster Lease
+mutex + per-node transient-unit mutex dedupe them):
+
+1. **Node-local dead-man switch (primary, delivery-independent)** — a
+   systemd timer on every node (`watch-cache-watchdog.timer`, 5 min tick)
+   runs the RV=0 write-reflection self-test locally; **two consecutive
+   CRITICAL results** trigger `event_watch_cache_remediate.sh` directly on
+   the node. No nagios, no NRPE, no network in the trigger path
+   ([homelabia#134](https://github.com/pgmac-net/homelabia/issues/134),
+   closing the 2026-07-09 delivery gap). Worst-case trigger ~11 min from
+   freeze onset. UNKNOWN self-test results do not count as strikes.
+2. **Nagios event handler (faster parallel path)** — `microk8s-watch-cache`
+   HARD CRITICAL fires `event_watch_cache_remediate` via NRPE (~6 min when
+   delivery works). Since 2026-07-09 the service uses `check_nrpe_60`, so a
+   real freeze shows the check's actual CRITICAL output rather than
+   `Socket timeout after 15 seconds`.
+
+Audit trail: `journalctl -u watch-cache-watchdog` (self-test + strikes) and
+`journalctl -u watch-cache-remediate` (the remediation itself) on the node,
+plus nagios.log event-handler entries.
 
 **A human is needed only when the automation defers or fails:**
 
@@ -124,8 +140,10 @@ nagios.log event-handler entries.
 - `FAILED: ... leaving <node> CORDONED` — the script never uncordons
   without a verified canary in the RV=0 cache read; pick up from
   whichever step it failed at.
-- Kill switch: remove the `event_handler` line from the
-  `microk8s-watch-cache` service in nagios-config and reload nagios.
+- Kill switch: `systemctl disable --now watch-cache-watchdog.timer` on the
+  node (watchdog path) and/or remove the `event_handler` line from the
+  `microk8s-watch-cache` service in nagios-config and reload nagios
+  (handler path).
 
 ### Delivery failure: empty journal does NOT mean the handler never fired
 
@@ -153,9 +171,12 @@ ssh <node> 'sudo journalctl -u watch-cache-remediate --since "-6 hours" --no-pag
 
 A `microk8s-watch-cache` result of `Socket timeout after 15 seconds` (rather
 than a proper CRITICAL message) is itself a saturation indicator — assume
-lost remediation. Fix tracked in
-[homelabia#134](https://github.com/pgmac-net/homelabia/issues/134)
-(node-local systemd-timer dead-man switch).
+the handler path is lost and check the watchdog journal
+(`journalctl -u watch-cache-watchdog`) for strike progress. Both fixes for
+this failure mode shipped 2026-07-09 via
+[homelabia#134](https://github.com/pgmac-net/homelabia/issues/134): the
+node-local watchdog trigger path and the `check_nrpe_60` timeout. This triage
+remains for the case where *both* paths fail.
 
 ## Manual recovery
 
