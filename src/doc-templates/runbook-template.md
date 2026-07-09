@@ -200,11 +200,11 @@ kubectl -n kube-system get pods | grep dqlite
 ## References
 
 - PIR: [Title](../incidents/YYYY-MM-DD-filename.md)
-- Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+- Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN)
 - Related: [other-runbook.md](other-runbook.md)
 ```
 
-**Why:** Links to the investigation (PIR), the tracking ticket, and related runbooks. When a failure is complex enough to have a runbook, it almost always has a PIR and a Linear ticket.
+**Why:** Links to the investigation (PIR), the tracking issue, and related runbooks. When a failure is complex enough to have a runbook, it almost always has a PIR and a GitHub Issue.
 
 ---
 
@@ -395,7 +395,7 @@ Cluster/service is healthy when:
 ## References
 
 - PIR: [Title](../incidents/YYYY-MM-DD-filename.md)
-- Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+- Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN)
 - Related: [other-runbook.md](other-runbook.md)
 ```
 
@@ -508,6 +508,6 @@ All N failure modes produce the same symptom. Check [key diagnostic] to distingu
 ## References
 
 - PIR: [Title](../incidents/YYYY-MM-DD-filename.md)
-- Linear: [PGM-NNN](https://linear.app/pgmac-net-au/issue/PGM-NNN)
+- Issue: [owner/repo#NN](https://github.com/owner/repo/issues/NN)
 - Related: [other-runbook.md](other-runbook.md)
 ```

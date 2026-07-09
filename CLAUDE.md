@@ -27,7 +27,7 @@ New PIRs and runbooks **do not** need to be added to `mkdocs.yml` nav — they'r
 1. Filename: `src/incidents/YYYY-MM-DD-<slug>.md`
 2. Add row to top of `src/incidents/index.md` (newest-first)
 3. Follow `src/doc-templates/pir-template.md` — read it before writing; it contains section-by-section guidance
-4. Use the `/create-pir` skill for the full automated flow (Infinite How's analysis, Linear tickets, runbook evaluation, commit, PR)
+4. Use the `/create-pir` skill for the full automated flow (Infinite How's analysis, GitHub Issues, runbook evaluation, commit, PR)
 
 ## Adding a Runbook
 
@@ -69,4 +69,4 @@ src/
 
 - Branch prefix: `docs/pir-<slug>` for PIRs, `docs/<description>` for everything else
 - Never commit directly to `main`
-- PR title format: `docs(pir): <title> (<primary-linear-ticket>)` or `docs(<scope>): <description>`
+- PR title format: `docs(pir): <title> (<primary-issue-ref>)` or `docs(<scope>): <description>`
