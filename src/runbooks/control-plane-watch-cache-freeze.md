@@ -230,6 +230,7 @@ drain; jiva replica pods may briefly go Pending while rescheduling.
 
 ## References
 
+- PIR: [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Auto-Remediation Delivery Failure](../incidents/2026-07-09-k8s03-watch-cache-freeze-remediation-delivery-failure.md) (2026-07-09) — 5h19m scheduling outage; source of the delivery-failure triage and empty-nodeAffinity PV sections
 - Incident: PGM-241 (2026-06-10/11) — 16h KCM stall, then scheduler, then kubelets on k8s01+k8s03
 - Related: [kubelet-silent-stall.md](kubelet-silent-stall.md) — kubelet-only variant and why cordon-before-restart is mandatory
 - Related: [kcm-stale-terminating-replicas.md](kcm-stale-terminating-replicas.md) — earlier, narrower KCM informer staleness
