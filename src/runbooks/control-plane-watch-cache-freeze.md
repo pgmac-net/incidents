@@ -133,6 +133,14 @@ plus nagios.log event-handler entries.
 
 - `DEFERRED: only N/2 other nodes Ready+schedulable` — multi-node
   incident; run the manual procedure below.
+- `DEFERRED: remediation lease held by <node>` — another node was
+  remediating at that instant. Usually benign, **but** the DEFERRED path
+  exits 1, leaving the node's transient `watch-cache-remediate.service`
+  in systemd `failed` state — which silently blocks every future
+  watchdog trigger on that node (see delivery failure #2 below). After
+  any DEFERRED, run `sudo systemctl reset-failed watch-cache-remediate.service`
+  on that node until [homelabia#137](https://github.com/pgmac-net/homelabia/issues/137)
+  ships.
 - `REFUSED: remediation ran <2h ago` — recurring freeze; investigate the
   trigger (write storms, snapshot bloat — see
   [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md)) instead of
@@ -177,6 +185,42 @@ this failure mode shipped 2026-07-09 via
 [homelabia#134](https://github.com/pgmac-net/homelabia/issues/134): the
 node-local watchdog trigger path and the `check_nrpe_60` timeout. This triage
 remains for the case where *both* paths fail.
+
+### Delivery failure #2: stale `failed` unit blocks the watchdog trigger
+
+Confirmed 2026-07-10 (~3h scheduling outage, k8s03 holding both scheduler
+and KCM leases): the watchdog reached strike 2/2 but logged
+`WARNING: failed to launch remediation unit on <node>` and the remediation
+never ran. Chain:
+
+1. An earlier remediation attempt on the node **DEFERRED** (lease held by
+   another node — correct behaviour) and exited 1, so systemd recorded the
+   transient `watch-cache-remediate.service` as `failed`. Nothing resets it.
+2. `event_watch_cache_remediate.sh` guards only with
+   `systemctl is-active --quiet` (true only while *running*), so the stale
+   `failed` unit passes the guard, and `systemd-run --unit=watch-cache-remediate`
+   then refuses to start because a unit with that name already exists.
+   The Lease guard inside `remediate_watch_cache.sh` is never reached.
+
+Any DEFERRED/FAILED attempt therefore permanently disables the watchdog
+trigger path on that node until manually cleared. Triage and fix:
+
+```bash
+# The tell: strike 2/2 followed by the launch warning
+ssh <node> "sudo journalctl -u watch-cache-watchdog --since '-6 hours' --no-pager \
+  | grep -E 'strike 2/2|failed to launch'"
+
+# Confirm the stale unit
+ssh <node> "systemctl is-failed watch-cache-remediate.service"   # → failed
+
+# Clear it (also do this after any DEFERRED, proactively)
+ssh <node> "sudo systemctl reset-failed watch-cache-remediate.service"
+```
+
+Clearing the unit does **not** retro-trigger remediation — the watchdog
+only fires on a fresh strike 2/2, up to ~10 min away. If the freeze is
+live, don't wait: run the manual procedure below. Script fix tracked in
+[homelabia#137](https://github.com/pgmac-net/homelabia/issues/137).
 
 ## Manual recovery
 
@@ -252,6 +296,7 @@ drain; jiva replica pods may briefly go Pending while rescheduling.
 ## References
 
 - PIR: [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Auto-Remediation Delivery Failure](../incidents/2026-07-09-k8s03-watch-cache-freeze-remediation-delivery-failure.md) (2026-07-09) — 5h19m scheduling outage; source of the delivery-failure triage and empty-nodeAffinity PV sections
+- Incident 2026-07-10 — ~3h scheduling outage, k8s03 frozen while holding both scheduler and KCM leases; source of delivery failure #2 (stale `failed` unit); fix tracked in [homelabia#137](https://github.com/pgmac-net/homelabia/issues/137)
 - Incident: PGM-241 (2026-06-10/11) — 16h KCM stall, then scheduler, then kubelets on k8s01+k8s03
 - Related: [kubelet-silent-stall.md](kubelet-silent-stall.md) — kubelet-only variant and why cordon-before-restart is mandatory
 - Related: [kcm-stale-terminating-replicas.md](kcm-stale-terminating-replicas.md) — earlier, narrower KCM informer staleness
