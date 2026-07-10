@@ -14,7 +14,7 @@ tags:
 # Post Incident Review: pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Stale-Unit Watchdog Lockout
 
 **Date:** 2026-07-11
-**Duration:** ~3h 0m scheduling outage (~02:32 AEST → ~05:32 AEST); total window ~3h 20m (~02:15 → ~05:35)
+**Duration:** ~3h 0m scheduling outage (~02:32 AEST → ~05:32 AEST); ~5h 40m total including storage collateral (~02:15 → ~07:55)
 **Severity:** High (100% of new pod scheduling stopped cluster-wide for ~3h; existing workloads kept running)
 **Status:** Resolved
 
@@ -30,6 +30,8 @@ Nagios detection and notification worked: `microk8s-watch-cache` went HARD CRITI
 
 Recovery followed the existing [control-plane watch-cache freeze runbook](../runbooks/control-plane-watch-cache-freeze.md): cordon k8s03, restart `k8s-dqlite` then `kubelite` (in that order), verify with an RV=0 write-reflection canary plus a nodeName-pinned canary pod, then uncordon. Scheduling resumed immediately; the 3h CronJob backlog self-drained; the stale failed unit was cleared with `systemctl reset-failed`. The script fix for the lockout is tracked in [pgmac-net/homelabia#137](https://github.com/pgmac-net/homelabia/issues/137), and the runbook gained a "delivery failure #2" section in [incidents PR#57](https://github.com/pgmac-net/incidents/pull/57).
 
+The storm also left storage collateral that outlived the control-plane recovery: iSCSI I/O errors during the contention window aborted EXT4 journals, and **six jiva volumes remounted read-only** across all three nodes (seerr, readarr, radarr, sonarr, calibre-web, survive-minecraft). Five of the six apps kept reporting `1/1 Running` on dead storage because their probes never touch disk; readarr had in fact been crash-looping on a read-only volume for ~8 days, misattributed to slow storage. All six were recovered ~07:10–07:55 AEST by deleting each pod so kubelet re-attached the volume fresh (journal replay → rw), plus three unstick manoeuvres: a jiva-ctrl restart to drop a stale single-initiator session (radarr), a cordon to stop a pod re-landing on its stale ro global mount (sonarr), and one manual `umount` of a bind mount stranded by a force-delete (seerr).
+
 This is the third watch-cache freeze incident (after [2026-06-24](2026-06-24-k8s02-watch-cache-freeze-dqlite-leadership-disruption.md) and [2026-07-09](2026-07-09-k8s03-watch-cache-freeze-remediation-delivery-failure.md)) and the second consecutive one where the freeze itself was routine but the auto-remediation delivery layer failed in a new way.
 
 ---
@@ -40,6 +42,7 @@ This is the third watch-cache freeze incident (after [2026-06-24](2026-06-24-k8s
 | --- | --- |
 | **~02:15 AEST** | dqlite write-contention storm begins: `database is locked` (try: 500) errors on k8s01 and k8s03; brief `no known leader` on k8s01 at 02:15:17. Storm keys dominated by openebs jiva replica pod/event writes |
 | **~02:20 AEST** | apiserver watch caches freeze on all three nodes as kine watch streams break |
+| **02:22 AEST** | iSCSI I/O errors during the storm abort EXT4 journals — six jiva volumes remount read-only across all 3 nodes (seerr, readarr, radarr, sonarr, calibre-web, survive-minecraft configs/data); affected apps keep reporting Running |
 | **02:24 AEST** | Nagios `microk8s-watch-cache` goes CRITICAL for k8s03 (SOFT 2, event handler fired); k8s03 node-local watchdog logs strike 1/2 |
 | **02:25–02:27 AEST** | k8s01 and k8s03 reach HARD CRITICAL; event handlers fired; Slack + Zulip notifications sent |
 | **02:28 AEST** | k8s02 watch cache recovers on its own (`OK - watch cache reflected write in 0s`) |
@@ -55,7 +58,10 @@ This is the third watch-cache freeze incident (after [2026-06-24](2026-06-24-k8s
 | **05:27 AEST** | `snap.microk8s.daemon-k8s-dqlite` restarted on k8s03 (clean raft rejoin, no lock errors), then `snap.microk8s.daemon-kubelite` |
 | **~05:29 AEST** | Node Ready; RV=0 write-reflection canary passed; nodeName-pinned canary pod Running on k8s03 in 13s; `kubectl uncordon k8s03` |
 | **05:32 AEST** | Nagios `microk8s-watch-cache` k8s03 returns OK. New `k8s-heartbeat` job completes end-to-end; stale 3h backlog job GC'd |
-| **~05:35 AEST** | Nagios MCP returns HTTP 200; `systemctl reset-failed watch-cache-remediate.service` applied on k8s03; leases redistributed normally (KCM → k8s01) — incident resolved |
+| **~05:35 AEST** | Nagios MCP returns HTTP 200; `systemctl reset-failed watch-cache-remediate.service` applied on k8s03; leases redistributed normally (KCM → k8s01) — scheduling outage resolved |
+| **~06:50 AEST** | Storage collateral discovered: seerr not Ready (`FailedMount ... read-only file system`), readarr crash-looping (exit 143, SQLite ops 25–46s = write retries against EROFS). Node survey finds six ro jiva mounts across all 3 nodes |
+| **07:10–07:40 AEST** | Rolling pod recreations remount volumes rw: calibre-web, readarr, minecraft, sonarr (after cordon — first replacement re-landed on its stale ro global mount), radarr (after jiva-ctrl restart to drop a stale k8s01 iSCSI session blocking single-initiator login) |
+| **~07:55 AEST** | seerr recovered last: force-delete had stranded one bind mount on k8s01, wedging kubelet's UnmountDevice (`GetDeviceMountRefs check failed`); manual `umount` of the leftover path unblocked unstage → iSCSI logout → k8s03 stage succeeded. All six services 1/1 Running — incident fully resolved |
 
 ---
 
@@ -128,6 +134,26 @@ This is a deliberate trade-off: no 24/7 on-call exists for a homelab. The compen
 
 ---
 
+#### Chain 4: Six Apps Running on Read-Only Storage — Undetected EXT4 Journal Aborts
+
+##### How did six services stay broken for hours after the control plane recovered?
+
+Their jiva volumes were mounted read-only on the workload nodes. Every config/database write failed (`EROFS`), but five of the six pods kept reporting `1/1 Running`, so nothing flagged them; they surfaced only when checked by hand.
+
+##### How did the volumes become read-only?
+
+During the 02:15 write-contention storm, jiva targets/replicas stopped answering iSCSI I/O. The kernel marked the SCSI devices offline, in-flight writes returned I/O errors, JBD2 aborted the ext4 journals, and ext4 remounted each filesystem read-only — the documented [jiva-ctrl eviction → iSCSI → EXT4-ro](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) cascade (PGM-224), triggered this time by the storm rather than an eviction.
+
+##### How did the failure stay invisible?
+
+App probes never touch disk: tcp-socket and HTTP-status probes pass on a process whose writes all fail. readarr — the one app whose probes indirectly depended on disk — had been crash-looping for ~8 days (SQLite operations taking 25–46s were write retries against `EROFS`, then the startupProbe killed it at 150s), misread as slow storage rather than read-only storage.
+
+##### How was read-only storage not alerted on?
+
+No monitoring exists for `ext4 ro` PVC mounts in `/proc/mounts` or for `EXT4-fs error` / `Aborting journal` kernel signatures. This exact gap was identified in the 2026-05-28 PIR (PGM-221, "log-based alerts on EXT4 ro remount") and never implemented. Now tracked concretely as [pgmac-net/homelabia#140](https://github.com/pgmac-net/homelabia/issues/140).
+
+---
+
 ## Impact
 
 ### Services Affected
@@ -140,19 +166,22 @@ This is a deliberate trade-off: no 24/7 on-call exists for a homelab. The compen
 | Nagios MCP (`nagios-mcp.int.pgmac.net`) | HTTP 503 — pod Running but endpoints stale behind frozen control plane | ~3h |
 | CI automation (`ci/automation-job-2426`) | Job pod never scheduled | ~3h |
 | Applications requiring new pods (restarts, jobs, scaling) | Unable to start any new workload | ~3h 0m |
+| seerr, radarr, sonarr, calibre-web, minecraft configs/data | Volumes read-only — all writes failing while pods reported Running | ~5h 30m (02:22 → 07:10–07:55) |
+| readarr | Crash-looping on read-only volume (startupProbe kills during EROFS write retries) | ~8 days (pre-existing, same failure mode) |
 
 ### Duration
 
-- **Total incident window:** ~3h 20m (02:15 → 05:35 AEST)
+- **Total incident window:** ~5h 40m (02:15 → 07:55 AEST, including storage collateral)
 - **Scheduling outage:** ~3h 0m (02:32 → 05:32 AEST)
 - **Auto-remediation lockout:** 2h 49m, 17 failed launch attempts (02:29 → 05:18 AEST)
-- **Active human recovery time:** ~15 min (05:20 → 05:35) — the documented runbook procedure worked first time
+- **Read-only storage on six volumes:** ~5h 30m (02:22 → 07:10–07:55 AEST); readarr's volume ~8 days
+- **Active human recovery time:** ~15 min for the control plane (05:20 → 05:35, runbook worked first time) + ~65 min for the storage collateral (06:50 → 07:55)
 
 ### Scope
 
-- Nodes: k8s03 frozen throughout; k8s01 frozen ~10 min (auto-remediated); k8s02 frozen ~8 min (self-recovered)
-- Data loss: none
-- Existing running workloads: unaffected — impact was limited to anything needing a *new* pod
+- Nodes: k8s03 frozen throughout; k8s01 frozen ~10 min (auto-remediated); k8s02 frozen ~8 min (self-recovered); ro jiva mounts on all three nodes
+- Data loss: none confirmed — ext4 journal replay recovered every volume cleanly on remount; writes during the ro window were refused, not corrupted
+- Existing running workloads: unaffected unless jiva-backed — six jiva-backed apps lost all writes while appearing healthy
 
 ---
 
@@ -181,6 +210,15 @@ This is a deliberate trade-off: no 24/7 on-call exists for a homelab. The compen
 3. `kubectl uncordon k8s03`.
 4. Fresh `k8s-heartbeat` job completed end-to-end; 3h backlog job and its stuck pods self-drained via GC once KCM recovered.
 5. Nagios MCP endpoint returned HTTP 200; Nagios `microk8s-watch-cache` k8s03 OK at 05:32.
+
+### Phase 4: Storage Collateral (per [jiva-ctrl-eviction-iscsi-ro-filesystem.md](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md))
+
+1. Surveyed all nodes: `grep -E 'pvc-.* ext4 ro' /proc/mounts` — six ro jiva volumes found; dmesg confirmed `Detected aborted journal` + `rejecting I/O to offline device` from 02:22.
+2. Deleted each affected pod so kubelet re-attached the volume fresh (unmount → iSCSI logout → fresh login → ext4 journal replay → rw). This alone recovered calibre-web, readarr, and minecraft.
+3. sonarr: replacement pod re-landed on the same node and bind-mounted the stale ro global mount — cordoned the node, deleted the pod again, uncordoned once it rescheduled elsewhere.
+4. radarr: new node's iSCSI login rejected (`target already connected` — jiva single-initiator, stale session from a previous node). Restarted the jiva-ctrl pod to drop all sessions; the new node won the re-login.
+5. seerr: the earlier force-delete stranded one duplicate bind mount (of 8 — mount proliferation), wedging kubelet's UnmountDevice loop (`GetDeviceMountRefs check failed`, retrying every 2m2s forever). One manual `umount` of the leftover pod path unblocked unstage → iSCSI logout → the pending stage on the new node succeeded within 2 minutes.
+6. Verified zero `ext4 ro` PVC mounts on all nodes and all six apps `1/1 Running`.
 
 ---
 
@@ -222,13 +260,17 @@ curl -s -o /dev/null -w '%{http_code}' https://nagios-mcp.int.pgmac.net/sse --ma
     - Chain 2's detection gap: the watchdog logged `failed to launch remediation unit` 17 times into a journal nobody watches. A Nagios check (or watchdog-side passive result) must surface remediation launch failures and a lingering `failed` `watch-cache-remediate.service` — the automation's own failure has to be alert-worthy, since it is the only overnight control (Chain 3).
     - Issue: [pgmac-net/homelabia#138](https://github.com/pgmac-net/homelabia/issues/138)
 
+3. **Alert on EXT4 read-only remounts and ro PVC mounts** (High)
+    - Chain 4's detection gap: six volumes served `EROFS` for hours (one for 8 days) while pods reported Running. Per-node checks on `/proc/mounts` ro PVC entries and kernel `EXT4-fs error`/`Aborting journal` signatures. First identified 2026-05-28 (PGM-221), never implemented.
+    - Issue: [pgmac-net/homelabia#140](https://github.com/pgmac-net/homelabia/issues/140)
+
 ### Longer-Term Improvements
 
-3. **Reduce the openebs jiva write pressure feeding contention storms** (Medium)
+4. **Reduce the openebs jiva write pressure feeding contention storms** (Medium)
     - Chain 1's trigger: the storm's write keys were dominated by events/status from four jiva replica pods that have been crash-looping for days. Fixing or silencing those crash-loops removes a standing storm generator (relates to pgk8s#577 dqlite bloat work and open jiva tickets PGM-221/222).
     - Issue: [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139)
 
-4. **Runbook: document delivery failure #2** (Done)
+5. **Runbook: document delivery failure #2** (Done)
     - The [control-plane watch-cache freeze runbook](../runbooks/control-plane-watch-cache-freeze.md) gained a "Delivery failure #2: stale `failed` unit blocks the watchdog trigger" section with triage commands and the `reset-failed` mitigation.
     - PR: [pgmac-net/incidents#57](https://github.com/pgmac-net/incidents/pull/57)
 
@@ -255,6 +297,9 @@ curl -s -o /dev/null -w '%{http_code}' https://nagios-mcp.int.pgmac.net/sse --ma
 - All three nodes froze at ~02:20; k8s02's watch stream reconnected by itself within ~8 minutes. Self-recovery is possible but evidently rare — the other two needed process restarts.
 - `systemd-run` treats a *failed* leftover transient unit as a name collision, not something it can replace — using unit names as mutexes requires explicitly handling the `failed` terminal state.
 - The stuck heartbeat pods were scheduled to nothing at all (no node assignment, no events) for 3 hours — yet the moment the scheduler leader's cache thawed, the entire backlog resolved within one reconciliation pass with no manual cleanup needed beyond one exceeded-backoff job.
+- An app on a read-only volume can look *slow* rather than *broken*: readarr's SQLite operations took 25–46s each because they were retrying writes against `EROFS` (busytimeout churn), which for 8 days read as a storage-performance problem rather than a dead filesystem.
+- `kubectl delete pod` alone is a complete fix for EXT4-ro jiva volumes in the common case — kubelet's detach/reattach replays the journal and remounts rw. All three unstick manoeuvres that were needed (cordon-first, ctrl restart, manual umount) stemmed from *stale prior state*, not from the remount itself.
+- Force-deleting a pod with CSI mount-proliferation duplicates strands the un-cleared bind mount forever: kubelet's UnmountDevice loop retries every 2 minutes for a pod path it will never unpublish again (`GetDeviceMountRefs check failed`). Prefer letting slow teardowns finish over `--force`.
 
 ---
 
@@ -264,8 +309,9 @@ curl -s -o /dev/null -w '%{http_code}' https://nagios-mcp.int.pgmac.net/sse --ma
 | --- | --- | --- | --- |
 | 1 | Fix stale-failed-unit lockout: reset-failed guard in trigger script + clean DEFERRED exit status | High | [pgmac-net/homelabia#137](https://github.com/pgmac-net/homelabia/issues/137) |
 | 2 | Alert on remediation launch failure and lingering failed `watch-cache-remediate.service` | High | [pgmac-net/homelabia#138](https://github.com/pgmac-net/homelabia/issues/138) |
-| 3 | Reduce openebs jiva crash-loop write pressure feeding dqlite contention storms | Medium | [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) |
-| 4 | Runbook: document delivery failure #2 (stale failed unit) with triage + mitigation | Done | [pgmac-net/incidents#57](https://github.com/pgmac-net/incidents/pull/57) |
+| 3 | Alert on EXT4 read-only remounts and ro PVC mounts per node | High | [pgmac-net/homelabia#140](https://github.com/pgmac-net/homelabia/issues/140) |
+| 4 | Reduce openebs jiva crash-loop write pressure feeding dqlite contention storms | Medium | [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) |
+| 5 | Runbook: document delivery failure #2 (stale failed unit) with triage + mitigation | Done | [pgmac-net/incidents#57](https://github.com/pgmac-net/incidents/pull/57) |
 
 ---
 
@@ -324,6 +370,7 @@ kubectl --context pvek8s get lease -n kube-system kube-scheduler kube-controller
 - GitHub Issue: [pgmac-net/homelabia#137](https://github.com/pgmac-net/homelabia/issues/137) — stale-failed-unit lockout fix
 - GitHub Issue: [pgmac-net/homelabia#138](https://github.com/pgmac-net/homelabia/issues/138) — alert on remediation launch failure
 - GitHub Issue: [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) — jiva write-pressure reduction
+- GitHub Issue: [pgmac-net/homelabia#140](https://github.com/pgmac-net/homelabia/issues/140) — EXT4-ro / ro-PVC-mount alerting
 - PR: [pgmac-net/incidents#57](https://github.com/pgmac-net/incidents/pull/57) — runbook delivery failure #2 section
 - Runbook: [Control-Plane Watch-Cache Freeze](../runbooks/control-plane-watch-cache-freeze.md)
 - Runbook: [dqlite Write Contention](../runbooks/dqlite-write-contention.md)
