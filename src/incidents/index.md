@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Title | Severity | Duration |
 |------|-------|----------|----------|
+| 2026-07-11 | [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Stale-Unit Watchdog Lockout](2026-07-11-k8s03-watch-cache-freeze-stale-unit-lockout.md) | High | ~3h |
 | 2026-07-09 | [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Auto-Remediation Delivery Failure](2026-07-09-k8s03-watch-cache-freeze-remediation-delivery-failure.md) | High | ~5h 19m |
 | 2026-06-28 | [pvek8s dqlite WAL Lock Storm — Jiva Controller Endpoint Deadlock](2026-06-28-dqlite-lock-storm-jiva-endpoint-deadlock.md) | High | ~11h 11m |
 | 2026-06-24 | [k8s02 Watch-Cache Freeze — dqlite Leadership Disruption Stalls Pod Creation](2026-06-24-k8s02-watch-cache-freeze-dqlite-leadership-disruption.md) | High | ~4h |
