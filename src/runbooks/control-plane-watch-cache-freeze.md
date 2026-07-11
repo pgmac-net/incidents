@@ -279,6 +279,16 @@ when the apiserver bounced: restart any controller-runtime operator pods
 errors, and clean up stale CRs (EphemeralRunners claiming `Running` against
 Completed/missing pods).
 
+Also check for **read-only jiva volumes** — the dqlite storms that break
+kine watch streams also starve jiva iSCSI targets, aborting ext4 journals
+(2026-07-11: six volumes ro across all 3 nodes while their pods reported
+Running). Since 2026-07-11 the `microk8s-ro-pvc-mounts` and
+`microk8s-storage-kernel-errors` checks page on this
+([homelabia#140](https://github.com/pgmac-net/homelabia/issues/140));
+recovery per
+[jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md)
+(fast path: recreate the pod).
+
 Also check for **PVs provisioned during the freeze with empty nodeAffinity**
 (2026-07-09): the hostpath provisioner records an empty hostname when its
 helper pods can't schedule, producing PVs with

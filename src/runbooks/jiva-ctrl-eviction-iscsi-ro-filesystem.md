@@ -58,6 +58,31 @@ The jiva-ctrl pod (iSCSI target) running on some node was evicted or killed whil
 
 ## Detection
 
+### Automated (since 2026-07-11, [homelabia#140](https://github.com/pgmac-net/homelabia/issues/140))
+
+Two nagios checks page on this failure mode — check these first, they
+usually identify the volume and node before any manual digging:
+
+- **`microk8s-ro-pvc-mounts`** — CRITICAL while any PVC volume is mounted
+  read-only on the node, **naming each PVC** in the alert output.
+  State-based: stays CRITICAL until the volume is remounted rw, so it also
+  catches long-standing silent cases (readarr sat ro for ~8 days before
+  this existed).
+- **`microk8s-storage-kernel-errors`** — CRITICAL when hard failure
+  signatures (`Aborting journal`, `Remounting filesystem read-only`,
+  `session recovery timed out`, `rejecting I/O to offline device`) appear
+  in the node's kernel log within 30 min — fires during the cascade
+  itself, before applications notice. Plain iSCSI `conn error` lines are
+  perfdata-only (`conn_errors=`): they occur on benign jiva-ctrl restarts
+  and orphaned-session retries and do not alert.
+
+After any dqlite storm or watch-cache freeze, survey all nodes even if the
+checks are green (a remount can predate the check window):
+
+```bash
+for n in k8s01 k8s02 k8s03; do ssh $n "grep -E 'pvc-.* ext4 ro' /proc/mounts"; done
+```
+
 ### Step 1: Confirm filesystem is read-only on the affected pod
 
 ```bash
@@ -113,6 +138,27 @@ kubectl get jivavolume <pvc-name> -n openebs -o jsonpath='{.spec.mountInfo}'
 ---
 
 ## Recovery
+
+### Fast path (proven 2026-07-11, six volumes recovered)
+
+If the jiva-ctrl for the volume is healthy (2/2 Running), plain
+`kubectl delete pod` is usually the complete fix: kubelet detaches
+(unmount + iSCSI logout), the replacement pod triggers a fresh login and
+mount, and ext4 journal replay remounts rw. The full phases below are only
+needed when stale prior state gets in the way:
+
+- Replacement pod lands back on the **same node** and reuses the stale ro
+  global mount → cordon the node first, delete the pod, uncordon after it
+  reschedules elsewhere.
+- New node's login rejected with `target already connected` (jiva is
+  single-initiator; a stale session elsewhere holds the slot) → restart the
+  jiva-ctrl pod to drop all sessions instead of hunting the stale one, or
+  use Phase 3 below.
+- **Never `--force --grace-period=0`** a pod with proliferated CSI bind
+  mounts: kubelet unmounts most but any stranded pod-path bind mount wedges
+  UnmountDevice forever (`GetDeviceMountRefs check failed`, 2-minute retry
+  loop) — the only fix is a manual `umount` of the leftover path. Let slow
+  teardowns finish.
 
 ### Phase 1: Assess and stabilise
 
