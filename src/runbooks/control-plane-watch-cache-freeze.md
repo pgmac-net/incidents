@@ -134,13 +134,11 @@ plus nagios.log event-handler entries.
 - `DEFERRED: only N/2 other nodes Ready+schedulable` — multi-node
   incident; run the manual procedure below.
 - `DEFERRED: remediation lease held by <node>` — another node was
-  remediating at that instant. Usually benign, **but** the DEFERRED path
-  exits 1, leaving the node's transient `watch-cache-remediate.service`
-  in systemd `failed` state — which silently blocks every future
-  watchdog trigger on that node (see delivery failure #2 below). After
-  any DEFERRED, run `sudo systemctl reset-failed watch-cache-remediate.service`
-  on that node until [homelabia#137](https://github.com/pgmac-net/homelabia/issues/137)
-  ships.
+  remediating at that instant. Benign; the node will re-trigger on its
+  next strike 2/2 if its own freeze persists. (Before
+  [homelabia#137](https://github.com/pgmac-net/homelabia/issues/137)
+  shipped on 2026-07-11 this exited 1 and silently disarmed the watchdog
+  — see delivery failure #2 below.)
 - `REFUSED: remediation ran <2h ago` — recurring freeze; investigate the
   trigger (write storms, snapshot bloat — see
   [dqlite-datastore-vacuum.md](dqlite-datastore-vacuum.md)) instead of
@@ -186,7 +184,14 @@ this failure mode shipped 2026-07-09 via
 node-local watchdog trigger path and the `check_nrpe_60` timeout. This triage
 remains for the case where *both* paths fail.
 
-### Delivery failure #2: stale `failed` unit blocks the watchdog trigger
+### Delivery failure #2: stale `failed` unit blocks the watchdog trigger (FIXED 2026-07-11)
+
+**Fixed by [homelabia#137](https://github.com/pgmac-net/homelabia/issues/137)
+([ansible#213](https://github.com/pgmac-net/ansible/pull/213), deployed
+2026-07-11, live-fire verified on k8s02):** the trigger now runs
+`systemctl reset-failed` before `systemd-run`, and DEFERRED/REFUSED guard
+declines exit 0 so the transient unit is GC'd clean. The triage below is
+kept in case of regression or a rolled-back node.
 
 Confirmed 2026-07-10 (~3h scheduling outage, k8s03 holding both scheduler
 and KCM leases): the watchdog reached strike 2/2 but logged
@@ -202,8 +207,8 @@ never ran. Chain:
    then refuses to start because a unit with that name already exists.
    The Lease guard inside `remediate_watch_cache.sh` is never reached.
 
-Any DEFERRED/FAILED attempt therefore permanently disables the watchdog
-trigger path on that node until manually cleared. Triage and fix:
+Before the fix, any DEFERRED/FAILED attempt permanently disabled the
+watchdog trigger path on that node until manually cleared. Triage:
 
 ```bash
 # The tell: strike 2/2 followed by the launch warning
@@ -219,8 +224,7 @@ ssh <node> "sudo systemctl reset-failed watch-cache-remediate.service"
 
 Clearing the unit does **not** retro-trigger remediation — the watchdog
 only fires on a fresh strike 2/2, up to ~10 min away. If the freeze is
-live, don't wait: run the manual procedure below. Script fix tracked in
-[homelabia#137](https://github.com/pgmac-net/homelabia/issues/137).
+live, don't wait: run the manual procedure below.
 
 ## Manual recovery
 
