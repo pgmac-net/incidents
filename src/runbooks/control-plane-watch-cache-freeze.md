@@ -129,6 +129,16 @@ Audit trail: `journalctl -u watch-cache-watchdog` (self-test + strikes) and
 `journalctl -u watch-cache-remediate` (the remediation itself) on the node,
 plus nagios.log event-handler entries.
 
+**Delivery-path meta-monitoring (since 2026-07-11,
+[homelabia#138](https://github.com/pgmac-net/homelabia/issues/138)):** the
+`microk8s-watch-cache-remediation-health` nagios check goes CRITICAL when a
+node's remediation cannot launch — a lingering `failed`
+`watch-cache-remediate.service`, or `failed to launch remediation unit`
+logged by either trigger path within 30 min. **If this check is CRITICAL at
+the same time as `microk8s-watch-cache`, the freeze will not self-heal — go
+straight to the manual procedure.** It self-clears 30 min after the last
+launch failure.
+
 **A human is needed only when the automation defers or fails:**
 
 - `DEFERRED: only N/2 other nodes Ready+schedulable` — multi-node
@@ -208,7 +218,10 @@ never ran. Chain:
    The Lease guard inside `remediate_watch_cache.sh` is never reached.
 
 Before the fix, any DEFERRED/FAILED attempt permanently disabled the
-watchdog trigger path on that node until manually cleared. Triage:
+watchdog trigger path on that node until manually cleared. Since 2026-07-11
+the `microk8s-watch-cache-remediation-health` check pages on exactly this
+state ([homelabia#138](https://github.com/pgmac-net/homelabia/issues/138)).
+Manual triage:
 
 ```bash
 # The tell: strike 2/2 followed by the launch warning
