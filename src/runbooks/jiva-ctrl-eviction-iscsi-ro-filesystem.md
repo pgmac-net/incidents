@@ -139,17 +139,30 @@ kubectl get jivavolume <pvc-name> -n openebs -o jsonpath='{.spec.mountInfo}'
 
 ## Recovery
 
-### Fast path (proven 2026-07-11, six volumes recovered)
+### Fast path (proven 2026-07-11, six volumes recovered; refined 2026-07-13)
 
-If the jiva-ctrl for the volume is healthy (2/2 Running), plain
-`kubectl delete pod` is usually the complete fix: kubelet detaches
-(unmount + iSCSI logout), the replacement pod triggers a fresh login and
-mount, and ext4 journal replay remounts rw. The full phases below are only
-needed when stale prior state gets in the way:
+If the jiva-ctrl for the volume is healthy (2/2 Running), **cordon the
+node with the ro mount, then** `kubectl delete pod`: kubelet detaches
+(unmount + iSCSI logout), the replacement pod lands on another node,
+triggers a fresh login and mount, and ext4 journal replay remounts rw.
+Uncordon once the replacement is Running elsewhere.
 
-- Replacement pod lands back on the **same node** and reuses the stale ro
-  global mount → cordon the node first, delete the pod, uncordon after it
-  reschedules elsewhere.
+**Cordon-first is mandatory, not optional** (confirmed 2026-07-13, radarr):
+the scheduler has no memory of the failure — a plain delete relanded the
+replacement on the same node, where it silently bind-mounted the stale ro
+global mount (kubelet only tears down the global mount once *no* pod on
+the node references the volume, and the replacement claimed it first).
+
+The full phases below are only needed when stale prior state gets in the
+way:
+
+- Pod wedged in **Terminating** (jiva-csi NodeUnpublish `chmod` fails
+  EROFS; the driver attempts unmount once and never retries) → a single
+  manual `umount` of the pod mount path on the node is the complete fix
+  (Phase 2 step 1 only — confirmed 2026-07-13, seerr). Globalmount
+  teardown and iSCSI logout then complete on their own, and a transient
+  `already mounted at more than one place` FailedMount on the new node
+  self-clears on jiva-csi's next retry — no JivaVolume CR patch needed.
 - New node's login rejected with `target already connected` (jiva is
   single-initiator; a stale session elsewhere holds the slot) → restart the
   jiva-ctrl pod to drop all sessions instead of hunting the stale one, or
@@ -314,6 +327,7 @@ See [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) for t
 ## References
 
 - PIR: [pvek8s Post-Power-Outage Recovery — kubelet Volume Manager Stall and KCM Stale terminatingReplicas](../incidents/2026-05-28-pvek8s-post-outage-kubelet-informer-kcm-stall.md) — Chain 4
+- PIR: [pvek8s Storage Cascade — ArgoCD Sync Burst, Watch-Cache Freeze, and jiva iSCSI Read-Only Volumes](../incidents/2026-07-13-argocd-sync-burst-watch-cache-freeze-jiva-ro.md) — Chains 2–3; source of the 2026-07-13 fast-path refinements
 - Linear: [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224) — this runbook
 - Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) — log-based alerts (planned)
 - Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) — extended jiva-ctrl tolerations (planned)
