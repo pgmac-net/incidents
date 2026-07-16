@@ -81,7 +81,31 @@ A healthy node shows exactly 1 occurrence per Jiva CSI volume.
 
 ---
 
-## Remediation
+## Auto-remediation
+
+Since 2026-07-16 ([homelabia#146](https://github.com/pgmac-net/homelabia/issues/146)) this failure mode self-heals: a Nagios event handler on `microk8s-jiva-csi-mounts` HARD WARNING/CRITICAL fires an NRPE trigger on the affected node, which launches `remediate_jiva_csi_mounts.sh` detached under systemd (`journalctl -u jiva-mounts-remediate`). The script runs the umount loop below for every duplicated volume, with guards:
+
+- **Re-confirmation** — no duplicated mounts = FALSE ALARM, no action
+- **Kubelite stability** — waits until kubelite has been active ≥10min (polls up to 15min); unmounting while the kubelet is re-running `NodePublishVolume` is the overshoot scenario
+- **Rate limit** — refuses to run twice within 1h; rapid recurrence means kubelite is crash-looping and needs a human
+- **Overshoot abort** — if any umount drops a count to 0, it stops ALL cleanup, logs ERROR, and exits failed. The recovery path (iSCSI logout + JivaVolume patch + pod delete, below) is deliberately human-only
+
+**Before intervening manually, check the auto-remediation first:**
+
+```bash
+ssh <node> "journalctl -u jiva-mounts-remediate --since '1 hour ago'"
+```
+
+- `SUCCESS` — done; wait for the next Nagios poll
+- `DEFERRED` / `REFUSED` — the guard explains why; note the trigger only re-fires on a Nagios state *change*, so after fixing the underlying cause either wait for WARNING→CRITICAL escalation or run the cleanup manually
+- `ERROR: OVERSHOOT` / `FAILED` — live mount lost; go straight to **If live mount was accidentally removed** below
+- Empty journal — delivery failed; check `microk8s-jiva-mounts-remediation-health` and `journalctl -t jiva-mounts-trigger`, then remediate manually
+
+`microk8s-jiva-mounts-remediation-health` pages when the delivery path itself is broken (lingering failed `jiva-mounts-remediate` unit, or launch failures in the last 30min). Both checks CRITICAL together = it will NOT self-heal, go manual.
+
+---
+
+## Manual remediation
 
 !!! warning "Overshoot risk: cleanup can remove the live mount"
     The loop below stops when `/proc/mounts` count reaches 1. This assumes the count
@@ -226,6 +250,7 @@ This recurs each time kubelite restarts on the node while a Jiva CSI pod is sche
 ## References
 
 - [PGM-203](https://linear.app/pgmac-net-au/issue/PGM-203) — incident and fix
+- [homelabia#146](https://github.com/pgmac-net/homelabia/issues/146) — auto-remediation via Nagios event handler (2026-07-16)
 - [PGM-195](https://linear.app/pgmac-net-au/issue/PGM-195), [PGM-201](https://linear.app/pgmac-net-au/issue/PGM-201) — kubelite restart incidents that caused accumulation
 - PIR: [pvek8s dqlite WAL Lock Storm — Jiva Controller Endpoint Deadlock](../incidents/2026-06-28-dqlite-lock-storm-jiva-endpoint-deadlock.md) — incident where overshoot removed live seerr mount; iSCSI logout + JivaVolume patch recovery documented here
 - [Jiva CSI Stale Node Attachment runbook](jiva-csi-stale-node-attachment.md) — the "If live mount removed" recovery above produces the same stale attachment state
