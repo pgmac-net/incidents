@@ -20,6 +20,28 @@ mise run build     # build static site
 mise run build-strict  # strict build (matches CI)
 ```
 
+## Skills
+
+PIRs and runbooks are authored with Claude Code / OpenCode skills from
+[pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins).
+
+| Skill              | Purpose                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `/create-pir`      | Generate a post-incident review: Infinite How's analysis, runbook evaluation, GitHub Issues, commit + PR |
+| `/pickup-ticket`   | Work a GitHub Issue end-to-end: read, grill, plan, implement, PR, document                               |
+| `/grilling`        | Stress-test plans and decisions one question at a time                                                   |
+| `/domain-modeling` | Build and sharpen domain model: glossary, ADRs, terminology                                              |
+
+## Why public?
+
+Why do I make all of this public? A few reasons:
+
+1. I enjoy working in public.
+2. I'm challenged by working in public.
+   It forces me to produce work I am prepared to show.
+3. Helps future-me by reducing the number of assumptions and assumed knowledge I sometimes(/usually) leave.
+4. Hopefully it helps other people not only pick up some SRE knowledge, but also inspire some to work in public and share their experiences, too.
+
 ## Contributing
 
 ### New PIR
@@ -28,6 +50,7 @@ mise run build-strict  # strict build (matches CI)
 2. Location: `src/incidents/`
 3. Add a row to the top of `src/incidents/index.md` (newest-first)
 4. Follow `src/doc-templates/pir-template.md`
+5. Use the `/create-pir` skill to automate the full flow — see [Skills](#skills) above
 
 ### New Runbook
 
@@ -36,6 +59,7 @@ mise run build-strict  # strict build (matches CI)
 3. Add a row to `src/runbooks/index.md`
 4. Follow `src/doc-templates/runbook-template.md` (simple or multi-mode pattern)
 5. Cross-link from the PIR that documented the failure
+6. The `/create-pir` skill evaluates runbook needs during PIR generation — see [Skills](#skills) above
 
 ### CI
 

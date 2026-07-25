@@ -15,19 +15,31 @@ CI runs `mkdocs build --strict` on every PR. Warnings become errors.
 
 ## Two Build Targets
 
-| Config | Site URL | Nav |
-|--------|----------|-----|
-| `mkdocs.yml` | `https://macro.int.pgmac.net/incidents/` | Explicit — sidebar only shows listed files |
-| `incidents-mkdoc.yml` | `https://incidents.pgmac.net.au/` | Auto-discovered — all files appear in sidebar |
+| Config                | Site URL                                 | Nav                                           |
+| --------------------- | ---------------------------------------- | --------------------------------------------- |
+| `mkdocs.yml`          | `https://macro.int.pgmac.net/incidents/` | Explicit — sidebar only shows listed files    |
+| `incidents-mkdoc.yml` | `https://incidents.pgmac.net.au/`        | Auto-discovered — all files appear in sidebar |
 
 New PIRs and runbooks **do not** need to be added to `mkdocs.yml` nav — they're reachable via links from the index tables and appear automatically on the GitHub Pages build (`incidents-mkdoc.yml`). Add them to `mkdocs.yml` nav only if sidebar visibility on the internal site matters.
+
+## Claude Code Skills
+
+Skills are sourced from [github.com/pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins).
+Install via the instructions in that repo's README (`scripts/install-opencode-skills.sh`).
+
+| Skill              | Description                                                                                        | Used when...                         |
+| ------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `/create-pir`      | End-to-end PIR generation: Infinite How's analysis, runbook evaluation, GitHub Issues, commit + PR | Adding a PIR                         |
+| `/pickup-ticket`   | End-to-end ticket workflow: read, grill, plan, implement, PR, document                             | Working action items or feature work |
+| `/grilling`        | Stress-test plans, decisions, or ideas one question at a time                                      | Designing a fix before implementing  |
+| `/domain-modeling` | Build and sharpen a project's domain model: glossary, ADRs, terminology                            | Clarifying system concepts           |
 
 ## Adding a PIR
 
 1. Filename: `src/incidents/YYYY-MM-DD-<slug>.md`
 2. Add row to top of `src/incidents/index.md` (newest-first)
 3. Follow `src/doc-templates/pir-template.md` — read it before writing; it contains section-by-section guidance
-4. Use the `/create-pir` skill for the full automated flow (Infinite How's analysis, GitHub Issues, runbook evaluation, commit, PR)
+4. Use the `/create-pir` skill for the full automated flow (Infinite How's analysis, GitHub Issues, runbook evaluation, commit, PR) — see [Skills](#claude-code-skills) above
 
 ## Adding a Runbook
 
@@ -35,6 +47,7 @@ New PIRs and runbooks **do not** need to be added to `mkdocs.yml` nav — they'r
 2. Add row to `src/runbooks/index.md`
 3. Cross-link from the PIR's References section
 4. Follow `src/doc-templates/runbook-template.md` — covers simple pattern (one failure mode) and multi-mode pattern (same symptom, multiple root causes)
+5. Use the `/create-pir` skill — it evaluates runbook needs automatically during PIR generation. See [Skills](#claude-code-skills) above.
 
 ## Markdown Gotchas
 
@@ -42,11 +55,11 @@ New PIRs and runbooks **do not** need to be added to `mkdocs.yml` nav — they'r
 
 ```markdown
 1. **Item title**
-    - nested bullet   ← 4 spaces, renders correctly
-    - nested bullet
+   - nested bullet ← 4 spaces, renders correctly
+   - nested bullet
 
 1. **Item title**
-   - nested bullet   ← 3 spaces, renders as flat continuation text
+   - nested bullet ← 3 spaces, renders as flat continuation text
 ```
 
 ## Source Layout

@@ -8,6 +8,8 @@ This page explains the structure of every Post-Incident Review (PIR) on this sit
 
 The raw template to copy is at the [bottom of this page](#template).
 
+> **Automated creation:** The `/create-pir` skill from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins) writes PIRs using this template end-to-end: Infinite How's root cause analysis, runbook evaluation, GitHub Issues for action items, commit + PR.
+
 ---
 
 ## Why we write PIRs

@@ -8,6 +8,8 @@ This page explains the two runbook patterns used on this site, describing what b
 
 The raw templates to copy are at the [bottom of this page](#templates).
 
+> **Automated creation:** The `/create-pir` skill from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins) evaluates runbook needs during PIR generation and creates runbooks using this template.
+
 ---
 
 ## Why we write runbooks
