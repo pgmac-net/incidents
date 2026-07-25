@@ -32,6 +32,16 @@ PIRs and runbooks are authored with Claude Code / OpenCode skills from
 | `/grilling`        | Stress-test plans and decisions one question at a time                                                   |
 | `/domain-modeling` | Build and sharpen domain model: glossary, ADRs, terminology                                              |
 
+## Why public?
+
+Why do I make all of this public? A few reasons:
+
+1. I enjoy working in public.
+2. I'm challenged by working in public.
+   It forces me to produce work I am prepared to show.
+3. Helps future-me by reducing the number of assumptions and assumed knowledge I sometimes(/usually) leave.
+4. Hopefully it helps other people not only pick up some SRE knowledge, but also inspire some to work in public and share their experiences, too.
+
 ## Contributing
 
 ### New PIR
