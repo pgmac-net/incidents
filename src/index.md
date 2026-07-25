@@ -37,6 +37,7 @@ Each post-incident review follows a standard structure:
 2. Place documents in the `src/incidents/` directory — auto-nav picks them up automatically, no `mkdocs.yml` changes needed
 3. Add a row to the top of `src/incidents/index.md` (newest-first)
 4. Follow the [PIR structure template](doc-templates/pir-template.md) — each section is explained with guidance on what to write and why
+5. Use the `/create-pir` Claude Code skill to automate the full flow (root cause analysis, runbook evaluation, GitHub Issues, commit + PR) — available from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins)
 
 ### Creating a Runbook
 
@@ -46,6 +47,7 @@ Write a runbook when an incident has a repeatable failure mode with a concrete, 
 2. Place documents in the `src/runbooks/` directory — auto-nav picks them up automatically
 3. Follow the [runbook template](doc-templates/runbook-template.md) — it covers both the simple pattern (one failure mode) and the multi-mode pattern (same symptom, multiple root causes)
 4. Consider extending an existing runbook with a new failure mode section instead of creating a new file if the observable symptom is the same
+5. The `/create-pir` skill evaluates runbook needs automatically during PIR generation — available from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins)
 
 ## Navigation
 
