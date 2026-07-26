@@ -1,85 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+MkDocs site of PIRs and runbooks. Contents, commands, skills, and contribution steps: `README.md`. `mise run build-strict` before committing — CI runs `mkdocs build --strict` and warnings become errors.
 
-## Commands
+## Gotchas
 
-```bash
-mise run install        # create venv and install dependencies (run once)
-mise run serve          # local dev server at http://localhost:8000 with live reload
-mise run build          # build static site
-mise run build-strict   # strict build — matches CI; use before committing
-```
-
-CI runs `mkdocs build --strict` on every PR. Warnings become errors.
-
-## Two Build Targets
-
-| Config                | Site URL                                 | Nav                                           |
-| --------------------- | ---------------------------------------- | --------------------------------------------- |
-| `mkdocs.yml`          | `https://macro.int.pgmac.net/incidents/` | Explicit — sidebar only shows listed files    |
-| `incidents-mkdoc.yml` | `https://incidents.pgmac.net.au/`        | Auto-discovered — all files appear in sidebar |
-
-New PIRs and runbooks **do not** need to be added to `mkdocs.yml` nav — they're reachable via links from the index tables and appear automatically on the GitHub Pages build (`incidents-mkdoc.yml`). Add them to `mkdocs.yml` nav only if sidebar visibility on the internal site matters.
-
-## Claude Code Skills
-
-Skills are sourced from [github.com/pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins).
-Install via the instructions in that repo's README (`scripts/install-opencode-skills.sh`).
-
-| Skill              | Description                                                                                        | Used when...                         |
-| ------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `/create-pir`      | End-to-end PIR generation: Infinite How's analysis, runbook evaluation, GitHub Issues, commit + PR | Adding a PIR                         |
-| `/pickup-ticket`   | End-to-end ticket workflow: read, grill, plan, implement, PR, document                             | Working action items or feature work |
-| `/grilling`        | Stress-test plans, decisions, or ideas one question at a time                                      | Designing a fix before implementing  |
-| `/domain-modeling` | Build and sharpen a project's domain model: glossary, ADRs, terminology                            | Clarifying system concepts           |
-
-## Adding a PIR
-
-1. Filename: `src/incidents/YYYY-MM-DD-<slug>.md`
-2. Add row to top of `src/incidents/index.md` (newest-first)
-3. Follow `src/doc-templates/pir-template.md` — read it before writing; it contains section-by-section guidance
-4. Use the `/create-pir` skill for the full automated flow (Infinite How's analysis, GitHub Issues, runbook evaluation, commit, PR) — see [Skills](#claude-code-skills) above
-
-## Adding a Runbook
-
-1. Filename: `src/runbooks/<service>-<failure-description>.md`
-2. Add row to `src/runbooks/index.md`
-3. Cross-link from the PIR's References section
-4. Follow `src/doc-templates/runbook-template.md` — covers simple pattern (one failure mode) and multi-mode pattern (same symptom, multiple root causes)
-5. Use the `/create-pir` skill — it evaluates runbook needs automatically during PIR generation. See [Skills](#claude-code-skills) above.
-
-## Markdown Gotchas
-
-**Nested lists under ordered items require 4-space indent** — MkDocs Material does not render 3-space indented sub-items as nested:
-
-```markdown
-1. **Item title**
-   - nested bullet ← 4 spaces, renders correctly
-   - nested bullet
-
-1. **Item title**
-   - nested bullet ← 3 spaces, renders as flat continuation text
-```
-
-## Source Layout
-
-```
-src/
-  index.md                  # site home page
-  incidents/
-    index.md                # incidents table (update when adding PIRs)
-    YYYY-MM-DD-<slug>.md    # PIR documents
-  runbooks/
-    index.md                # runbooks table (update when adding runbooks)
-    <service>-<desc>.md     # runbook documents
-  doc-templates/
-    pir-template.md         # PIR template with section guidance
-    runbook-template.md     # runbook template (simple + multi-mode patterns)
-```
-
-## Branch and PR Conventions
-
-- Branch prefix: `docs/pir-<slug>` for PIRs, `docs/<description>` for everything else
-- Never commit directly to `main`
-- PR title format: `docs(pir): <title> (<primary-issue-ref>)` or `docs(<scope>): <description>`
+- **Two build targets**: `mkdocs.yml` (internal, `macro.int.pgmac.net/incidents/`, explicit nav) vs `incidents-mkdoc.yml` (public, `incidents.pgmac.net.au`, auto-discovered nav). New PIRs/runbooks don't need adding to `mkdocs.yml` nav — they're reachable via index links and appear automatically on the public build. Only add to nav if internal sidebar visibility matters.
+- **Nested lists under ordered items need 4-space indent** — MkDocs Material renders 3-space indented sub-items as flat continuation text, not a nested list.
+- **`docs/` in this repo is build output** (GitHub Pages), not a source docs directory — source lives in `src/`.
+- Branch prefix: `docs/pir-<slug>` for PIRs, `docs/<description>` otherwise. Never commit directly to `main`.
