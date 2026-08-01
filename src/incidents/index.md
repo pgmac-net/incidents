@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Title | Severity | Duration |
 |------|-------|----------|----------|
+| 2026-08-01 | [hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap](2026-08-01-hal-nfs-export-failure-stale-mounts.md) | High | ~8h 5m |
 | 2026-07-13 | [pvek8s Storage Cascade — ArgoCD Sync Burst, Watch-Cache Freeze, and jiva iSCSI Read-Only Volumes](2026-07-13-argocd-sync-burst-watch-cache-freeze-jiva-ro.md) | Medium | ~1h 8m |
 | 2026-07-11 | [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Stale-Unit Watchdog Lockout](2026-07-11-k8s03-watch-cache-freeze-stale-unit-lockout.md) | High | ~5h 40m |
 | 2026-07-09 | [pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Auto-Remediation Delivery Failure](2026-07-09-k8s03-watch-cache-freeze-remediation-delivery-failure.md) | High | ~5h 19m |
