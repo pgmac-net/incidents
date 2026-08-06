@@ -34,6 +34,8 @@ Recovery required correcting the documented procedure. The runbook's fast path (
 
 All six volumes were confirmed writable by live write test at approximately 21:00 AEST. The chronic `microk8s-image-gc` CRITICAL on k8s02 was investigated, found to predate this incident by 34–35 days, and split out as a separate issue.
 
+A follow-up investigation the same evening went looking for whatever kicked off the dqlite storm and concluded that **nothing did**. ArgoCD, scheduled workloads, host cron, event churn, the kine socket reset and disk latency were each checked and ruled out. What it found instead is that the cluster sustains roughly 409,000 datastore revisions per day while completely idle — almost entirely lease-renewal overhead — driving a 16 MB dqlite snapshot every ~103 seconds, with a single query (`revision_interval_sql`) consuming about 42% of wall-clock time. There is no headroom, so ordinary variance is sufficient to produce a storm. The same investigation found that the dqlite metrics needed to catch this early are already exported on every node and simply unscraped.
+
 ---
 
 ## Timeline (AEST — UTC+10)
@@ -138,11 +140,37 @@ Aug 05 17:03:22 k8s02 microk8s.daemon-k8s-dqlite: level=error msg="error in txn:
 
 `node.session.timeo.replacement_timeout` is at its 120s default and the ping timeout at 5s. These defaults assume a dedicated storage network. Here the iSCSI initiator, dqlite, kubelite and every workload contend for the same CPUs on a three-node hyperconverged cluster, so control-plane load and storage-path liveness are not isolated from each other. Raising the iSCSI timeouts was identified as a structural mitigation in the existing runbook (as PGM-222/PGM-221 under the old Linear tracker) and was never implemented.
 
-##### How was the dqlite storm itself not prevented or detected before it reached storage?
+##### How did the dqlite storm start at 03:03?
 
-The storm's own trigger was not isolated — the sampled log window does not show what was driving writes at 03:03. dqlite write contention is a known, repeatedly-documented failure mode in this cluster with an existing runbook, but monitoring alerts on its *downstream consequences* (watch-cache freeze, ro mounts) rather than on write-retry rate itself. There is no alert on dqlite retry depth, so a storm is only visible once it has already broken something.
+A follow-up investigation (2026-08-06 evening) searched specifically for a discrete trigger and **found none**. The following were each checked and ruled out:
 
-→ **ACTIONABLE ROOT CAUSE:** No alerting on dqlite write-retry rate, and no isolation between control-plane CPU pressure and iSCSI keepalive timing. Actions: alert on dqlite retry depth before consequences land; raise iSCSI `replacement_timeout` so a transient control-plane stall cannot kill a storage session.
+| Candidate | Verdict |
+|---|---|
+| ArgoCD sync burst (the 2026-07-13 trigger) | **Ruled out.** Controller was quiet at onset — 26 then 16 log lines/min. Its 631-line/min spike at 03:17 is *after* the ro remounts: a reaction, not a cause. |
+| Scheduled workload | **Ruled out.** No CronJob fires at 17:00 UTC — nearest are `hostpath-helper-cleanup` (03:30 UTC) and `jiva-snapshot-cleanup` (02:00 UTC). |
+| Host cron / snap / apt | **Ruled out.** Nothing in the window beyond the 5-minutely `debian-sa1` no-op. |
+| Event churn | **Ruled out.** Only 169 events exist cluster-wide. |
+| kine socket reset at 03:00:40 | **Ruled out.** Baseline churn — these occur ~19x/hour normally. |
+| Slow disk | **Ruled out.** Sustained sampling shows all three nodes at 0.55–0.75 ms write latency. |
+| calibre exec probe flooding kubelet (3.9 MB/probe) | **Ruled out as trigger.** Flat at 720/hour before, during and after — chronic load, not a trigger. Filed as [pgmac-net/pgk8s#621](https://github.com/pgmac-net/pgk8s/issues/621). |
+
+The conclusion is that **no trigger is required**, because the cluster has no headroom to absorb ordinary variance:
+
+- Measured live, the idle cluster sustains **~4.7 revisions/sec — roughly 409,000 revisions/day**. This is almost entirely lease-renewal traffic from 20 leases renewing every 2–10 s. It is control-plane heartbeat overhead, not workload.
+- dqlite consequently writes an **8 MB raft segment every ~100 s and a 16 MB snapshot every ~103 s, continuously**. Every snapshot takes the SQLite write lock.
+- The `k8s_dqlite_generic_op_latency` metrics show `revision_interval_sql` running **14.2 times per second at 29.5 ms average — about 42% of wall-clock time in a single query**. Operations that fail during a storm average 6.8–8.9 seconds.
+
+Against that background, any momentary stall coinciding with a snapshot's write lock is enough to back up lease renewals until kine exhausts its 500-retry budget. Note the first logged error already reads `try: 500`, so the true lock onset **predates the 03:03:22 timestamp** — the log records budget exhaustion, not the beginning.
+
+##### How was this not detected before it reached storage?
+
+dqlite write contention is a known, repeatedly-documented failure mode with an existing runbook, but monitoring alerts only on its *downstream consequences* (watch-cache freeze, ro mounts). A storm is therefore only visible once it has already broken something.
+
+The follow-up investigation found that **k8s-dqlite already exports Prometheus metrics on every node** (`--metrics --metrics-listen=127.0.0.1:9042`) and nothing scrapes them. The `result="fail"` series of `k8s_dqlite_generic_op_latency` is a direct storm signal requiring no log parsing. The capability has been present all along and was simply never wired up.
+
+Two node-level observability gaps also materially limited this analysis: journald retention is under 24 hours (k8s01 and k8s03 had **already discarded the pre-storm window**; k8s02 retained it by 49 minutes), and `sysstat` is installed and scheduled but has `ENABLED="false"`, so the CPU history that would have confirmed or refuted the starvation mechanism was never collected. Filed as [pgmac-net/ansible#259](https://github.com/pgmac-net/ansible/issues/259).
+
+→ **ACTIONABLE ROOT CAUSE:** The cluster runs permanently at the edge of its datastore capacity — ~409k revisions/day of pure lease overhead with a 16 MB snapshot every ~103 s — so storms need no trigger, only variance. Compounding this, the dqlite metrics that would give early warning are exported but unscraped, and the node history needed to explain a storm after the fact is not retained. Actions: scrape the existing dqlite metrics; reduce baseline datastore write load; fix journald/sysstat retention; raise iSCSI `replacement_timeout` so a control-plane stall cannot kill a storage session.
 
 ---
 
@@ -383,13 +411,21 @@ Nagios `get_unhandled_problems` returns no hosts down and no incident-related se
     - Defaults assume a dedicated storage network; on a hyperconverged 3-node cluster a control-plane CPU stall can kill a storage session. Previously identified and never implemented. Chain 1.
     - Issue: [pgmac-net/ansible#257](https://github.com/pgmac-net/ansible/issues/257)
 
-6. **Alert on dqlite write-retry rate** (Medium)
-    - Storms are currently only visible through their downstream consequences, by which point damage has occurred. Chain 1.
+6. **Scrape the dqlite metrics that already exist** (Medium)
+    - Storms are currently only visible through their downstream consequences, by which point damage has occurred. k8s-dqlite already exports `k8s_dqlite_generic_op_latency` on `127.0.0.1:9042` and nothing reads it; the `result="fail"` series is a direct storm signal. Chain 1.
     - Issue: [pgmac-net/ansible#258](https://github.com/pgmac-net/ansible/issues/258)
 
 7. **Document the ArgoCD interaction for storage recovery** (Low)
     - Auto-sync reverted scale-to-0 within ~40s throughout the recovery, making the procedure racy. Chain 4.
     - Issue: [pgmac-net/homelabia#159](https://github.com/pgmac-net/homelabia/issues/159)
+
+8. **Fix node observability retention** (Medium)
+    - journald retains <24h, so k8s01 and k8s03 had discarded the pre-storm window before anyone looked; `sysstat` is scheduled but disabled, so no CPU history exists to confirm the starvation mechanism. Chain 1.
+    - Issue: [pgmac-net/ansible#259](https://github.com/pgmac-net/ansible/issues/259)
+
+9. **Reduce baseline datastore write load** (Low)
+    - ~409k revisions/day of lease-renewal overhead on an idle cluster leaves no headroom for variance. Worth reviewing lease renewal intervals and whether all 20 leaseholders are needed. Chain 1.
+    - Issue: [pgmac-net/pgk8s#621](https://github.com/pgmac-net/pgk8s/issues/621) covers one contributor (calibre probes); the broader load reduction is not yet ticketed.
 
 ---
 
@@ -419,6 +455,9 @@ Nagios `get_unhandled_problems` returns no hosts down and no incident-related se
 - **The iSCSI logout, not the pod recreation, is the operative step.** Recovery works when the volume becomes fully unreferenced and the session drops, which is why scale-to-0 succeeds where pod-delete fails.
 - **microk8s kubelet uses its own mount namespace**, so a volume can be correctly mounted and writable inside the pod while `mount` on the host shows nothing. This briefly read as "the volume failed to attach" when `survive-minecraft` was in fact fully healthy.
 - **Applications hide read-only storage almost completely.** Four of six workloads reported `1/1 Running` with zero restarts for seventeen hours while every write failed. Only the one with a startup database migration crashed.
+- **The storm had no trigger.** Every plausible candidate was checked and ruled out. An idle cluster generating ~409,000 revisions/day of pure lease overhead, snapshotting 16 MB every ~103 s, simply has no margin — the storm is what normal variance looks like at that operating point. The `try: 500` on the very first logged line reinforces this: the log records the moment kine gave up, not the moment the lock contention began.
+- **The early-warning telemetry was already running.** k8s-dqlite has been exporting `k8s_dqlite_generic_op_latency` on `127.0.0.1:9042` on every node the whole time, unscraped. The PIR's original claim that this signal did not exist was wrong — it existed and nobody was reading it.
+- **Two of three nodes had already forgotten the incident** by the time anyone investigated. journald retention is under 24 hours; k8s02 preserved the pre-storm window by a 49-minute margin, and the entire root cause analysis rested on that accident.
 
 ---
 
@@ -431,8 +470,10 @@ Nagios `get_unhandled_problems` returns no hosts down and no incident-related se
 | 3 | Escalate unacknowledged data-integrity CRITICALs | High | [pgmac-net/nagios-config#46](https://github.com/pgmac-net/nagios-config/issues/46) |
 | 4 | Fix watch-cache remediation canary budget, cordon bookkeeping, and mount cleanup | Medium | [pgmac-net/ansible#256](https://github.com/pgmac-net/ansible/issues/256) |
 | 5 | Raise iSCSI `replacement_timeout` and ping timeout on all nodes | Medium | [pgmac-net/ansible#257](https://github.com/pgmac-net/ansible/issues/257) |
-| 6 | Alert on dqlite write-retry rate before downstream damage | Medium | [pgmac-net/ansible#258](https://github.com/pgmac-net/ansible/issues/258) |
+| 6 | Scrape the existing `k8s_dqlite_generic_op_latency` metrics and alert on the `result="fail"` rate | Medium | [pgmac-net/ansible#258](https://github.com/pgmac-net/ansible/issues/258) |
 | 7 | Document ArgoCD auto-sync interaction with storage recovery procedures | Low | [pgmac-net/homelabia#159](https://github.com/pgmac-net/homelabia/issues/159) |
+| 8 | Fix node observability: journald retention <24h, `sysstat` collection disabled | Medium | [pgmac-net/ansible#259](https://github.com/pgmac-net/ansible/issues/259) |
+| 9 | Fix calibre exec probes dumping 3.9 MB/run into kubelet | Low | [pgmac-net/pgk8s#621](https://github.com/pgmac-net/pgk8s/issues/621) |
 
 ---
 
