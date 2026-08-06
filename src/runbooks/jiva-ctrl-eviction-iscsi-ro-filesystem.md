@@ -38,6 +38,25 @@ This is distinct from the [kubelet-volume-manager-stall](kubelet-volume-manager-
 
 ## Root Cause
 
+There are **two distinct paths** to the same ext4 read-only outcome. Both end in `session recovery timed out after 120 secs`, but they differ in what killed the session — and therefore in what you should check first.
+
+| | Mode A: target killed | Mode B: initiator starved |
+| --- | --- | --- |
+| **Trigger** | jiva-ctrl pod evicted/killed | dqlite write storm starves the node |
+| **First kernel signature** | `conn error (1020)` (TCP RST / refused) | `ping timeout of 5 secs expired` → `conn error (1022)` |
+| **jiva-ctrl state** | Restarted/evicted *before* the remount | Healthy throughout; any restart comes *after* |
+| **JivaVolume CR** | May show stale `mountInfo` | `Ready` / `RW` throughout |
+| **Blast radius** | Volumes served by that one ctrl | Every volume on the affected node(s), often several nodes at once |
+| **First observed** | 2026-05-28 | 2026-08-06 |
+
+**Distinguish them first** — a `ping timeout` line before any `1020` means Mode B, and the entire "find the evicted ctrl" branch below is a dead end:
+
+```bash
+ssh <node> "sudo journalctl -k --since '<incident window>' | grep -E 'ping timeout|conn error|session recovery'" | head
+```
+
+### Mode A: jiva-ctrl evicted (target killed)
+
 The jiva-ctrl pod (iSCSI target) running on some node was evicted or killed while an iSCSI initiator on another node had an active session to it.
 
 **Full cascade:**
@@ -53,6 +72,27 @@ The jiva-ctrl pod (iSCSI target) running on some node was evicted or killed whil
 **Batched eviction amplifier**: During cluster recovery, if the kube-controller-manager was temporarily disconnected from dqlite, pending taint evictions queue up. On reconnect, all queued jiva-ctrl pods are evicted simultaneously — dropping all iSCSI sessions at once, leaving no time for individual session recovery.
 
 **Earlier link-flap comparison**: A brief physical network event (eth0 down <30s) will also trigger error 1020, but the sessions recover once connectivity returns because the iSCSI target is still alive. The critical difference here is that the **target process itself** was killed.
+
+### Mode B: dqlite storm starves the initiator (target healthy)
+
+Added 2026-08-06. The Jiva target never dies — the *initiator* misses its keepalive.
+
+**Full cascade:**
+
+1. A dqlite write-contention storm begins, retrying hundreds of times per key per second:
+   ```
+   level=error msg="error in txn: update transaction failed for key
+   /registry/leases/kube-system/kube-controller-manager: exec (try: 500): database is locked"
+   ```
+2. The resulting CPU/scheduler pressure delays the kernel iSCSI initiator's keepalive processing past its 5-second `node.session.timeo.noop_out_timeout` deadline
+3. `ping timeout of 5 secs expired` → `detected conn error (1022)` — note **1022, not 1020**
+4. Session recovery runs 120s and fails; the block device goes offline; JBD2 aborts; ext4 remounts ro
+
+Because the trigger is node-wide rather than volume-specific, this mode hits **every Jiva volume on the affected node**, and typically **several nodes simultaneously** — on 2026-08-06 it took six volumes across k8s02 and k8s03 within seven minutes.
+
+**Do not go looking for an evicted jiva-ctrl in this mode.** The JivaVolume CRs stay `Ready`/`RW` throughout, and any jiva-ctrl restart you find in the logs will post-date the remount (on 2026-08-06 the ctrl pods restarted only when the watch-cache auto-remediation restarted kubelite, 12 minutes *after* the filesystems went read-only).
+
+**Structural cause:** on a hyperconverged 3-node cluster the iSCSI initiator, dqlite, kubelite and every workload contend for the same CPUs. The default 5s ping / 120s replacement timeouts assume a dedicated storage network, so a control-plane stall is sufficient to kill a storage session.
 
 ---
 
@@ -139,7 +179,50 @@ kubectl get jivavolume <pvc-name> -n openebs -o jsonpath='{.spec.mountInfo}'
 
 ## Recovery
 
-### Fast path (proven 2026-07-11, six volumes recovered; refined 2026-07-13)
+### The operative step is the iSCSI logout, not the pod recreation
+
+Everything below works for one reason: kubelet tears down the global
+device mount and **logs out the iSCSI session** only once *no* pod on the
+node references the volume. That logout is what lets the next mount do a
+fresh login and replay the ext4 journal rw. Any procedure that leaves the
+volume referenced — even for a few seconds — reuses the stale ro mount and
+silently does nothing.
+
+**A plain `kubectl delete pod` does not work** (verified 2026-08-06,
+readarr): the ReplicaSet recreates the pod within seconds and it re-binds
+the stale ro global mount before kubelet can drop it. The volume stays
+`ro,relatime` and the pod comes back just as broken.
+
+### Fast path A — scale to zero (preferred; proven 2026-08-06, six volumes)
+
+Works whether or not another node is available, and does not depend on
+winning a race with the scheduler:
+
+```bash
+kubectl --context pvek8s scale deploy -n <ns> <name> --replicas=0
+# StatefulSets: kubectl scale statefulset -n <ns> <name> --replicas=0
+
+# Confirm FULL unreference before scaling back up — both must be true:
+ssh <node> "mount | grep <pvc>"      # → empty
+ssh <node> "ls -la /dev/sdX"         # → No such file or directory (session logged out)
+
+kubectl --context pvek8s scale deploy -n <ns> <name> --replicas=1
+```
+
+If `/dev/sdX` is still present after the mounts clear, the session did not
+drop — go to "Persisted superblock error state" below, because a remount
+alone will not restore rw.
+
+**ArgoCD will fight you.** On apps with auto-sync enabled, ArgoCD reverts
+`--replicas=0` within roughly 40 seconds. The unmount usually still
+completes inside that window, but the procedure becomes racy — prefer
+disabling auto-sync for the app first:
+
+```bash
+argocd app set <app> --sync-policy none    # re-enable with --sync-policy automated
+```
+
+### Fast path B — cordon then delete (2026-07-11/13; use when another node is free)
 
 If the jiva-ctrl for the volume is healthy (2/2 Running), **cordon the
 node with the ro mount, then** `kubectl delete pod`: kubelet detaches
@@ -150,8 +233,52 @@ Uncordon once the replacement is Running elsewhere.
 **Cordon-first is mandatory, not optional** (confirmed 2026-07-13, radarr):
 the scheduler has no memory of the failure — a plain delete relanded the
 replacement on the same node, where it silently bind-mounted the stale ro
-global mount (kubelet only tears down the global mount once *no* pod on
-the node references the volume, and the replacement claimed it first).
+global mount.
+
+This path fails if no other node can take the pod (node affinity, capacity,
+or all nodes affected — common in Mode B). Use Fast path A instead.
+
+### Persisted superblock error state (fsck required)
+
+Added 2026-08-06. If the volume comes back **still ro** after a clean
+unmount and remount, the ext4 error flag is persisted in the superblock and
+no amount of remounting will clear it:
+
+```bash
+ssh <node> "sudo dumpe2fs -h /dev/sdX 2>&1 | grep -Ei 'filesystem state|FS Error count|First error'"
+```
+
+```
+Filesystem state:         clean with errors      <-- remount will NOT restore rw
+Filesystem features:      ... needs_recovery ...
+FS Error count:           2
+First error function:     ext4_journal_check_start
+```
+
+With the workload scaled to 0 and the device confirmed unmounted:
+
+```bash
+ssh <node> "sudo e2fsck -f -y /dev/sdX"
+ssh <node> "sudo dumpe2fs -h /dev/sdX 2>&1 | grep -i 'filesystem state'"
+# → Filesystem state:         clean
+```
+
+On 2026-08-06 this recovered the journal on borked-craft's volume with only
+minor bitmap/inode corrections and all 789 files intact. `e2fsck` may warn
+`/dev/sdX is mounted` even when `mount` shows nothing — microk8s kubelet
+uses its own mount namespace. Verify with `grep /dev/sdX /proc/mounts`
+before overriding.
+
+### Verifying inside the pod, not on the host
+
+microk8s kubelet mounts in its own namespace, so a volume can be correctly
+mounted and writable inside the pod while `mount` on the host shows nothing
+at all. Do not read an empty host mount table as "the volume failed to
+attach" — check from inside:
+
+```bash
+kubectl --context pvek8s exec -n <ns> <pod> -- sh -c 'touch /data/.rwtest && rm /data/.rwtest && echo RW-OK'
+```
 
 The full phases below are only needed when stale prior state gets in the
 way:
@@ -171,7 +298,24 @@ way:
   mounts: kubelet unmounts most but any stranded pod-path bind mount wedges
   UnmountDevice forever (`GetDeviceMountRefs check failed`, 2-minute retry
   loop) — the only fix is a manual `umount` of the leftover path. Let slow
-  teardowns finish.
+  teardowns finish. (Re-confirmed the hard way on 2026-08-06: the minecraft
+  pods were force-deleted and produced exactly this wedge, costing four
+  manual unmounts.)
+
+  The wedge looks like this in the kubelite journal, retrying forever:
+  ```
+  Error: GetDeviceMountRefs check failed for volume "pvc-746b2837-..." on node "k8s02" :
+  the device mount path ".../globalmount" is still mounted by other references
+  [.../pods/<uid>/volumes/kubernetes.io~csi/pvc-746b2837-.../mount]
+  ```
+  Unmount the path named in the brackets and kubelet completes teardown on
+  its next retry:
+  ```bash
+  ssh <node> "sudo umount /var/snap/microk8s/common/var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~csi/<pvc>/mount"
+  ```
+  If you manually unmount a path for a pod that still exists, that pod's
+  mount is now broken and it will start with an empty `d---------` `/data`.
+  Delete it so kubelet rebuilds the mount cleanly.
 
 ### Phase 1: Assess and stabilise
 
@@ -316,10 +460,29 @@ Before applying a `NoExecute` taint to or draining a node:
 
 See [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) for the full step-by-step procedure including commands to identify sessions, migrate workloads, and verify logout before restarting.
 
+### Against Mode B (initiator starvation)
+
+Node-level prevention, since there is no jiva-ctrl to migrate:
+
+1. **Watch for the storm before it reaches storage.** A dqlite storm
+   precedes the first `ping timeout` by only ~2 minutes — see
+   [dqlite-write-contention.md](dqlite-write-contention.md). Once
+   `try: 500` retry depths appear, storage is already at risk.
+2. **After any dqlite storm or watch-cache freeze, survey every node**,
+   even if checks are green — a remount can predate the check window:
+   ```bash
+   for n in k8s01 k8s02 k8s03; do ssh $n "grep -E 'pvc-.* ext4 ro' /proc/mounts"; done
+   ```
+3. **Beware the remediation itself.** Auto-remediation restarts kubelite,
+   which duplicates CSI bind mounts (see
+   [jiva-csi-mount-proliferation.md](jiva-csi-mount-proliferation.md)).
+   On 2026-08-06 the fix attempt produced 16x stacked mounts on both
+   CSI volumes. Check for duplication after any remediation run.
+
 ### Structural mitigations (not yet implemented)
 
 - **Extended NoExecute toleration** on jiva-ctrl pods (`tolerationSeconds=600`) — gives more time for transient NotReady to resolve before eviction fires. Tracked: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222).
-- **iSCSI session recovery timeout** — increase `node.session.timeo.replacement_timeout` from 120s to 300s+ to give jiva-ctrl pods more time to restart and re-register. Configure via iscsiadm on each node or in the jiva-csi DaemonSet.
+- **iSCSI session recovery timeout** — increase `node.session.timeo.replacement_timeout` from 120s to 300s+ to give jiva-ctrl pods more time to restart and re-register. Configure via iscsiadm on each node or in the jiva-csi DaemonSet. **Raised in priority by the 2026-08-06 incident**: in Mode B this timeout (together with the 5s `noop_out_timeout`) is the entire failure mechanism — a control-plane CPU stall of ~2 minutes was sufficient to destroy six volumes' sessions.
 - **Monitoring** — log-based alerts on EXT4 ro remount and iSCSI session failure patterns in kern.log. Tracked: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221).
 
 ---
@@ -328,6 +491,7 @@ See [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) for t
 
 - PIR: [pvek8s Post-Power-Outage Recovery — kubelet Volume Manager Stall and KCM Stale terminatingReplicas](../incidents/2026-05-28-pvek8s-post-outage-kubelet-informer-kcm-stall.md) — Chain 4
 - PIR: [pvek8s Storage Cascade — ArgoCD Sync Burst, Watch-Cache Freeze, and jiva iSCSI Read-Only Volumes](../incidents/2026-07-13-argocd-sync-burst-watch-cache-freeze-jiva-ro.md) — Chains 2–3; source of the 2026-07-13 fast-path refinements
+- PIR: [pvek8s Read-Only Volume Cascade — dqlite Storm, iSCSI Starvation, and a 17-Hour Action Gap](../incidents/2026-08-06-dqlite-storm-iscsi-ro-volumes-detection-gap.md) — source of Mode B, the scale-to-0 fast path, the fsck requirement, and the ArgoCD interaction
 - Linear: [PGM-224](https://linear.app/pgmac-net-au/issue/PGM-224) — this runbook
 - Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) — log-based alerts (planned)
 - Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) — extended jiva-ctrl tolerations (planned)
