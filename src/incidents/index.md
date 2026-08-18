@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Title | Severity | Duration |
 |------|-------|----------|----------|
+| 2026-08-15 | [hal NFS Handle Invalidation — Silent SQLite Failures Across Three Services and a 2.7-Day Detection Gap](2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md) | High | ~2d 16h 38m |
 | 2026-08-06 | [pvek8s Read-Only Volume Cascade — dqlite Storm, iSCSI Starvation, and a 17-Hour Action Gap](2026-08-06-dqlite-storm-iscsi-ro-volumes-detection-gap.md) | High | ~17h 57m |
 | 2026-08-01 | [hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap](2026-08-01-hal-nfs-export-failure-stale-mounts.md) | High | ~8h 5m |
 | 2026-07-13 | [pvek8s Storage Cascade — ArgoCD Sync Burst, Watch-Cache Freeze, and jiva iSCSI Read-Only Volumes](2026-07-13-argocd-sync-burst-watch-cache-freeze-jiva-ro.md) | Medium | ~1h 8m |
