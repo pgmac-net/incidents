@@ -79,14 +79,20 @@ nav:
   - Runbooks:
     - runbooks/index.md
     - runbooks/dqlite-write-contention.md
+    - runbooks/dqlite-datastore-vacuum.md
     - runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md
     - runbooks/jiva-ctrl-node-rolling-restart.md
+    - runbooks/jiva-ctrl-endpoint-deadlock.md
     - runbooks/jiva-csi-mount-proliferation.md
+    - runbooks/jiva-csi-stale-node-attachment.md
+    - runbooks/jiva-replica-corrupt-snapshot-chain.md
+    - runbooks/hal-nfs-export-failure.md
     - runbooks/control-plane-watch-cache-freeze.md
     - runbooks/kcm-stale-terminating-replicas.md
     - runbooks/kubelet-volume-manager-stall.md
     - runbooks/kubelet-silent-stall.md
     - runbooks/calico-cni-unauthorized.md
+    - runbooks/calico-orphaned-pod-route.md
     - runbooks/k8s-upgrade-validation.md
   - Tags: tags.md
 
