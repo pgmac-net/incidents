@@ -17,34 +17,42 @@ repo_url: https://github.com/pgmac-net/incidents/
 
 theme:
   name: material
+  custom_dir: overrides
   features:
-    - navigation.sections
-    - navigation.expand
+    # Neither navigation.sections nor navigation.expand: sections must stay
+    # collapsible so only the section you are in opens, and the other section
+    # cards stay shut. Both of those features defeat that.
     - navigation.top
     - search.suggest
     - search.highlight
     - content.code.copy
     - content.code.annotate
     - navigation.indexes
+  # primary/accent are 'custom' so the palette is defined by tokens in
+  # assets/stylesheets/extra.css. Chrome is deliberately neutral: red is
+  # reserved for severity, so that spending it on the header would devalue it.
   palette:
     # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: red
-      accent: deep orange
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: red
-      accent: deep orange
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   icon:
     repo: fontawesome/brands/github
+
+extra_css:
+  - assets/stylesheets/extra.css
 
 plugins:
   - search

@@ -1,0 +1,464 @@
+/* ==========================================================================
+   Post-Incident Reviews — site theme
+   --------------------------------------------------------------------------
+   Design intent, so future edits do not undo it by accident:
+
+   1. Chrome is neutral. This site grades its content by severity, so red is
+      spent on severity badges and danger admonitions only. A red header would
+      make red mean "pgmac" instead of "this hurt", which is the opposite of
+      what the content needs.
+
+   2. Sections differ by hue AND glyph, never hue alone. Colour is never the
+      only channel carrying meaning.
+
+   3. Sections take the cool end of the wheel; severity owns the warm end
+      exclusively. That is why Incidents is indigo rather than amber — amber is
+      P3, and the two would otherwise collide on the page where severity is
+      most load-bearing.
+
+   Palette is bound to Material via `primary: custom` / `accent: custom` in
+   mkdocs-base.yml, so nothing here fights a stock Material colour rule.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Tokens — light
+   -------------------------------------------------------------------------- */
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:          #2B3038;
+  --md-primary-fg-color--light:   #3D4450;
+  --md-primary-fg-color--dark:    #1D2128;
+  --md-primary-bg-color:          #F2F4F7;
+  --md-primary-bg-color--light:   #C7CDD7;
+
+  --md-accent-fg-color:           #33608F;
+  --md-accent-fg-color--transparent: rgba(51, 96, 143, 0.1);
+  --md-accent-bg-color:           #FFFFFF;
+  --md-accent-bg-color--light:    #FFFFFF;
+
+  --md-typeset-a-color:           #33608F;
+
+  /* Section identity */
+  --sect-home:                    #596272;
+  --sect-incidents:               #3A5FA8;
+  --sect-runbooks:                #0E6E67;
+  --sect-doc-templates:           #6A4C9C;
+  --sect-tags:                    #596272;
+
+  /* Severity — warm ramp, reserved */
+  --sev-p1:                       #8E1B1B;
+  --sev-p2:                       #B4441F;
+  --sev-p3:                       #9A6B12;
+  --sev-p4:                       #5C6675;
+  --sev-p1-bg:                    #F6E4E4;
+  --sev-p2-bg:                    #F8E7DF;
+  --sev-p3-bg:                    #F6EEDA;
+  --sev-p4-bg:                    #ECEEF1;
+
+  --card-bg:                      #FFFFFF;
+  --card-bg-open:                 #F4F6F9;
+  --card-rule:                    #E2E6EC;
+}
+
+/* --------------------------------------------------------------------------
+   2. Tokens — dark (slate)
+   -------------------------------------------------------------------------- */
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:          #1B1F26;
+  --md-primary-fg-color--light:   #2A3038;
+  --md-primary-fg-color--dark:    #14171C;
+  --md-primary-bg-color:          #E6E9EE;
+  --md-primary-bg-color--light:   #98A2B3;
+
+  --md-accent-fg-color:           #82AAD6;
+  --md-accent-fg-color--transparent: rgba(130, 170, 214, 0.12);
+  --md-accent-bg-color:           #14171C;
+  --md-accent-bg-color--light:    #14171C;
+
+  --md-default-bg-color:          #14171C;
+  --md-typeset-a-color:           #82AAD6;
+
+  --sect-home:                    #98A2B3;
+  --sect-incidents:               #7FA0DC;
+  --sect-runbooks:                #48ADA4;
+  --sect-doc-templates:           #A88BDC;
+  --sect-tags:                    #98A2B3;
+
+  --sev-p1:                       #E96A6A;
+  --sev-p2:                       #E08A5C;
+  --sev-p3:                       #D2A94E;
+  --sev-p4:                       #98A2B3;
+  --sev-p1-bg:                    #3A1E20;
+  --sev-p2-bg:                    #3A261C;
+  --sev-p3-bg:                    #352C18;
+  --sev-p4-bg:                    #262B33;
+
+  --card-bg:                      #1B1F26;
+  --card-bg-open:                 #222731;
+  --card-rule:                    #2E343E;
+}
+
+/* Fallback: main.html binds --sect-hue on body per page. Declared on the same
+   element the scheme tokens live on, so the lookup resolves; a page outside the
+   known sections sits on the neutral rather than inheriting nothing. */
+[data-md-color-scheme] {
+  --sect-hue: var(--sect-home);
+}
+
+/* --------------------------------------------------------------------------
+   3. Typography
+   -------------------------------------------------------------------------- */
+
+.md-typeset h1 {
+  font-weight: 640;
+  letter-spacing: -0.018em;
+  line-height: 1.18;
+  text-wrap: balance;
+  color: var(--md-default-fg-color);
+  margin-bottom: 0.35rem;
+}
+
+.md-typeset h2 {
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.md-typeset p,
+.md-typeset li {
+  text-wrap: pretty;
+}
+
+/* Long-form analysis reads badly at full container width. */
+.md-typeset p,
+.md-typeset > ul,
+.md-typeset > ol {
+  max-width: 72ch;
+}
+
+/* Anything that is machine output lines up in columns. */
+.md-typeset table:not([class]) td:first-child,
+.md-typeset .sev,
+.md-typeset .pir-meta__facts {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   4. Section identity — kicker and title rule
+   -------------------------------------------------------------------------- */
+
+.pir-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--sect-hue);
+  margin-bottom: 0.35rem;
+}
+
+.pir-kicker svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  flex: none;
+}
+
+/* A short rule under the page title, in the section's hue. Deliberately
+   2px and 2.75rem — a full-width bar reads as a divider, not an identity. */
+.md-typeset h1::after {
+  content: "";
+  display: block;
+  width: 2.75rem;
+  height: 2px;
+  margin-top: 0.55rem;
+  background: var(--sect-hue);
+}
+
+/* --------------------------------------------------------------------------
+   5. Left nav — section cards
+   --------------------------------------------------------------------------
+   --card-hue is set per card by overrides/partials/nav.html. The fallback
+   keeps the cards legible if that partial is ever removed.
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 76.25em) {
+  .md-nav--primary > .md-nav__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-right: 0.4rem;
+  }
+
+  .md-nav--primary > .md-nav__list > .md-nav__item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-rule);
+    border-left: 2px solid var(--card-hue, var(--card-rule));
+    padding: 0;
+  }
+
+  /* Material indents nested nav with a left border; the card supplies the
+     structure instead, so drop it. */
+  .md-nav--primary > .md-nav__list > .md-nav__item .md-nav__list {
+    padding-left: 0.6rem;
+  }
+
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.42rem 0.55rem;
+    font-weight: 600;
+    color: var(--md-default-fg-color);
+  }
+
+  /* The open card gets a tinted ground so the current section is obvious
+     even before you read the labels. */
+  .md-nav--primary > .md-nav__list > .md-nav__item:has(> .md-nav__toggle:checked) {
+    background: var(--card-bg-open);
+  }
+
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav {
+    padding: 0 0.5rem 0.45rem;
+  }
+
+  .md-nav--primary .md-nav__item .md-nav__link {
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .md-nav--primary .md-nav__link--active,
+  .md-nav--primary .md-nav__item--active > .md-nav__link {
+    color: var(--card-hue, var(--md-accent-fg-color));
+    font-weight: 600;
+  }
+
+  /* Section glyph, injected by the nav partial. */
+  .md-nav__section-icon {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: none;
+    fill: none;
+    stroke: var(--card-hue, currentColor);
+    stroke-width: 1.5;
+  }
+
+  .md-nav__count {
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--md-default-fg-color--light);
+    font-weight: 500;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Right TOC — active marker in the section hue
+   -------------------------------------------------------------------------- */
+
+.md-nav--secondary .md-nav__link--active {
+  color: var(--sect-hue);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   7. Severity badges
+   --------------------------------------------------------------------------
+   Always carry the P-number as text. Colour is reinforcement, never the sole
+   carrier — the same rule the section cues follow.
+
+   Usable from Markdown via attr_list:  `P2`{ .sev .sev--p2 }
+   -------------------------------------------------------------------------- */
+
+.md-typeset .sev,
+.sev {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.42rem;
+  border-radius: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-typeset .sev--p1, .sev--p1 { color: var(--sev-p1); background: var(--sev-p1-bg); }
+.md-typeset .sev--p2, .sev--p2 { color: var(--sev-p2); background: var(--sev-p2-bg); }
+.md-typeset .sev--p3, .sev--p3 { color: var(--sev-p3); background: var(--sev-p3-bg); }
+.md-typeset .sev--p4, .sev--p4 { color: var(--sev-p4); background: var(--sev-p4-bg); }
+
+/* Markdown inline code styling would otherwise fight the badge. */
+.md-typeset code.sev {
+  background: var(--sev-p4-bg);
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   8. PIR metadata header
+   -------------------------------------------------------------------------- */
+
+.pir-meta {
+  border: 1px solid var(--card-rule);
+  border-left: 2px solid var(--sect-hue);
+  background: var(--card-bg-open);
+  padding: 0.7rem 0.85rem;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pir-meta__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pir-meta__status {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-default-fg-color--light);
+  font-weight: 600;
+}
+
+.pir-meta__facts {
+  font-size: 0.72rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.pir-meta__impact {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--md-default-fg-color--light);
+  max-width: 68ch;
+}
+
+/* --------------------------------------------------------------------------
+   9. Index tables
+   -------------------------------------------------------------------------- */
+
+.md-typeset table:not([class]) {
+  font-size: 0.76rem;
+  border: none;
+}
+
+.md-typeset table:not([class]) th {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+  background: transparent;
+  border-bottom: 1px solid var(--card-rule);
+}
+
+.md-typeset table:not([class]) td {
+  border-top: none;
+  border-bottom: 1px solid var(--card-rule);
+  vertical-align: baseline;
+}
+
+/* --------------------------------------------------------------------------
+   10. Home landing — section card grid
+   -------------------------------------------------------------------------- */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem;
+  margin: 1.25rem 0;
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-rule);
+  border-left: 2px solid var(--card-hue, var(--card-rule));
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-card:hover,
+.home-card:focus-visible {
+  background: var(--card-bg-open);
+}
+
+.home-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 620;
+  color: var(--md-default-fg-color);
+}
+
+.home-card__title svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  fill: none;
+  stroke: var(--card-hue, currentColor);
+  stroke-width: 1.5;
+}
+
+.home-card__desc {
+  font-size: 0.74rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Recent-incidents list, generated by main.py */
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: none;
+}
+
+.recent-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+}
+
+.recent-list__date {
+  font-variant-numeric: tabular-nums;
+  color: var(--md-default-fg-color--light);
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Accessibility
+   -------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
