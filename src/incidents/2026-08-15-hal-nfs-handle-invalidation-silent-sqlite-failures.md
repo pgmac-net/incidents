@@ -1,4 +1,12 @@
 ---
+title: 2026-08-15 hal NFS handle invalidation
+date: 2026-08-15
+severity: P2
+status: Resolved
+duration: ~2d 16h 38m (03:12 AEST 16 Aug → 19:50 AEST 18 Aug); undetected throughout, ~17m active remediation
+impact: >-
+  Permanent loss of ~2.7 days of Home Assistant recorder history; sabnzbd
+  history unusable; all three services reported 1/1 Running the entire time.
 tags:
   - k8s01
   - k8s02
@@ -14,13 +22,6 @@ tags:
 ---
 
 # Post Incident Review: hal NFS Handle Invalidation — Silent SQLite Failures Across Three Services and a 2.7-Day Detection Gap
-
-**Date:** 2026-08-15
-**Duration:** ~2d 16h 38m (~03:12 AEST 16 Aug → ~19:50 AEST 18 Aug); undetected throughout, ~17m active remediation
-**Severity:** High (permanent loss of ~2.7 days of Home Assistant recorder history; sabnzbd history unusable; all three services reported `1/1 Running` the entire time)
-**Status:** Resolved
-
----
 
 ## Executive Summary
 

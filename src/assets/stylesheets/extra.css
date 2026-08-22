@@ -107,6 +107,25 @@
 }
 
 /* --------------------------------------------------------------------------
+   2b. Section glyphs
+   --------------------------------------------------------------------------
+   Applied as masks, so the glyph takes the card's hue rather than carrying a
+   baked-in colour that would be wrong in one of the two schemes. Colour-blind
+   readers get the shape; the hue is reinforcement only.
+
+   Bound to cards by overrides/partials/nav.html, which maps each top-level nav
+   item to --icon-<slug>.
+   -------------------------------------------------------------------------- */
+
+[data-md-color-scheme] {
+  --icon-home: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M2 6.5 8 2l6 4.5V14H2z'/%3E%3C/svg%3E");
+  --icon-incidents: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M8 2.5 14.5 13.5h-13z'/%3E%3Cpath d='M8 6.5v3'/%3E%3Cpath d='M8 11.3v.3'/%3E%3C/svg%3E");
+  --icon-runbooks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M2.5 4h11'/%3E%3Cpath d='M2.5 8h11'/%3E%3Cpath d='M2.5 12h7'/%3E%3C/svg%3E");
+  --icon-doc-templates: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M4 2h5l3 3v9H4z'/%3E%3Cpath d='M9 2v3h3'/%3E%3C/svg%3E");
+  --icon-tags: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M2.5 2.5h5l6 6-5 5-6-6z'/%3E%3Ccircle cx='5.6' cy='5.6' r='1'/%3E%3C/svg%3E");
+}
+
+/* --------------------------------------------------------------------------
    3. Typography
    -------------------------------------------------------------------------- */
 
@@ -160,13 +179,20 @@
   margin-bottom: 0.35rem;
 }
 
-.pir-kicker svg {
-  width: 0.85rem;
-  height: 0.85rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
+/* Glyph as a mask, so it takes the section hue rather than shipping a colour
+   that would be wrong in one of the two schemes. */
+.pir-kicker::before {
+  content: "";
+  width: 0.8rem;
+  height: 0.8rem;
   flex: none;
+  background-color: var(--sect-hue);
+  -webkit-mask-image: var(--sect-icon);
+  mask-image: var(--sect-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 /* A short rule under the page title, in the section's hue. Deliberately
@@ -240,22 +266,47 @@
     font-weight: 600;
   }
 
-  /* Section glyph, injected by the nav partial. */
-  .md-nav__section-icon {
+  /* Section glyph. Drawn as a masked pseudo-element rather than inline SVG so
+     that Material's own nav item markup never has to be forked. */
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link::before,
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link::before {
+    content: "";
     width: 0.85rem;
     height: 0.85rem;
     flex: none;
-    fill: none;
-    stroke: var(--card-hue, currentColor);
-    stroke-width: 1.5;
+    background-color: var(--card-hue, currentColor);
+    -webkit-mask-image: var(--card-icon);
+    mask-image: var(--card-icon);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
   }
 
-  .md-nav__count {
+  /* Document count, supplied as a string by the nav partial. Sits before
+     Material's own expand chevron. */
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link::after,
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link::after {
+    content: var(--card-count, "");
+    order: 1;
     margin-left: auto;
+    padding-left: 0.4rem;
     font-size: 0.68rem;
     font-variant-numeric: tabular-nums;
     color: var(--md-default-fg-color--light);
     font-weight: 500;
+  }
+
+  /* The count is a pseudo-element and lays out last by default, reading as
+     "Incidents ⌄ 23". With navigation.indexes a nested item's header is a
+     div.md-nav__container holding the link and a separate <label> carrying the
+     chevron, so the flex child to reorder is that label — not the icon span
+     inside it. Ordering it after the count puts the number with the label it
+     counts and leaves the chevron acting on the card. */
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container > label.md-nav__link {
+    order: 2;
+    margin-left: 0.35rem;
+    padding: 0;
   }
 }
 

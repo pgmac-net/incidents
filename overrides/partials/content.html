@@ -1,0 +1,43 @@
+{#-
+  Overrides Material's content.html to add two things: a section kicker above
+  the page title, and the incident metadata block directly below it.
+
+  The metadata block has to land *after* the H1, but the H1 is inside the
+  already-rendered page.content blob, so it cannot be placed by ordinary
+  template composition. Rather than make .md-content__inner a flex container
+  and reorder its children — which would change margin collapsing for every
+  element Material lays out inside it — this splices the block in after the
+  first </h1>. There is exactly one H1 per page, so the count of 1 is not a
+  guard against ambiguity so much as a statement that only the title is meant.
+
+  Kept otherwise identical to upstream; revisit on Material upgrades.
+-#}
+{% include "partials/tags.html" %}
+{% include "partials/actions.html" %}
+
+{%- if page and page.meta and page.meta.severity -%}
+  {%- set section_label = "Incidents" -%}
+{%- elif page and page.url.startswith("runbooks/") and not page.is_index -%}
+  {%- set section_label = "Runbooks" -%}
+{%- else -%}
+  {%- set section_label = none -%}
+{%- endif -%}
+
+{%- if section_label %}
+  <p class="pir-kicker">{{ section_label }}</p>
+{%- endif %}
+
+{% if "<h1" not in page.content %}
+  <h1>{{ page.title | d(config.site_name, true)}}</h1>
+{% endif %}
+
+{%- set pir_meta %}{% include "partials/pir-meta.html" %}{% endset -%}
+{%- if pir_meta | trim -%}
+  {{ page.content | replace("</h1>", "</h1>" ~ pir_meta, 1) }}
+{%- else -%}
+  {{ page.content }}
+{%- endif -%}
+
+{% include "partials/source-file.html" %}
+{% include "partials/feedback.html" %}
+{% include "partials/comments.html" %}
