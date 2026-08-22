@@ -1,3 +1,13 @@
-mkdocs>=1.5.0
-mkdocs-material>=9.5.0
+# MkDocs 2.0 removes the plugin system and rewrites the theming system, with no
+# migration path — it would break every plugin below and the overrides/ theme
+# directory. See https://squidfunk.github.io/mkdocs-material/blog/2026/02/18/mkdocs-2.0/
+# Upper bounds are deliberate: do not relax without testing both builds.
+mkdocs>=1.6,<2
+mkdocs-material>=9.7,<10
 pymdown-extensions>=10.0
+
+# Nav ordering — incidents sorted newest-first (src/incidents/.nav.yml)
+mkdocs-awesome-nav>=3.3,<4
+
+# Build-time generation of the home page recent-incidents list and section counts
+mkdocs-macros-plugin>=1.5,<2

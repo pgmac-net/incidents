@@ -1,0 +1,3 @@
+# Directory is doc-templates/ to avoid colliding with MkDocs' own templates
+# concept; the section reads as "Templates" in the nav.
+title: Templates

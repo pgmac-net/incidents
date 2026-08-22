@@ -1,0 +1,9 @@
+# Top-level section order. Without this, sections sort alphabetically and land
+# as Home, Tags, Doc templates, Incidents, Runbooks — burying the two sections
+# people actually come here for.
+nav:
+  - index.md
+  - incidents
+  - runbooks
+  - doc-templates
+  - tags.md
