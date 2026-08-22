@@ -1,4 +1,5 @@
 ---
+title: "KCM stale terminatingReplicas"
 tags:
   - runbook
   - kine

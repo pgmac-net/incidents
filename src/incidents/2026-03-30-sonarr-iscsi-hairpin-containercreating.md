@@ -1,4 +1,11 @@
 ---
+title: "2026-03-30 Sonarr iSCSI hairpin NAT"
+date: 2026-03-30
+severity: P2
+resolution: "Resolved"
+duration: "Unknown silent failure period + ~45m active investigation and recovery"
+impact: >-
+  Single service outage — Sonarr completely unavailable.
 tags:
   - sonarr
   - iscsi
@@ -9,12 +16,7 @@ tags:
 
 # Post Incident Review: Sonarr Outage Due to iSCSI Hairpin NAT Failure on k8s03
 
-**Date:** 2026-03-30
-**Duration:** Unknown silent failure period + ~45m active investigation and recovery
-**Severity:** P2 (single service outage — Sonarr completely unavailable)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

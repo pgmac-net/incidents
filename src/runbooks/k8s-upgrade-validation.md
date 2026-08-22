@@ -1,4 +1,5 @@
 ---
+title: "k8s post-upgrade validation"
 tags:
   - runbook
   - microk8s

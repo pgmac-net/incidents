@@ -1,4 +1,13 @@
 ---
+title: "2026-05-18 k8s03 kine watch + VXLAN corruption"
+date: 2026-05-18
+severity: P2
+resolution: "Resolved"
+duration: "~2h10m active (~14:00 AEST → ~16:10 AEST)"
+impact: >-
+  Cross-node traffic blackholed; multiple workloads stuck
+  Pending/Terminating/CrashLoopBackOff; calico-node unable to start for 35+
+  min. Cluster fully operational; all non-OpenEBS pods Running.
 tags:
   - k8s03
   - calico
@@ -12,12 +21,7 @@ tags:
 
 # Post Incident Review: k8s03 Extended Recovery — kine Watch Corruption, VXLAN Route Corruption, and Kubelet Watch Stream Stall
 
-**Date:** 2026-05-18
-**Duration:** ~2h10m active (~14:00 AEST → ~16:10 AEST)
-**Severity:** High (cross-node traffic blackholed; multiple workloads stuck Pending/Terminating/CrashLoopBackOff; calico-node unable to start for 35+ min)
-**Status:** Resolved (cluster fully operational; all non-OpenEBS pods Running)
 
----
 
 ## Executive Summary
 

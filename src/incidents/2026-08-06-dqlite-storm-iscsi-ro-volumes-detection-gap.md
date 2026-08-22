@@ -1,4 +1,12 @@
 ---
+title: "2026-08-06 Read-only volume cascade"
+date: 2026-08-06
+severity: P2
+resolution: "Resolved"
+duration: "~17h 57m (~03:03 AEST → ~21:00 AEST)"
+impact: >-
+  Two services fully down, four more silently failing writes, ~17h of unsaved
+  game-server state discarded.
 tags:
   - k8s02
   - k8s03
@@ -15,12 +23,7 @@ tags:
 
 # Post Incident Review: pvek8s Read-Only Volume Cascade — dqlite Storm, iSCSI Starvation, and a 17-Hour Action Gap
 
-**Date:** 2026-08-06
-**Duration:** ~17h 57m (~03:03 AEST → ~21:00 AEST)
-**Severity:** High (two services fully down, four more silently failing writes, ~17h of unsaved game-server state discarded)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

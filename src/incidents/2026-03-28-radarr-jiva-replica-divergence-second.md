@@ -1,4 +1,11 @@
 ---
+title: "2026-03-28 Radarr jiva replica divergence (2nd)"
+date: 2026-03-28
+severity: P2
+resolution: "Resolved"
+duration: "~30h silent failure + ~50m active recovery"
+impact: >-
+  Single service outage — Radarr completely unavailable.
 tags:
   - openebs
   - radarr
@@ -9,10 +16,7 @@ tags:
 
 # Post Incident Review: Radarr Outage — OpenEBS Jiva Replica Divergence (Second Occurrence)
 
-**Date:** 2026-03-28
-**Duration:** ~30h silent failure + ~50m active recovery
-**Severity:** High (single service outage — Radarr completely unavailable)
-**Status:** Resolved
+
 **Linear:** [PGM-115](https://linear.app/pgmac-net-au/issue/PGM-115/pir-radarr-outage-openebs-jiva-replica-divergence-second-occurrence)
 **Second occurrence** on the same PVC — see also [Radarr Outage Due to OpenEBS Jiva Replica Divergence](2026-02-22-radarr-openebs-jiva-replica-divergence.md)
 

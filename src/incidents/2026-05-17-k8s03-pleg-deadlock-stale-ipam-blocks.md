@@ -1,4 +1,13 @@
 ---
+title: "2026-05-17 k8s03 PLEG deadlock"
+date: 2026-05-17
+severity: P2
+resolution: "Resolved"
+duration: "~9 hours active (23:30 AEST 2026-05-17 → 08:45 AEST 2026-05-18)"
+impact: >-
+  K8s03 node deadlocked; recurring across multiple restart attempts; workloads
+  disrupted. K8s03 uncordoned and fully operational as of 2026-05-22; see
+  follow-up note below.
 tags:
   - k8s03
   - calico
@@ -13,12 +22,7 @@ tags:
 
 # Post Incident Review: k8s03 PLEG Deadlock — Stale Calico IPAM Blocks + Generic PLEG Serial-Poll Vulnerability
 
-**Date:** 2026-05-17 (resolved 2026-05-18)
-**Duration:** ~9 hours active (23:30 AEST 2026-05-17 → 08:45 AEST 2026-05-18)
-**Severity:** High (k8s03 node deadlocked; recurring across multiple restart attempts; workloads disrupted)
-**Status:** Resolved (k8s03 uncordoned and fully operational as of 2026-05-22; see follow-up note below)
 
----
 
 ## Executive Summary
 

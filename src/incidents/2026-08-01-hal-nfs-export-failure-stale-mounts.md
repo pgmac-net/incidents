@@ -1,4 +1,12 @@
 ---
+title: "2026-08-01 hal NFS export failure"
+date: 2026-08-01
+severity: P2
+resolution: "Resolved"
+duration: "~8h 5m total (~02:59 AEST → ~11:04 AEST); ~7h 17m undetected, ~48m active remediation"
+impact: >-
+  12 pods across 3 namespaces lost their storage; one user-visible outage;
+  SQLite data-integrity exposure.
 tags:
   - k8s01
   - k8s02
@@ -12,12 +20,7 @@ tags:
 
 # Post Incident Review: hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap
 
-**Date:** 2026-08-01
-**Duration:** ~8h 5m total (~02:59 AEST → ~11:04 AEST); ~7h 17m undetected, ~48m active remediation
-**Severity:** High (12 pods across 3 namespaces lost their storage; one user-visible outage; SQLite data-integrity exposure)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

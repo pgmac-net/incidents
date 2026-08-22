@@ -4,9 +4,14 @@
   Renders the frontmatter contract that replaced the four bold prose lines that
   used to sit under every PIR's H1:
 
-    severity  P1 | P2 | P3 | P4   (validated at build time in main.py)
-    status    Resolved, Monitoring, ...
-    date      YYYY-MM-DD
+    severity    P1 | P2 | P3 | P4   (validated at build time in main.py)
+    resolution  Resolved, Monitoring, ...
+    date        YYYY-MM-DD
+
+  Named `resolution` rather than the more obvious `status` because `status` is
+  reserved by Material: it maps front matter to an `extra.status` icon and
+  renders a marker next to every nav entry. Using it here put an
+  unknown-status glyph on all 23 incidents.
     duration  free text
     impact    free text, one or two sentences
 
@@ -21,8 +26,8 @@
   <div class="pir-meta">
     <div class="pir-meta__row">
       <span class="sev sev--{{ sev }}">{{ page.meta.severity }}</span>
-      {%- if page.meta.status %}
-        <span class="pir-meta__status">{{ page.meta.status }}</span>
+      {%- if page.meta.resolution %}
+        <span class="pir-meta__status">{{ page.meta.resolution }}</span>
       {%- endif %}
       {%- if page.meta.date or page.meta.duration %}
         <span class="pir-meta__facts">

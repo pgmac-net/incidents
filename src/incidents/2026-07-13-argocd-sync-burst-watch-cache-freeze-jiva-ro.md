@@ -1,4 +1,12 @@
 ---
+title: "2026-07-13 ArgoCD sync burst — jiva read-only"
+date: 2026-07-13
+severity: P3
+resolution: "Resolved"
+duration: "~1h 8m active (~20:17 AEST → ~21:25 AEST); one contributing failure (corrupt jiva replica) pre-existed undetected for 14 days"
+impact: >-
+  Two media services on dead storage ~35–45 min, one workspace volume on
+  degraded redundancy; control plane self-healed in 76 s; no data loss.
 tags:
   - k8s01
   - k8s02
@@ -16,12 +24,7 @@ tags:
 
 # Post Incident Review: pvek8s Storage Cascade — ArgoCD Sync Burst, Watch-Cache Freeze, and jiva iSCSI Read-Only Volumes
 
-**Date:** 2026-07-13
-**Duration:** ~1h 8m active (~20:17 AEST → ~21:25 AEST); one contributing failure (corrupt jiva replica) pre-existed undetected for 14 days
-**Severity:** Medium (two media services on dead storage ~35–45 min, one workspace volume on degraded redundancy; control plane self-healed in 76 s; no data loss)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

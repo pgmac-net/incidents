@@ -1,4 +1,11 @@
 ---
+title: "2026-02-22 Radarr jiva replica divergence"
+date: 2026-02-22
+severity: P2
+resolution: "Resolved"
+duration: "~16h30m silent failure + ~47m active recovery (22:25 AEST 2026-02-21 → 18:48 AEST 2026-02-22)"
+impact: >-
+  Single service outage — Radarr completely unavailable.
 tags:
   - openebs
   - radarr
@@ -9,12 +16,7 @@ tags:
 
 # Post Incident Review: Radarr Outage Due to OpenEBS Jiva Replica Divergence
 
-**Date:** 2026-02-22
-**Duration:** ~16h30m silent failure + ~47m active recovery (22:25 AEST 2026-02-21 → 18:48 AEST 2026-02-22)
-**Severity:** High (single service outage — Radarr completely unavailable)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

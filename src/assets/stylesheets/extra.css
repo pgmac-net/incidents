@@ -347,10 +347,14 @@
 .md-typeset .sev--p3, .sev--p3 { color: var(--sev-p3); background: var(--sev-p3-bg); }
 .md-typeset .sev--p4, .sev--p4 { color: var(--sev-p4); background: var(--sev-p4-bg); }
 
-/* Markdown inline code styling would otherwise fight the badge. */
+/* Badges are authored as spans in the index tables and emitted as spans by
+   pir-meta.html. If one is ever written as inline code instead, strip the code
+   chrome so the badge's own colours are what shows. */
 .md-typeset code.sev {
-  background: var(--sev-p4-bg);
+  background: inherit;
+  color: inherit;
   box-shadow: none;
+  padding: 0.1rem 0.42rem;
 }
 
 /* --------------------------------------------------------------------------

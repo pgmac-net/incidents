@@ -1,4 +1,12 @@
 ---
+title: "2026-07-09 Watch-cache freeze — remediation gap"
+date: 2026-07-09
+severity: P2
+resolution: "Resolved"
+duration: "~5h 19m active (~02:03 AEST → ~07:22 AEST)"
+impact: >-
+  Zero pod scheduling cluster-wide for 5+ hours; existing workloads
+  unaffected; no data loss.
 tags:
   - k8s01
   - k8s02
@@ -13,12 +21,7 @@ tags:
 
 # Post Incident Review: pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Auto-Remediation Delivery Failure
 
-**Date:** 2026-07-09
-**Duration:** ~5h 19m active (~02:03 AEST → ~07:22 AEST)
-**Severity:** High (zero pod scheduling cluster-wide for 5+ hours; existing workloads unaffected; no data loss)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

@@ -1,4 +1,12 @@
 ---
+title: "2026-06-24 k8s02 watch-cache freeze"
+date: 2026-06-24
+severity: P2
+resolution: "Resolved"
+duration: "~4h active (Nagios alert ~20:20 UTC → recovery ~00:20 UTC 2026-06-25); underlying dqlite disruption at 16:16 UTC"
+impact: >-
+  KCM stalled cluster-wide; zero pod creations for ~4h; running workloads
+  unaffected.
 tags:
   - k8s02
   - dqlite
@@ -12,12 +20,7 @@ tags:
 
 # Post Incident Review: k8s02 Watch-Cache Freeze — Ansible Parallel dqlite Restart Stalls Pod Creation
 
-**Date:** 2026-06-24
-**Duration:** ~4h active (Nagios alert ~20:20 UTC → recovery ~00:20 UTC 2026-06-25); underlying dqlite disruption at 16:16 UTC
-**Severity:** High (KCM stalled cluster-wide; zero pod creations for ~4h; running workloads unaffected)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

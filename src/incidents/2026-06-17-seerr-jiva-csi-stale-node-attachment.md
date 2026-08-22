@@ -1,4 +1,12 @@
 ---
+title: "2026-06-17 seerr Jiva CSI stale attachment"
+date: 2026-06-17
+severity: P3
+resolution: "Resolved"
+duration: "~31m active (~21:02 AEST → ~21:33 AEST)"
+impact: >-
+  Single service unavailable; no data loss; recovery required manual CSI state
+  surgery.
 tags:
   - k8s01
   - k8s03
@@ -10,12 +18,7 @@ tags:
 
 # Post Incident Review: seerr Jiva CSI Stale Node Attachment — PVC Stuck After Cross-Node Rescheduling
 
-**Date:** 2026-06-17
-**Duration:** ~31m active (~21:02 AEST → ~21:33 AEST)
-**Severity:** Medium (single service unavailable; no data loss; recovery required manual CSI state surgery)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

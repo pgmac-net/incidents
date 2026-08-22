@@ -1,4 +1,11 @@
 ---
+title: "2026-05-15 AWX pod pending — Calico RBAC gap"
+date: 2026-05-15
+severity: P3
+resolution: "Resolved"
+duration: "~13 min silent (pod never scheduled) + ~8 min to fix + ~1.5h total including maintenance"
+impact: >-
+  AWX CI/CD jobs failing repeatedly; no user-facing homelab services impacted.
 tags:
   - calico
   - awx
@@ -9,12 +16,7 @@ tags:
 
 # Post Incident Review: AWX Automation Pod Stuck Pending — Calico RBAC Gap + dqlite Write Storm
 
-**Date:** 2026-05-15
-**Duration:** ~13 min silent (pod never scheduled) + ~8 min to fix + ~1.5h total including maintenance
-**Severity:** Medium (AWX CI/CD jobs failing repeatedly; no user-facing homelab services impacted)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

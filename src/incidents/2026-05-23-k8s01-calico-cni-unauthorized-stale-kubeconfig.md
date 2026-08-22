@@ -1,4 +1,12 @@
 ---
+title: "2026-05-23 k8s01 Calico CNI unauthorized"
+date: 2026-05-23
+severity: P3
+resolution: "Resolved"
+duration: "~1h active (~12:01 AEST → ~13:01 AEST)"
+impact: >-
+  6 PVC replicas stuck Terminating; Jiva redundancy reduced to 2-of-3 per
+  affected PVC; no service outage.
 tags:
   - k8s01
   - calico
@@ -11,12 +19,7 @@ tags:
 
 # Post Incident Review: k8s01 Calico CNI Unauthorized — Stale Pod-Bound Token After Calico Upgrade
 
-**Date:** 2026-05-23
-**Duration:** ~1h active (~12:01 AEST → ~13:01 AEST)
-**Severity:** Medium (6 PVC replicas stuck Terminating; Jiva redundancy reduced to 2-of-3 per affected PVC; no service outage)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

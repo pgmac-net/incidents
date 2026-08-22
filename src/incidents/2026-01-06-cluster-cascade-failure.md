@@ -1,4 +1,11 @@
 ---
+title: "2026-01-06 Cluster cascade failure"
+date: 2026-01-06
+severity: P1
+resolution: "Resolved"
+duration: "~8 hours (estimated 09:00 - 17:00 AEST)"
+impact: >-
+  Complete cluster instability, multiple service outages.
 tags:
   - dqlite
   - kubelet
@@ -12,12 +19,7 @@ tags:
 
 # Post Incident Review: Cascading Kubernetes Cluster Failures
 
-**Date:** 2026-01-06
-**Duration:** ~8 hours (estimated 09:00 - 17:00 AEST)
-**Severity:** Critical (Complete cluster instability, multiple service outages)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

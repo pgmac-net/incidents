@@ -1,4 +1,12 @@
 ---
+title: "2026-07-11 Watch-cache freeze — watchdog lockout"
+date: 2026-07-11
+severity: P2
+resolution: "Resolved"
+duration: "~3h 0m scheduling outage (~02:32 AEST → ~05:32 AEST); ~5h 40m total including storage collateral (~02:15 → ~07:55)"
+impact: >-
+  100% of new pod scheduling stopped cluster-wide for ~3h; existing workloads
+  kept running.
 tags:
   - k8s01
   - k8s02
@@ -13,12 +21,7 @@ tags:
 
 # Post Incident Review: pvek8s Scheduling Outage — k8s03 Watch-Cache Freeze and Stale-Unit Watchdog Lockout
 
-**Date:** 2026-07-11
-**Duration:** ~3h 0m scheduling outage (~02:32 AEST → ~05:32 AEST); ~5h 40m total including storage collateral (~02:15 → ~07:55)
-**Severity:** High (100% of new pod scheduling stopped cluster-wide for ~3h; existing workloads kept running)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 
