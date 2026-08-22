@@ -48,6 +48,8 @@ def _incident_files() -> list[Path]:
 
 
 def define_env(env):
+    """Register the macros available to pages that opt into rendering."""
+
     @env.macro
     def recent_incidents(count: int = 5) -> str:
         """Render the most recent incidents, newest first.
@@ -70,7 +72,7 @@ def define_env(env):
             title = str(meta.get("title", path.stem))
             # Titles are date-prefixed for the sidebar; the date has its own
             # column here, so drop the duplicate.
-            label = title[len(date):].strip() if title.startswith(date) else title
+            label = title[len(date) :].strip() if title.startswith(date) else title
             badge = (
                 f'<span class="sev sev--{severity.lower()}">{escape(severity)}</span>'
                 if severity
