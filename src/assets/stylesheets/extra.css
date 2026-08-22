@@ -104,6 +104,7 @@
    known sections sits on the neutral rather than inheriting nothing. */
 [data-md-color-scheme] {
   --sect-hue: var(--sect-home);
+  --link-hue: var(--md-accent-fg-color);
 }
 
 /* --------------------------------------------------------------------------
@@ -214,18 +215,47 @@
    -------------------------------------------------------------------------- */
 
 @media screen and (min-width: 76.25em) {
+  /* The sidebar's own title is site_name, which the header bar already shows
+     and index.md's H1 repeats — three copies of "Post-Incident Reviews" in one
+     viewport. It exists to title the mobile drawer, where the header is not
+     visible, so it is hidden only at desktop width. */
+  .md-nav--primary > .md-nav__title {
+    display: none;
+  }
+
   .md-nav--primary > .md-nav__list {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.7rem;
     padding-right: 0.4rem;
   }
 
   .md-nav--primary > .md-nav__list > .md-nav__item {
     background: var(--card-bg);
-    border: 1px solid var(--card-rule);
-    border-left: 2px solid var(--card-hue, var(--card-rule));
+    border: 1px solid color-mix(in srgb, var(--card-hue, var(--card-rule)) 42%, transparent);
+    border-left: 3px solid var(--card-hue, var(--card-rule));
     padding: 0;
+  }
+
+  /* Tinted header band, in the section's own hue. */
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container {
+    background: color-mix(in srgb, var(--card-hue, transparent) 12%, transparent);
+    color: var(--card-hue, var(--md-default-fg-color));
+  }
+
+  /* When a top-level *page* is the active page, Material converts it to a
+     nested item: a <label for="__toc"> header, a duplicate <a> self-link, and
+     the page's own table of contents inlined. On Tags that renders "Tags",
+     then "Tags" again, then every tag anchor the right-hand contents column is
+     already listing.
+
+     Keep the real link, drop the label and the inlined contents. Desktop only —
+     in the mobile drawer there is no right-hand column, so it is the only
+     contents there is. */
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link[for="__toc"],
+  .md-nav--primary .md-nav--secondary {
+    display: none;
   }
 
   /* Material indents nested nav with a left border; the card supplies the
@@ -317,6 +347,28 @@
 .md-nav--secondary .md-nav__link--active {
   color: var(--sect-hue);
   font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   6b. Body links in the section hue
+   --------------------------------------------------------------------------
+   --link-hue is bound per page in main.html: the section's own hue inside the
+   three content sections, and the steel-blue accent on Home and Tags, whose
+   slate identity would make links read as disabled.
+
+   Scoped to .md-typeset so it applies to prose only — chrome, nav and footer
+   links keep Material's own colours. Underlines stay on hover, so colour is
+   never the only thing marking a link.
+   -------------------------------------------------------------------------- */
+
+.md-typeset a {
+  color: var(--link-hue);
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--link-hue);
+  text-decoration: underline;
 }
 
 /* --------------------------------------------------------------------------

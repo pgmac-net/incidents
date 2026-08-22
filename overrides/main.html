@@ -28,7 +28,20 @@
   inherit downward only. Binding --sect-hue on :root would look up a token that
   does not exist at that level and resolve to nothing.
 #}
+{#
+  Body links take the section hue, so a link's colour says where you are. Only
+  the three content sections opt in: Home and Tags are slate, and slate links
+  read as disabled rather than clickable, so those pages keep the steel-blue
+  accent. Card identity and link affordance are therefore separate properties —
+  --sect-hue can be a quiet neutral without dragging link colour down with it.
+#}
+{% if section_slug in ['incidents', 'runbooks', 'doc-templates'] %}
+  {% set link_hue = 'var(--sect-' ~ section_slug ~ ')' %}
+{% else %}
+  {% set link_hue = 'var(--md-accent-fg-color)' %}
+{% endif %}
+
 {% block extrahead %}
   {{ super() }}
-  <style>body[data-md-color-scheme]{--sect-hue:var(--sect-{{ section_slug }});--sect-icon:var(--icon-{{ section_slug }});}</style>
+  <style>body[data-md-color-scheme]{--sect-hue:var(--sect-{{ section_slug }});--sect-icon:var(--icon-{{ section_slug }});--link-hue:{{ link_hue }};}</style>
 {% endblock %}
