@@ -18,6 +18,8 @@
   {% set section_slug = _seg %}
 {% elif (page.url or '').startswith('tags') %}
   {% set section_slug = 'tags' %}
+{% elif (page.url or '').startswith('decisions') %}
+  {% set section_slug = 'decisions' %}
 {% else %}
   {% set section_slug = 'home' %}
 {% endif %}

@@ -43,6 +43,7 @@
   --sect-incidents:               #3A5FA8;
   --sect-runbooks:                #0E6E67;
   --sect-doc-templates:           #6A4C9C;
+  --sect-decisions:               #596272;
   --sect-tags:                    #596272;
 
   /* Severity — warm ramp, reserved */
@@ -83,6 +84,7 @@
   --sect-incidents:               #7FA0DC;
   --sect-runbooks:                #48ADA4;
   --sect-doc-templates:           #A88BDC;
+  --sect-decisions:               #98A2B3;
   --sect-tags:                    #98A2B3;
 
   --sev-p1:                       #E96A6A;
@@ -123,6 +125,7 @@
   --icon-incidents: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M8 2.5 14.5 13.5h-13z'/%3E%3Cpath d='M8 6.5v3'/%3E%3Cpath d='M8 11.3v.3'/%3E%3C/svg%3E");
   --icon-runbooks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M2.5 4h11'/%3E%3Cpath d='M2.5 8h11'/%3E%3Cpath d='M2.5 12h7'/%3E%3C/svg%3E");
   --icon-doc-templates: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M4 2h5l3 3v9H4z'/%3E%3Cpath d='M9 2v3h3'/%3E%3C/svg%3E");
+  --icon-decisions: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v12'/%3E%3Cpath d='M3 5h10'/%3E%3Cpath d='M3 5 1.5 9h3z'/%3E%3Cpath d='M13 5l1.5 4h-3z'/%3E%3C/svg%3E");
   --icon-tags: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M2.5 2.5h5l6 6-5 5-6-6z'/%3E%3Ccircle cx='5.6' cy='5.6' r='1'/%3E%3C/svg%3E");
 }
 

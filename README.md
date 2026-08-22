@@ -8,6 +8,8 @@ Published at **https://incidents.pgmac.net.au/**
 
 - **[Incidents](src/incidents/)** — PIRs documenting what went wrong, why, and how it was fixed
 - **[Runbooks](src/runbooks/)** — Step-by-step recovery procedures for known failure modes
+- **[Templates](src/doc-templates/)** — PIR and runbook templates, with section-by-section guidance
+- **[Decisions](src/decisions.md)** — ADRs covering how the site itself works
 
 ## Local Development
 
@@ -47,10 +49,15 @@ Why do I make all of this public? A few reasons:
 ### New PIR
 
 1. Name: `YYYY-MM-DD-brief-description.md`
-2. Location: `src/incidents/`
-3. Add a row to the top of `src/incidents/index.md` (newest-first)
-4. Follow `src/doc-templates/pir-template.md`
-5. Use the `/create-pir` skill to automate the full flow — see [Skills](#skills) above
+2. Location: `src/incidents/` — the nav discovers it automatically, newest-first
+3. Frontmatter must carry `title`, `date`, `severity` (`P1`–`P4`), `duration`, and normally
+   `resolution` and `impact`. `main.py` fails the build on a missing field or an unknown
+   severity. Never use `status:` — it is reserved by Material; use `resolution:`
+4. Add a row to the top of `src/incidents/index.md` (newest-first), with severity as a badge:
+   `<span class="sev sev--p2">P2</span>`
+5. Follow `src/doc-templates/pir-template.md` — it documents the full frontmatter contract.
+   Do not write the Date/Duration/Severity/Status block into the body; it is rendered
+6. Use the `/create-pir` skill to automate the full flow — see [Skills](#skills) above
 
 ### New Runbook
 
@@ -63,5 +70,19 @@ Why do I make all of this public? A few reasons:
 
 ### CI
 
-- `validate.yml` — MkDocs strict build on every PR
+- `validate.yml` — strict build of **both** configs on every PR
 - `deploy.yml` — builds and deploys to GitHub Pages on merge to `main`
+
+### Build configuration
+
+`mkdocs-base.yml` holds everything shared. `mkdocs.yml` (internal) and
+`incidents-mkdoc.yml` (public) are `INHERIT` plus their own `site_url`/`site_dir`, so a
+theme change made once applies to both. Neither declares a `nav` — pages are discovered
+from `src/` and ordered by `.nav.yml` files.
+
+`main.py` generates the home page's recent-incidents list and section counts from PIR
+frontmatter, and validates that frontmatter at build time. Macro rendering is opt-in
+(`render_macros: true`), because two documents quote Kubernetes errors containing literal
+`{{ }}` that Jinja would otherwise try to evaluate.
+
+Rationale for these choices is recorded in [`src/decisions.md`](src/decisions.md).

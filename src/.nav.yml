@@ -6,4 +6,5 @@ nav:
   - incidents
   - runbooks
   - doc-templates
+  - decisions.md
   - tags.md
