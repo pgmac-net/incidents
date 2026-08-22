@@ -58,6 +58,12 @@ plugins:
   - search
   - awesome-nav
   - tags
+  # render_by_default: false — two incident records quote Kubernetes CSI errors
+  # containing literal `{{ }}`, which Jinja would try to evaluate. Only pages
+  # opting in with `render_macros: true` are rendered; frontmatter validation
+  # in main.py still runs for every page.
+  - macros:
+      render_by_default: false
 
 markdown_extensions:
   - admonition
