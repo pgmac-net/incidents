@@ -1,4 +1,12 @@
 ---
+title: "2026-05-28 Post-outage kubelet + KCM stall"
+date: 2026-05-28
+severity: P2
+resolution: "Resolved"
+duration: "~5h 20m active (~20:55 AEST 2026-05-28 → ~02:15 AEST 2026-05-29) — reconstructed from session notes"
+impact: >-
+  4 media services fully unavailable; extended recovery requiring
+  kine+kubelite restart on control-plane node.
 tags:
   - k8s01
   - k8s02
@@ -17,12 +25,7 @@ tags:
 
 # Post Incident Review: pvek8s Post-Power-Outage Recovery — kubelet Volume Manager Stall and KCM Stale terminatingReplicas
 
-**Date:** 2026-05-28
-**Duration:** ~5h 20m active (~20:55 AEST 2026-05-28 → ~02:15 AEST 2026-05-29) — reconstructed from session notes
-**Severity:** High (4 media services fully unavailable; extended recovery requiring kine+kubelite restart on control-plane node)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

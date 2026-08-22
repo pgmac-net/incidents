@@ -33,9 +33,19 @@ jobs:
           uv run mkdocs --version
           echo "✅ MkDocs configuration is valid"
 
-      - name: Build site with strict mode
+      - name: Build internal site with strict mode
         run: |
           uv run mkdocs build --strict --verbose
+        env:
+          ENABLE_PDF_EXPORT: 0
+
+      # Both targets share mkdocs-base.yml, but they are separate builds and the
+      # public one is what deploys to GitHub Pages. Previously only the internal
+      # build was checked on a PR, so a config or override change could pass
+      # review and break incidents.pgmac.net.au at deploy time.
+      - name: Build public site with strict mode
+        run: |
+          uv run mkdocs build --config-file incidents-mkdoc.yml --strict --verbose
         env:
           ENABLE_PDF_EXPORT: 0
 

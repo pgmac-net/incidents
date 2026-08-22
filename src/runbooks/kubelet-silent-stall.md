@@ -1,4 +1,5 @@
 ---
+title: "Kubelet silent stall"
 tags:
   - runbook
   - microk8s

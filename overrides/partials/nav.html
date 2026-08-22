@@ -1,0 +1,77 @@
+{#-
+  Card-style section nav.
+
+  Deliberately overrides nav.html and NOT nav-item.html. nav-item.html is
+  generated, recursive, and rewritten between Material releases; forking it to
+  add an icon and a count would mean re-reconciling it on every upgrade. This
+  file is 30 lines of stable markup, so the override cost is small.
+
+  Nothing is injected into the item markup at all. Instead this emits one
+  scoped rule per top-level item binding three custom properties, and
+  extra.css turns those into the card's hue, glyph and count. Material's own
+  item rendering is left completely untouched.
+
+  The section is keyed on URL, not title, so renaming a nav label cannot
+  silently drop a section's identity — and it uses the same first-path-segment
+  rule as overrides/main.html, so the card hue and the page's --sect-hue can
+  never disagree.
+-#}
+{% import "partials/nav-item.html" as item with context %}
+{% set class = "md-nav md-nav--primary" %}
+{% if "navigation.tabs" in features %}
+  {% set class = class ~ " md-nav--lifted" %}
+{% endif %}
+{% if "toc.integrate" in features %}
+  {% set class = class ~ " md-nav--integrated" %}
+{% endif %}
+<nav class="{{ class }}" aria-label="{{ lang.t('nav') }}" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-nav__button md-logo" aria-label="{{ config.site_name }}" data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+    {{ config.site_name }}
+  </label>
+  {% if config.repo_url %}
+    <div class="md-nav__source">
+      {% include "partials/source.html" %}
+    </div>
+  {% endif %}
+
+  {%- set known = ['incidents', 'runbooks', 'doc-templates', 'decisions', 'tags'] -%}
+  <style>
+    {%- for nav_item in nav.items -%}
+      {#- Resolve this item to a section slug via its own URL, or its first
+          child's for a section (whose own url is None). -#}
+      {%- set raw = nav_item.url if nav_item.url
+            else (nav_item.children[0].url if nav_item.children else '') -%}
+      {%- set seg = (raw or '').strip('/').split('/')[0] -%}
+      {%- set slug = seg if seg in known else 'home' -%}
+
+      {#- Count real pages, excluding the section's own index page: with
+          navigation.indexes that index is promoted to the card header, so
+          counting it would report one more document than the card lists. -#}
+      {%- set ns = namespace(n = 0) -%}
+      {#- children is None, not [], on plain page items such as Home and Tags. -#}
+      {%- for child in nav_item.children or [] -%}
+        {%- if child.is_page and not child.is_index -%}
+          {%- set ns.n = ns.n + 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      .md-nav--primary > .md-nav__list > .md-nav__item:nth-child({{ loop.index }}) {
+        --card-hue: var(--sect-{{ slug }});
+        --card-icon: var(--icon-{{ slug }});
+        {%- if ns.n > 0 %}
+        --card-count: "{{ ns.n }}";
+        {%- endif %}
+      }
+    {%- endfor %}
+  </style>
+
+  <ul class="md-nav__list" data-md-scrollfix>
+    {% for nav_item in nav.items %}
+      {% set path = "__nav_" ~ loop.index %}
+      {{ item.render(nav_item, path, 1) }}
+    {% endfor %}
+  </ul>
+</nav>

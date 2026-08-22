@@ -1,4 +1,5 @@
 ---
+title: "hal NFS failure (export loss / handle invalidation)"
 tags:
   - runbook
   - nfs

@@ -1,4 +1,11 @@
 ---
+title: "2026-04-12 dqlite quorum loss — full cluster outage"
+date: 2026-04-12
+severity: P1
+resolution: "Resolved"
+duration: "7 days degraded (2/3 nodes) + ~1h 12m complete outage (2026-04-12 09:27–10:39 AEST)"
+impact: >-
+  Complete cluster outage; all NRPE checks timing out; API server unreachable.
 tags:
   - dqlite
   - quorum-loss
@@ -8,12 +15,7 @@ tags:
 
 # Post Incident Review: pvek8s Complete Cluster Outage — dqlite Quorum Loss and Ansible-Injected Invalid Flags
 
-**Date:** 2026-04-04 (degraded) → 2026-04-12
-**Duration:** 7 days degraded (2/3 nodes) + ~1h 12m complete outage (2026-04-12 09:27–10:39 AEST)
-**Severity:** Critical (complete cluster outage; all NRPE checks timing out; API server unreachable)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

@@ -1,4 +1,12 @@
 ---
+title: "2026-03-28 ARC pods pending — kubelet sync stall"
+date: 2026-03-28
+severity: P2
+resolution: "Resolved"
+duration: "~7h40m (07:07 AEST → 14:47 AEST)"
+impact: >-
+  GitHub Actions CI/CD completely unavailable — all self-hosted runners unable
+  to start.
 tags:
   - kubelet
   - arc-runners
@@ -8,12 +16,7 @@ tags:
 
 # Post Incident Review: ARC GitHub Actions Runner Pods Stuck Pending — Kubelet Sync Loop Stall and Multi-Node Degradation
 
-**Date:** 2026-03-28
-**Duration:** ~7h40m (07:07 AEST → 14:47 AEST)
-**Severity:** High (GitHub Actions CI/CD completely unavailable — all self-hosted runners unable to start)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

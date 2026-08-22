@@ -1,4 +1,12 @@
 ---
+title: "2026-04-02 dqlite snapshot bloat — crash-loop cascade"
+date: 2026-04-02
+severity: P2
+resolution: "Resolved"
+duration: "~36h (discovery 2026-04-01 ~09:00 AEST → full resolution 2026-04-02 ~18:00 AEST)"
+impact: >-
+  5 controllers crash-looping; all new pod creation silently stalled for
+  several hours; AWX and GitHub Actions CI/CD degraded.
 tags:
   - dqlite
   - calico
@@ -10,12 +18,7 @@ tags:
 
 # Post Incident Review: dqlite Snapshot Bloat → kube-apiserver Instability → Controller Crash-Loop Cascade and Watch Stream Failure
 
-**Date:** 2026-04-01 to 2026-04-02
-**Duration:** ~36h (discovery 2026-04-01 ~09:00 AEST → full resolution 2026-04-02 ~18:00 AEST)
-**Severity:** High (5 controllers crash-looping; all new pod creation silently stalled for several hours; AWX and GitHub Actions CI/CD degraded)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

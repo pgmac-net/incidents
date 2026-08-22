@@ -1,4 +1,11 @@
 ---
+title: "2026-06-05 Kernel reboot cascade"
+date: 2026-06-05
+severity: P1
+resolution: "Resolved"
+duration: "~6h 58m (~06:27 AEST → ~13:25 AEST)"
+impact: >-
+  Cluster fully non-functional; 0 user workloads schedulable for first 4h20m.
 tags:
   - k8s01
   - k8s02
@@ -16,12 +23,7 @@ tags:
 
 # Post Incident Review: pvek8s Kernel Update — Simultaneous 3-Node Reboot Cascade
 
-**Date:** 2026-06-05
-**Duration:** ~6h 58m (~06:27 AEST → ~13:25 AEST)
-**Severity:** P1 (cluster fully non-functional; 0 user workloads schedulable for first 4h20m)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

@@ -1,4 +1,12 @@
 ---
+title: "2026-06-28 dqlite lock storm — jiva deadlock"
+date: 2026-06-28
+severity: P2
+resolution: "Resolved"
+duration: "~11h 11m total degradation (~12:46 AEST → ~23:57 AEST); ~52m active recovery (~23:05 AEST → ~23:57 AEST)"
+impact: >-
+  Three PVCs with all replicas crashing for 10+ hours; iSCSI volumes at risk
+  of going read-only; no complete data loss.
 tags:
   - k8s01
   - k8s02
@@ -15,12 +23,7 @@ tags:
 
 # Post Incident Review: pvek8s dqlite WAL Lock Storm — Jiva Controller Endpoint Deadlock
 
-**Date:** 2026-06-28
-**Duration:** ~11h 11m total degradation (~12:46 AEST → ~23:57 AEST); ~52m active recovery (~23:05 AEST → ~23:57 AEST)
-**Severity:** High (three PVCs with all replicas crashing for 10+ hours; iSCSI volumes at risk of going read-only; no complete data loss)
-**Status:** Resolved
 
----
 
 ## Executive Summary
 

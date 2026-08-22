@@ -1,54 +1,78 @@
+---
+title: Home
+render_macros: true
+---
+
 # Post-Incident Reviews
 
-Welcome to the internal Post-Incident Review (PIR) documentation site. This site contains detailed analyses of system incidents, root cause investigations, and lessons learned.
+What broke on the pvek8s homelab cluster, why it broke, and how it was fixed.
+Every incident here is a real outage with a real recovery — written up so the
+next person hitting it, usually future-me, does not have to rediscover it.
 
-## Purpose
+<div class="home-grid">
+  <a class="home-card" href="incidents/" style="--card-hue: var(--sect-incidents); --card-icon: var(--icon-incidents);">
+    <span class="home-card__title">Incidents</span>
+    <span class="home-card__desc">{{ section_count('incidents') }} reviews — what went wrong, and the causal chain behind it</span>
+  </a>
+  <a class="home-card" href="runbooks/" style="--card-hue: var(--sect-runbooks); --card-icon: var(--icon-runbooks);">
+    <span class="home-card__title">Runbooks</span>
+    <span class="home-card__desc">{{ section_count('runbooks') }} procedures — recover a known failure mode, cold</span>
+  </a>
+  <a class="home-card" href="doc-templates/" style="--card-hue: var(--sect-doc-templates); --card-icon: var(--icon-doc-templates);">
+    <span class="home-card__title">Templates</span>
+    <span class="home-card__desc">{{ section_count('doc-templates') }} templates — start a new PIR or runbook</span>
+  </a>
+  <a class="home-card" href="tags/" style="--card-hue: var(--sect-tags); --card-icon: var(--icon-tags);">
+    <span class="home-card__title">Tags</span>
+    <span class="home-card__desc">Browse by node, service or technology</span>
+  </a>
+</div>
 
-Post-incident reviews are critical for:
+## Recent incidents
 
-- **Learning from failures** - Understanding what went wrong and why
-- **Preventing recurrence** - Implementing safeguards and preventive measures
-- **Improving systems** - Identifying architectural and operational improvements
-- **Knowledge sharing** - Building team expertise and institutional memory
+{{ recent_incidents(5) }}
 
-## PGMac . Net Service Status
+[All incidents](incidents/){ .md-button }
 
-These documents are an artefact to give clarity and detail on incidents discovered and communicated through my [Nagios Status Page](https://statuspage.pgmac.net.au/)
+## About this site
 
-## PIR Structure
+Incidents are discovered and communicated through my
+[Nagios status page](https://statuspage.pgmac.net.au/); these documents are the
+detail behind those alerts.
 
-Each post-incident review follows a standard structure:
+A post-incident review is not a blame document. Each one exists to extract the
+maximum learning from a failure: what the causal chain actually was, which
+monitoring gap let it run undetected, and what concrete work came out of it.
+Every PIR ends with trackable action items. If an incident produced none, it
+was either trivial or not investigated deeply enough.
 
-1. **Executive Summary** - High-level overview of the incident
-2. **Timeline** - Detailed chronological sequence of events
-3. **Root Causes** - Analysis of underlying issues
-4. **Impact** - Affected services, duration, and scope
-5. **Resolution Steps** - Actions taken to resolve the incident
-6. **Verification** - Confirmation of service restoration
-7. **Preventive Measures** - Immediate and long-term improvements
-8. **Lessons Learned** - Key takeaways and insights
-9. **Action Items** - Specific follow-up tasks with owners
+Severity is graded **P1** (cluster-wide outage) through **P4** (minor, contained).
 
-## Contributing
+??? contributing "Contributing — writing a PIR"
 
-### Creating a PIR
+    1. Name the file `YYYY-MM-DD-brief-description.md`
+    2. Put it in `src/incidents/` — the nav discovers it automatically, newest first
+    3. Add a row to the top of [the incidents index](incidents/)
+    4. Follow the [PIR structure template](doc-templates/pir-template.md), which explains
+       what belongs in each section and why
+    5. Frontmatter must carry `title`, `date`, `severity`, `resolution`, `duration` and
+       `impact` — the build fails on a missing or invalid severity
 
-1. Use the naming convention: `YYYY-MM-DD-brief-description.md`
-2. Place documents in the `src/incidents/` directory — auto-nav picks them up automatically, no `mkdocs.yml` changes needed
-3. Add a row to the top of `src/incidents/index.md` (newest-first)
-4. Follow the [PIR structure template](doc-templates/pir-template.md) — each section is explained with guidance on what to write and why
-5. Use the `/create-pir` Claude Code skill to automate the full flow (root cause analysis, runbook evaluation, GitHub Issues, commit + PR) — available from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins)
+    The `/create-pir` skill from
+    [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins) automates the
+    whole flow: root cause analysis, runbook evaluation, GitHub Issues, commit and PR.
 
-### Creating a Runbook
+??? contributing "Contributing — writing a runbook"
 
-Write a runbook when an incident has a repeatable failure mode with a concrete, step-by-step recovery procedure that an on-call could follow cold.
+    Write a runbook once a failure is understood well enough that someone could follow
+    the recovery cold.
 
-1. Use a descriptive name: `<service>-<failure-description>.md` (e.g., `calico-cni-unauthorized.md`)
-2. Place documents in the `src/runbooks/` directory — auto-nav picks them up automatically
-3. Follow the [runbook template](doc-templates/runbook-template.md) — it covers both the simple pattern (one failure mode) and the multi-mode pattern (same symptom, multiple root causes)
-4. Consider extending an existing runbook with a new failure mode section instead of creating a new file if the observable symptom is the same
-5. The `/create-pir` skill evaluates runbook needs automatically during PIR generation — available from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins)
+    1. Name it `<service>-<failure-description>.md`, e.g. `calico-cni-unauthorized.md`
+    2. Put it in `src/runbooks/`
+    3. Add a row to [the runbooks index](runbooks/)
+    4. Follow the [runbook template](doc-templates/runbook-template.md) — it covers both the
+       simple pattern and the multi-mode pattern for one symptom with several root causes
+    5. Cross-link the PIR that documented the failure
 
-## Navigation
-
-Use the navigation menu to browse incidents by date or search for specific topics using the search functionality.
+    Prefer extending an existing runbook with a new failure mode over creating a new file
+    when the observable symptom is the same.

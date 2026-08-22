@@ -1,4 +1,5 @@
 ---
+title: "Safe node restart (jiva-ctrl hosted)"
 tags:
   - runbook
   - microk8s

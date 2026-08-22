@@ -1,4 +1,5 @@
 ---
+title: "PIR structure template"
 tags: []
 ---
 
@@ -27,20 +28,51 @@ Every PIR should end with concrete, trackable action items (GitHub Issues). If a
 
 ## Section Guide
 
-### Frontmatter tags
+### Frontmatter
+
+Frontmatter is the **source of truth** for a PIR's metadata. The site reads it to
+render the severity badge and header block, to build the home page's recent-incidents
+list, and to order the navigation. Do not write the metadata into the body as prose —
+the header block below the title is generated.
 
 ```yaml
 ---
+title: 2026-08-15 hal NFS handle invalidation
+date: 2026-08-15
+severity: P2
+resolution: Resolved
+duration: ~2d 16h 38m; undetected throughout, ~17m active remediation
+impact: >-
+  Permanent loss of ~2.7 days of Home Assistant recorder history; sabnzbd
+  history unusable; all three services reported 1/1 Running the entire time.
 tags:
-  - k8s01
-  - calico
-  - networking
+  - hal
+  - nfs
+  - storage
 ---
 ```
 
-**Why:** The `tags` MkDocs plugin generates the [Tags index](../tags.md), letting you find all incidents involving a specific node or technology without reading each one. Tag liberally.
+| Field        | Required | Notes                                                                                  |
+| ------------ | -------- | -------------------------------------------------------------------------------------- |
+| `title`      | yes      | The **navigation label**, not the heading. Short and date-prefixed.                     |
+| `date`       | yes      | `YYYY-MM-DD`. Must match the date in the filename, which is what orders the nav.        |
+| `severity`   | yes      | One of `P1` `P2` `P3` `P4`. Anything else fails the build.                              |
+| `resolution` | no       | `Resolved` / `Partially Resolved` / `Monitoring`. **Not `status`** — see below.         |
+| `duration`   | yes      | Free text. Lead with the headline figure; the index table truncates at the first `;`.   |
+| `impact`     | no       | One or two sentences on what the incident actually cost. Rendered under the badge.      |
+| `tags`       | yes      | Drives the [Tags index](../tags.md). Tag liberally.                                     |
 
-**What to include:**
+**`title` is the nav label, not the heading.** Keep it short and date-prefixed
+(`2026-08-15 hal NFS handle invalidation`). The H1 stays long and descriptive. Without
+a `title`, the nav falls back to the H1 and the sidebar becomes a column of
+near-identical `Post Incident Review: pvek8s …` entries.
+
+**Use `resolution`, never `status`.** `status` is a reserved key in Material for
+MkDocs: it maps front matter to an `extra.status` icon and renders a marker beside
+every nav entry. The build still succeeds, so nothing catches it except looking at the
+rendered page. `main.py` now rejects `status` for this reason.
+
+**Tags — what to include:**
 
 | Category      | Values                                                                           |
 | ------------- | -------------------------------------------------------------------------------- |
@@ -51,25 +83,25 @@ tags:
 
 ---
 
-### Metadata block (Date, Duration, Severity, Status)
+### Severity — the P scale
 
-```
-**Date:** YYYY-MM-DD
-**Duration:** ~Xh Ym active (~HH:MM AEST → ~HH:MM AEST)
-**Severity:** High (one-line justification)
-**Status:** Resolved
-```
+Severity is graded `P1` to `P4`. The build fails on any other value, so a typo cannot
+reach the published site.
 
-**Why:** The metadata block lets readers instantly gauge the scope before investing time in the full document. Severity and duration together communicate urgency. Use the same severity level in the incidents index row.
+| Level | Criteria                                                                      |
+| ----- | ----------------------------------------------------------------------------- |
+| `P1`  | Full cluster outage or data loss; multiple services completely down           |
+| `P2`  | Single major service down; significant workload disruption; extended recovery |
+| `P3`  | Degraded redundancy; intermittent failures; no user-visible outage            |
+| `P4`  | Near-miss; caught before user impact; brief self-healing issue                |
 
-**Severity guide:**
+PIRs written before 2026-08-22 used `Critical` / `High` / `Medium` / `Low`. They were
+migrated as `Critical` → `P1`, `High` → `P2`, `Medium` → `P3`. `P4` is new and has no
+existing incidents; it gives the scale a floor rather than forcing genuinely minor
+events up into `P3`.
 
-| Level    | Criteria                                                                      |
-| -------- | ----------------------------------------------------------------------------- |
-| Critical | Full cluster outage or data loss; multiple services completely down           |
-| High     | Single major service down; significant workload disruption; extended recovery |
-| Medium   | Degraded redundancy; intermittent failures; no user-visible outage            |
-| Low      | Near-miss; caught before user impact; brief self-healing issue                |
+The severity in the [incidents index](../incidents/index.md) row must match the
+`severity` frontmatter of the document it links to.
 
 ---
 
@@ -250,6 +282,12 @@ Issues live in the repo whose code/config the action touches; `pgmac-net/homelab
 
 Priority: High / Medium / Low (matching the PIR text).
 
+**Action priority is not incident severity.** Priority ranks how urgently a piece of
+follow-up work should be done and stays on the High / Medium / Low scale, because it
+maps to GitHub Issue priority labels. Severity grades how bad the incident was and uses
+`P1`–`P4`. A `P1` outage can produce a Low-priority action, and a `P3` can produce a
+High-priority one.
+
 ---
 
 ### Technical Details
@@ -276,19 +314,20 @@ Copy this template to start a new PIR. Replace all `[...]` placeholders with act
 
 ```markdown
 ---
+title: YYYY-MM-DD [short nav label]
+date: YYYY-MM-DD
+severity: [P1 / P2 / P3 / P4]
+resolution: [Resolved / Partially Resolved / Monitoring]
+duration: ~Xh Ym active (~HH:MM AEST → ~HH:MM AEST)
+impact: >-
+  [One or two sentences on what the incident actually cost — the justification
+  that used to trail the severity word in parentheses.]
 tags:
   - k8s01
   - calico
 ---
 
 # Post Incident Review: [System] [Root Problem] — [Technical Detail]
-
-**Date:** YYYY-MM-DD
-**Duration:** ~Xh Ym active (~HH:MM AEST → ~HH:MM AEST)
-**Severity:** [Critical / High / Medium / Low] ([one-line justification])
-**Status:** [Resolved / Partially Resolved / Monitoring]
-
----
 
 ## Executive Summary
 

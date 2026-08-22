@@ -1,0 +1,11 @@
+# Incidents are named YYYY-MM-DD-*, so a descending path sort puts the newest
+# incident at the top of the nav — matching the newest-first order of the
+# index.md table. Ascending (the default) would disagree with it.
+nav:
+  - index.md
+  - glob: "*"
+    ignore_no_matches: true
+    sort:
+      by: path
+      direction: desc
+      type: natural

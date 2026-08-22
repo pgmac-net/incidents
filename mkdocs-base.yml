@@ -1,0 +1,90 @@
+# Shared configuration for both build targets.
+#
+# Consumed via INHERIT by:
+#   - mkdocs.yml           internal build  -> macro.int.pgmac.net/incidents/
+#   - incidents-mkdoc.yml  public build    -> incidents.pgmac.net.au
+#
+# Anything that is not a per-target URL or output directory belongs here, so the
+# two sites cannot drift apart. Neither build defines a nav — pages are
+# discovered from src/ and ordered by mkdocs-awesome-nav.
+
+site_name: Post-Incident Reviews
+site_description: Internal post-incident review documentation
+site_author: pgmac
+docs_dir: src/
+repo_name: pgmac-net/incidents
+repo_url: https://github.com/pgmac-net/incidents/
+
+theme:
+  name: material
+  custom_dir: overrides
+  features:
+    # Neither navigation.sections nor navigation.expand: sections must stay
+    # collapsible so only the section you are in opens, and the other section
+    # cards stay shut. Both of those features defeat that.
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - navigation.indexes
+  # primary/accent are 'custom' so the palette is defined by tokens in
+  # assets/stylesheets/extra.css. Chrome is deliberately neutral: red is
+  # reserved for severity, so that spending it on the header would devalue it.
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+plugins:
+  - search
+  - awesome-nav
+  - tags
+  # render_by_default: false — two incident records quote Kubernetes CSI errors
+  # containing literal `{{ }}`, which Jinja would try to evaluate. Only pages
+  # opting in with `render_macros: true` are rendered; frontmatter validation
+  # in main.py still runs for every page.
+  - macros:
+      render_by_default: false
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra:
+  analytics:
+    provider: google
+    property: G-4TK0898KNM
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pgmac
