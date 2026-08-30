@@ -24,12 +24,13 @@ mise run build-strict  # strict build (matches CI)
 
 ## Skills
 
-PIRs and runbooks are authored with Claude Code / OpenCode skills from
-[pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins).
+Live incidents are triaged and PIRs/runbooks are authored with Claude Code / OpenCode
+skills from [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins).
 
 | Skill              | Purpose                                                                                                  |
 | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `/create-pir`      | Generate a post-incident review: Infinite How's analysis, runbook evaluation, GitHub Issues, commit + PR |
+| `/start-incident`  | Work a live incident: open a tracking issue immediately, triage via Nagios/Slack, match a runbook, gate every mutating action on confirmation — hands off to `/create-pir` on resolution |
+| `/create-pir`      | Generate a post-incident review: Infinite How's analysis, runbook evaluation, GitHub Issues, commit + PR. Reads a `/start-incident` tracking issue as its primary source when one exists |
 | `/pickup-ticket`   | Work a GitHub Issue end-to-end: read, grill, plan, implement, PR, document                               |
 | `/grilling`        | Stress-test plans and decisions one question at a time                                                   |
 | `/domain-modeling` | Build and sharpen domain model: glossary, ADRs, terminology                                              |
