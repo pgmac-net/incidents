@@ -38,7 +38,9 @@ next person hitting it, usually future-me, does not have to rediscover it.
 
 Incidents are discovered and communicated through my
 [Nagios status page](https://statuspage.pgmac.net.au/); these documents are the
-detail behind those alerts.
+detail behind those alerts. Live incidents are worked with the `/start-incident`
+skill, which opens a tracking issue the moment triage starts so the timeline
+below is captured as it happens rather than reconstructed afterward.
 
 A post-incident review is not a blame document. Each one exists to extract the
 maximum learning from a failure: what the causal chain actually was, which
@@ -60,7 +62,9 @@ Severity is graded **P1** (cluster-wide outage) through **P4** (minor, contained
 
     The `/create-pir` skill from
     [pgmac-net/claude-plugins](https://github.com/pgmac-net/claude-plugins) automates the
-    whole flow: root cause analysis, runbook evaluation, GitHub Issues, commit and PR.
+    whole flow: root cause analysis, runbook evaluation, GitHub Issues, commit and PR. If
+    the incident was worked with `/start-incident`, its tracking issue is read as the
+    primary source instead of reconstructing the timeline from conversation alone.
 
 ??? contributing "Contributing — writing a runbook"
 
