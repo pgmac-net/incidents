@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Sev | Title | Duration |
 |------|-----|-------|----------|
+| 2026-09-02 | <span class="sev sev--p1">P1</span> | [pvek8s Total Control Plane Loss — systemd +esm4 PID 1 Segfault and Post-Reboot Storage Recovery](2026-09-02-systemd-esm4-pid1-segfault-control-plane-loss.md) | ~23h 4m |
 | 2026-08-15 | <span class="sev sev--p2">P2</span> | [hal NFS Handle Invalidation — Silent SQLite Failures Across Three Services and a 2.7-Day Detection Gap](2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md) | ~2d 16h 38m |
 | 2026-08-06 | <span class="sev sev--p2">P2</span> | [pvek8s Read-Only Volume Cascade — dqlite Storm, iSCSI Starvation, and a 17-Hour Action Gap](2026-08-06-dqlite-storm-iscsi-ro-volumes-detection-gap.md) | ~17h 57m |
 | 2026-08-01 | <span class="sev sev--p2">P2</span> | [hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap](2026-08-01-hal-nfs-export-failure-stale-mounts.md) | ~8h 5m total |
