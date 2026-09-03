@@ -89,7 +89,7 @@ Added 2026-08-06. The Jiva target never dies — the *initiator* misses its keep
 3. `ping timeout of 5 secs expired` → `detected conn error (1022)` — note **1022, not 1020**
 4. Session recovery runs 120s and fails; the block device goes offline; JBD2 aborts; ext4 remounts ro
 
-Because the trigger is node-wide rather than volume-specific, this mode hits **every Jiva volume on the affected node**, and typically **several nodes simultaneously** — on 2026-08-06 it took six volumes across k8s02 and k8s03 within seven minutes.
+Because the trigger is node-wide rather than volume-specific, this mode hits **every Jiva volume on the affected node**, and typically **several nodes simultaneously** — on 2026-08-06 it took six volumes across k8s02 and k8s03 within seven minutes; on 2026-09-03 it took ten of the cluster's eleven volumes across all three nodes within eleven minutes, including a volume that had been confirmed healthy hours earlier. Recovery both times used Fast path A below; see the [2026-09-02 PIR](../incidents/2026-09-02-systemd-esm4-pid1-segfault-control-plane-loss.md) for two additions worth checking on any recurrence: ArgoCD's `selfHeal` can be enforced by more than one app-of-apps parent (that incident needed `media`, `bork`, and `system` suspended, not just the leaf app), and a live dqlite lock-error rate is worth checking before treating a single `try: 500` scale-command failure as a fresh storm — it can also just be incidental contention from your own burst of recovery writes.
 
 **Do not go looking for an evicted jiva-ctrl in this mode.** The JivaVolume CRs stay `Ready`/`RW` throughout, and any jiva-ctrl restart you find in the logs will post-date the remount (on 2026-08-06 the ctrl pods restarted only when the watch-cache auto-remediation restarted kubelite, 12 minutes *after* the filesystems went read-only).
 
@@ -222,6 +222,20 @@ disabling auto-sync for the app first:
 ```bash
 argocd app set <app> --sync-policy none    # re-enable with --sync-policy automated
 ```
+
+**Check for an app-of-apps parent, not just the leaf app.** Suspending a
+child `Application`'s own `syncPolicy` is not sufficient if a parent
+app-of-apps still has `selfHeal` enabled — the parent reconciles the child's
+manifest (syncPolicy included) independently and will silently re-enable it
+within about a minute, undoing your suspension without reverting the scale
+command directly. Confirmed 2026-09-02 (`media` re-enabling `sonarr`'s
+syncPolicy) and 2026-09-03 (`bork` and `system` doing the same for
+`borked-craft`, `survive`, and `hass`) — see the
+[2026-09-02 PIR](../incidents/2026-09-02-systemd-esm4-pid1-segfault-control-plane-loss.md).
+If a scale-to-zero holds for under a minute then silently reverts, this is
+the most likely cause: check `kubectl get applications -n argocd` for a
+`syncOptions: [CreateNamespace=true]` app whose namespace matches the
+workload, and suspend it too before retrying.
 
 ### Fast path B — cordon then delete (2026-07-11/13; use when another node is free)
 
