@@ -1,14 +1,16 @@
 ---
-title: 2026-09-02 systemd +esm4 PID 1 segfault
+title: 2026-09-02 systemd segfault & jiva RO cascade
 date: 2026-09-02
 severity: P1
 resolution: Resolved
-duration: ~23h 4m (22:42 AEST 2 Sep → 21:46 AEST 3 Sep); ~18h undetected, ~69m total control-plane loss, ~3h 30m recovery
+duration: ~33h across two linked incidents (22:42 AEST 2 Sep → ~07:41 AEST 4 Sep); incident 1 ~23h 4m (~18h undetected, ~69m control-plane loss, ~3h30m recovery), incident 2 ~8h 44m (~7h45m undetected, ~35m active recovery)
 impact: >-
   All three pvek8s apiservers dead simultaneously for ~69 minutes with no
-  ability to schedule, restart or inspect any workload; nine pods offline up to
-  3h; ext4 corruption on two Jiva volumes and SQLite damage on a third. No data
-  was ultimately lost.
+  ability to schedule, restart or inspect any workload. A follow-on dqlite
+  storm ~24h later remounted 10 of 11 Jiva volumes read-only fleet-wide,
+  taking four external services down for up to ~8h45m. ext4 corruption
+  across five Jiva volumes and SQLite damage on two. No data was ultimately
+  lost in either incident.
 tags:
   - k8s01
   - k8s02
@@ -19,6 +21,8 @@ tags:
   - containerd
   - openebs
   - jiva
+  - iscsi
+  - calico
   - argocd
   - storage
   - monitoring
@@ -26,7 +30,7 @@ tags:
   - crash-loop
 ---
 
-# Post Incident Review: pvek8s Total Control Plane Loss — systemd +esm4 PID 1 Segfault and Post-Reboot Storage Recovery
+# Post Incident Review: pvek8s Total Control Plane Loss and Read-Only Volume Cascade — systemd +esm4 PID 1 Segfault, a Recurring dqlite/iSCSI Storm, and Two Rounds of Storage Recovery
 
 ## Executive Summary
 
@@ -41,6 +45,14 @@ Recovery required `sysrq` (`sync`, `remount read-only`, `reboot`) on each node, 
 Rebooting the nodes did not end the incident. Four further failures, each with a completely different mechanism, kept nine pods down for up to three hours afterwards: stale `nodeID` labels on nine `JivaVolume` CRs (the cross-node double-mount guard firing against nodes we had just made `Ready` again); a dirty ext4 journal on tautulli's volume; a volume root left at mode `0000` on calibreweb, which has no `fsGroup`; and genuine ext4 metadata corruption on readarr's and sonarr's volumes from the unclean shutdown, with sonarr's SQLite database additionally damaged. All were recovered without data loss — readarr's database passed `integrity_check` after `e2fsck`, and sonarr's was rebuilt with SQLite `.recover`, preserving all 39 tables and every row.
 
 Two things made this far worse than it needed to be. First, **nothing detected a dead init for 18 hours**, because every monitoring check on these nodes asks systemd whether systemd is alive. Second, roughly half the Nagios alert board was actively misleading — `check_systemd.sh` reports an unreachable D-Bus as a *service* failure, and four other scripts fabricate "unit not found" when `systemctl` times out, which read as "MicroK8s is not installed".
+
+### A second, linked incident: the dqlite storm returns
+
+Ninety minutes after the first incident closed, at 23:14 AEST on 3 Sep, a dqlite write-contention storm — the same failure class [homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) had been closed against — starved the kernel iSCSI initiator's 5-second keepalive on all three nodes at once. This is the documented **Mode B** cascade from the [jiva-ctrl-eviction-iscsi-ro-filesystem](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) runbook: `ping timeout` before any `conn error (1020)`, session recovery timing out after 120 seconds, the kernel marking the block devices offline, and ext4 journals aborting mid-write. Ten of the cluster's eleven Jiva volumes remounted read-only within an eleven-minute window (12:57–13:08 UTC) — including the one volume deliberately left untouched during the first incident's recovery because it was healthy, which is the clearest evidence this was a fresh, independent event rather than lingering damage.
+
+The read-only mounts alone produced no alert for over four and a half hours; the cascade only became visible once the affected applications' own retry loops exhausted — readarr and sonarr's deployments were reported degraded at 04:00 AEST, and jiva replica pods began crash-looping in earnest from 05:10, feeding writes back into dqlite in the exact self-reinforcing loop the (closed) `microk8s-jiva-pod-health` check warns about. By 06:49 AEST four externally-monitored services (Home Assistant, Overseerr, Readarr, Sonarr) were returning HTTP 503, alongside five more pods silently blocked on the same read-only volumes.
+
+Recovery followed the existing runbook's Fast Path A — scale each workload to zero, confirm the device and every bind-mount reference are fully released, scale back up — across nine volumes, plus a tenth (calibreweb) found separately with a milder `clean with errors` flag despite never fully remounting read-only. Two complications not previously documented surfaced along the way: ArgoCD's `selfHeal` reverted the scale-to-zero on three workloads via two app-of-apps parents (`bork`, `system`) that had to be discovered from scratch, mirroring `media`'s role in the first incident; and four pods hit the runbook's known `GetDeviceMountRefs` wedge, requiring a manual unmount of a stranded pod-path bind mount before kubelet would complete teardown. Every recovered filesystem returned `clean`, and readarr's, sonarr's and tautulli's databases all passed `PRAGMA integrity_check: ok` despite this event aborting journals mid-write rather than the first incident's clean shutdown — no data was lost. Two Jiva replicas remain in `CrashLoopBackOff` at time of writing, reporting `network is unreachable` to a healthy controller's ClusterIP from inside their own pod network namespace despite correct host-level iptables rules — a likely Calico per-pod route gap, tracked separately, not blocking service since both affected volumes hold 2-of-3 quorum.
 
 ---
 
@@ -76,7 +88,20 @@ Two things made this far worse than it needed to be. First, **nothing detected a
 | **21:22–21:24** | readarr: device imaged, `e2fsck -f -y` repairs extent-tree corruption; pod `Running`, `integrity_check: ok`, 26 authors / 372 books intact |
 | **21:28–21:36** | sonarr: ArgoCD auto-sync suspended on `media` + `sonarr`, stale bind mount unmounted, device imaged, `e2fsck -f -y` repairs bitmap/i_blocks damage |
 | **21:42–21:44** | sonarr SQLite `.recover` rebuild — `integrity_check: ok`, all 39 tables and every row preserved (188/19012/9398/21504); pod `Running` |
-| **21:46** | ArgoCD `syncPolicy` restored verbatim on both apps. **Incident resolved** |
+| **21:46** | ArgoCD `syncPolicy` restored verbatim on both apps. **Incident 1 resolved** |
+| **22:57:19–13:08 UTC, 3 Sep** | **Incident 2 begins.** dqlite storm starves iSCSI keepalive fleet-wide (`ping timeout` before `conn error (1020)` on all three nodes — Mode B); 10 of 11 Jiva volumes remount read-only by 23:08–23:35 AEST |
+| **04:00** | Nagios: `media/readarr (0/1)`, `media/sonarr (0/1)` deployments reported degraded |
+| **05:10–05:28** | Jiva replica pods begin sustained `CrashLoopBackOff`, feeding further dqlite writes |
+| **06:49** | Operator flags 4 services down (hass, overseerr, readarr, sonarr all HTTP 503) and several pods in error/CrashLoopBackOff; investigation resumes |
+| **06:50–07:00** | Root cause confirmed via Nagios alerts + kernel journal: Mode B signature present on all 3 nodes, 12:57–13:08 UTC. All 11 jiva-ctrl pods found recreated simultaneously at 17:52:52–56 UTC (03:52 AEST), all on k8s01 |
+| **07:00–07:04** | ArgoCD `syncPolicy` suspended on 10 apps (`media`, `radarr`, `readarr`, `sabnzbd`, `sonarr`, `tautulli`, `seerr`, `hass`, `survive`, `borked-craft`); 9 workloads scaled to zero |
+| **07:04–07:08** | `hass`, `borked-craft`, `survive` found reverted to `replicas: 1` — two previously-undocumented ArgoCD app-of-apps parents (`bork`, `system`) discovered and suspended; re-scaled successfully |
+| **07:06–07:08** | All 9 globalmounts confirmed released (unmounted, iSCSI logged out) across all three nodes |
+| **07:08–07:09** | All 9 workloads scaled back to 1; all Running within ~60s; RW confirmed from inside every pod |
+| **07:12–07:13** | Three jiva replica pods found still `CrashLoopBackOff`: `pvc-8eccb718-...-rep-0` (broken snapshot chain, pre-existing), `pvc-4dc1b925-...-rep-1` and `pvc-c231ecc5-...-rep-0` (`network is unreachable` to a healthy ctrl ClusterIP). Both affected volumes hold 2/3 quorum — deferred as a non-blocking follow-up |
+| **07:15–07:26** | Calibreweb found separately with `clean with errors` (never fully remounted ro); `media` app-of-apps re-suspended after reverting the first attempt; device imaged, `e2fsck -f -y`, volume root `chmod 755` (same missing-`fsGroup` recurrence as incident 1) |
+| **07:12–07:15** | readarr, sonarr, tautulli databases re-verified: `PRAGMA integrity_check: ok` on all three despite this event aborting journals mid-write (unlike incident 1's clean shutdown) |
+| **07:26–07:41** | All 12 ArgoCD `syncPolicy` values restored verbatim; Nagios confirms all 4 previously-down services cleared, all 11 JivaVolumes `Ready/RW`, dqlite lock rate back to baseline. **Incident 2 resolved** |
 
 ---
 
@@ -270,7 +295,31 @@ Its pod has `securityContext: {}` — **no `fsGroup`**. Every other volume in th
 
 ##### How was that fragility not caught before?
 
-It only surfaces when the volume is re-staged from scratch, which normal operation never does. Both of these are cases where application-level state assumed continuity that a full-cluster restart does not provide, and neither had a health check capable of distinguishing "still starting" from "permanently wedged".
+It only surfaces when the volume is re-staged from scratch, which normal operation never does. Both of these are cases where application-level state assumed continuity that a full-cluster restart does not provide, and neither had a health check capable of distinguishing "still starting" from "permanently wedged". **This chain recurred verbatim during incident 2** (calibreweb, 07:15–07:26 AEST 4 Sep) the moment its volume was re-staged for the ext4 repair — direct confirmation that the fix belongs on the workload's `fsGroup`, not in whatever happened to fix the mode last time.
+
+---
+
+#### Chain 6: The Storm Returns — dqlite Write Contention Restarts the iSCSI Cascade
+
+##### How did 10 of 11 Jiva volumes go read-only 90 minutes after incident 1 closed?
+
+A dqlite write-contention storm at 22:57–23:08 AEST starved the kernel iSCSI initiator's keepalive on all three nodes simultaneously. The kernel signature is unambiguous and present on every node: `ping timeout of 5 secs expired` **before** any `conn error (1020)`, which the existing [jiva-ctrl-eviction-iscsi-ro-filesystem](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) runbook documents as **Mode B** — the target (jiva-ctrl) stays healthy throughout; it is the initiator that misses its 5-second deadline under CPU/scheduler pressure. Session recovery timed out after 120 seconds on every affected session, the kernel marked the block devices offline, in-flight writes returned `-EIO`, and ext4 journals aborted, remounting read-only.
+
+##### How did a dqlite storm strike so soon after the first incident closed?
+
+Undetermined with certainty. The two candidate explanations are not mutually exclusive: elevated write activity from the previous night's recovery (reboots, controller migrations, scheduler churn, three separate ArgoCD sync operations) may not have fully settled by 22:57; alternatively this is simply the cluster's known recurring failure mode reasserting itself independent of the prior incident, as it has on 2026-06-28, 2026-07-07, 2026-07-11, 2026-08-06, and now 2026-09-03. [homelabia#139](https://github.com/pgmac-net/homelabia/issues/139), closed against exactly this class of storm, was flagged for review rather than reopened unilaterally, since it is not established whether its fix regressed or a different trigger reaches the same downstream storm.
+
+##### How did the storm produce a worse outcome than the 2026-08-06 precedent?
+
+2026-08-06 hit six volumes across two nodes in seven minutes. This event hit ten volumes across all three nodes within eleven minutes — including `pvc-746b2837`, the one volume this incident's own recovery had deliberately left untouched hours earlier specifically because it was healthy. Nothing about the recovery from incident 1 made the cluster more fragile to this trigger; the wider blast radius reflects how many Jiva volumes now exist on the cluster, not a regression from the first incident.
+
+##### How was the cascade not detected for over four and a half hours?
+
+The read-only mounts themselves produce no immediate alert-worthy symptom — pods can keep reporting `Running` while writes silently fail, exactly as documented in Chain 4 above and in the [2026-08-15 hal NFS PIR](2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md). Detection came only once downstream retry loops exhausted: readarr/sonarr deployments reported degraded at 04:00, and jiva replica pods began crash-looping from 05:10 — feeding further writes into dqlite in the self-reinforcing loop the (closed) `microk8s-jiva-pod-health` check's own output warns about (`sustained jiva crash-loops feed dqlite write storms`).
+
+##### How was this not prevented or detected sooner?
+
+Two gaps, both already tracked as action items from incident 1 rather than new discoveries: no alert fires on the read-only mount state itself faster than the current ~4h detection path, and the dqlite storm's root trigger remains only partially understood despite five prior occurrences. This chain adds one genuinely new gap — recovering from a fleet-wide Jiva RO event now requires knowing about **three** ArgoCD app-of-apps parents (`media`, `bork`, `system`), only one of which (`media`) was previously documented; `bork` and `system` had to be rediscovered live, under time pressure, costing several minutes and two reverted scale-down attempts.
 
 ---
 
@@ -288,20 +337,31 @@ It only surfaces when the volume is re-staged from scratch, which normal operati
 | ArgoCD redis-ha | StatefulSet 0/3; ArgoCD cache degraded | ~3h |
 | readarr | Down; ext4 + database corruption | ~3h 20m |
 | sonarr | Ran ~4h on a corrupt filesystem and damaged database | ~4h latent, ~16m remediation downtime |
+| hass, seerr (overseerr), readarr, sonarr *(incident 2)* | HTTP 503 — external Nagios host checks CRITICAL | up to ~8h45m latent, ~9m active remediation each |
+| radarr, sabnzbd, tautulli, calibreweb, 2× minecraft *(incident 2)* | Mount blocked, no external HTTP alert | up to ~8h45m latent, ~9m active remediation each |
+| Jiva replicas `pvc-8eccb718-rep-0`, `pvc-4dc1b925-rep-1`, `pvc-c231ecc5-rep-0` | `CrashLoopBackOff`; 2/3 quorum on 2 volumes | Ongoing at time of writing — not blocking service |
 
 ### Duration
 
+**Incident 1**
 - **Total incident window:** ~23h 4m (22:42 AEST 2 Sep → 21:46 AEST 3 Sep)
 - **Undetected:** ~18h 24m
 - **Total control plane loss:** ~69m
 - **Active recovery:** ~3h 30m
 - **Expected recovery time (with documented procedure):** ~45–60 min for the three-node `sysrq` reboot cycle, plus ~20 min for the stale-label sweep
 
+**Incident 2**
+- **Total incident window:** ~8h 44m (22:57 AEST 3 Sep → 07:41 AEST 4 Sep)
+- **Undetected:** ~7h 45m (first remount to operator report at 06:49)
+- **Services down (HTTP):** up to ~8h45m for the 4 externally-monitored services
+- **Active recovery:** ~35m (06:50–07:26 for the primary 10 volumes; permission-fix loop for calibreweb included)
+- **Expected recovery time (with documented procedure):** ~20–30 min once the app-of-apps hierarchy is documented (issue pgk8s#748) — most of the ~35m here was spent rediscovering `bork` and `system`
+
 ### Scope
 
-- All three nodes: k8s01, k8s02, k8s03
-- **Data loss: none.** readarr's database passed `integrity_check` after `e2fsck`; sonarr's was rebuilt via SQLite `.recover` with all 39 tables and every row preserved (188 series / 19012 episodes / 9398 episode files / 21504 history rows). Backups were captured but not needed.
-- User-visible impact: all media services and Home Assistant unavailable for up to ~3h; no ability to manage any workload cluster-wide for ~69 minutes.
+- All three nodes: k8s01, k8s02, k8s03, across both incidents
+- **Data loss: none, either incident.** readarr's database passed `integrity_check` after `e2fsck` both times it was tested; sonarr's was rebuilt via SQLite `.recover` in incident 1 (all 39 tables and every row preserved: 188 series / 19012 episodes / 9398 episode files / 21504 history rows) and re-verified `ok` after incident 2's more abrupt journal abort. Backups were captured in both incidents but never needed.
+- User-visible impact: all media services and Home Assistant unavailable for up to ~3h in incident 1, and hass/overseerr/readarr/sonarr unavailable for up to ~8h45m in incident 2; no ability to manage any workload cluster-wide for ~69 minutes during incident 1.
 
 ---
 
@@ -333,6 +393,21 @@ It only surfaces when the volume is re-staged from scratch, which normal operati
 6. readarr: imaged the device, `e2fsck -f -n` preview, then `e2fsck -f -y`; verified `integrity_check: ok`.
 7. sonarr: suspended ArgoCD auto-sync on `media` and `sonarr`, unmounted a stale bind mount left by a false unpublish, imaged the device, `e2fsck -f -y`, then SQLite `.recover` into a fresh database, verified and swapped in.
 8. Restored both ArgoCD `syncPolicy` values verbatim, including `media`'s `syncOptions`.
+
+### Phase 4: Incident 2 — Fleet-Wide Read-Only Cascade Recovery
+
+1. Confirmed the Mode B kernel signature (`ping timeout` before `conn error (1020)`) on all three nodes across the exact same 12:57–13:08 UTC window — ruled out chasing an evicted jiva-ctrl per the runbook's own guidance.
+2. Mapped all 9 affected app pods to their PVCs, owning controllers (Deployment/StatefulSet), and ArgoCD Applications.
+3. Recorded and suspended `syncPolicy` on 10 Applications (`media`, plus 9 leaf apps) before touching any workload.
+4. Scaled all 9 workloads to zero; one scale command hit a transient `database is locked (try: 500)` — checked the live dqlite rate (0–1/2min, not a storm) before retrying rather than assuming another emergency.
+5. Found `hass`, `borked-craft`, `survive` reverted to `replicas: 1` — traced to two undocumented ArgoCD app-of-apps parents (`bork`, `system`); suspended both, re-scaled successfully.
+6. Confirmed every globalmount and iSCSI session fully released on all three nodes before scaling anything back up.
+7. Cleared four `GetDeviceMountRefs` wedges (readarr, sonarr, seerr, hass) with a manual `umount` of the exact leftover bind-mount path named in the kubelite journal.
+8. Scaled all 9 workloads back to 1; verified RW from inside every pod with a `touch`/`rm` round-trip, not just `Running` status.
+9. Found calibreweb separately (`clean with errors`, never fully remounted ro) via a full filesystem-state sweep of every recovered device; repaired with the same image/`e2fsck` sequence, then hit and fixed the same missing-`fsGroup` mode-`0000` recurrence from Chain 5.
+10. Re-verified `PRAGMA integrity_check: ok` on readarr's, sonarr's and tautulli's databases given this event's more abrupt journal abort.
+11. Restored all 12 ArgoCD `syncPolicy` values verbatim (10 from step 3, plus `media` and `calibreweb` suspended a second time for the calibreweb repair).
+12. Left three jiva replica pods in `CrashLoopBackOff` as a documented, non-blocking follow-up — both affected volumes hold 2/3 quorum.
 
 ---
 
@@ -368,6 +443,30 @@ ssh k8s03 'sudo dmesg -T | grep "EXT4-fs error" | tail -1'
 # Databases intact
 sqlite3 readarr.db "PRAGMA integrity_check;"   # → ok
 sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
+```
+
+**Incident 2:**
+
+```bash
+# All 9 (then 10) globalmounts rw, no volume still ro
+for h in k8s01 k8s02 k8s03; do
+  ssh $h 'grep "jiva.csi.openebs.io.*globalmount" /proc/mounts | awk "{print \$1, \$4}"'
+done
+# → every entry "rw,relatime"
+
+# All 4 previously-down services confirmed RW from inside the pod, not just Running
+kubectl --context pvek8s exec -n media readarr-<pod> -- sh -c \
+  'touch /config/.rwtest && rm /config/.rwtest && echo RW-OK'
+# → RW-OK (repeated for sonarr, seerr, hass, and the other 5 recovered workloads)
+
+# Every syncPolicy restored to its exact recorded original
+for app in media bork system radarr readarr sabnzbd sonarr tautulli seerr hass survive borked-craft calibreweb; do
+  kubectl --context pvek8s get application -n argocd "$app" -o jsonpath='{.spec.syncPolicy}'
+done
+# → matches the pre-incident values captured before any patch
+
+# Nagios confirms all 4 down services cleared and no new criticals
+# (mcp__nagios__get_alerts) → hass/overseerr/readarr/sonarr absent from the alert list
 ```
 
 ---
@@ -411,8 +510,20 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
     - Issue: [pgmac-net/ansible#279](https://github.com/pgmac-net/ansible/issues/279)
 
 9. **Add `fsGroup` to calibreweb and make redis-ha bootstrap resilient** (Medium)
-    - Chain 5. calibreweb's missing `fsGroup` leaves its volume root unmanaged across remounts; redis-ha can deadlock permanently when all replicas are lost at once.
+    - Chain 5. calibreweb's missing `fsGroup` leaves its volume root unmanaged across remounts; redis-ha can deadlock permanently when all replicas are lost at once. Confirmed to recur verbatim on any future re-stage, since it recurred in incident 2 before this fix landed.
     - Issue: [pgmac-net/pgk8s#746](https://github.com/pgmac-net/pgk8s/issues/746)
+
+10. **Determine whether the closed dqlite-storm fix (homelabia#139) actually holds** (High)
+    - Chain 6. A storm of the exact class that issue targeted recurred 90 minutes after incident 1 closed, taking 10 of 11 Jiva volumes read-only fleet-wide. Not reopened unilaterally — flagged via comment for a call on whether the fix regressed or a different trigger reaches the same downstream failure.
+    - Issue: [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) (comment added, not reopened)
+
+11. **Investigate the Calico per-pod route gap on Jiva replica initiators** (Medium)
+    - Chain 6. Two jiva-rep pods report `network is unreachable` to a healthy jiva-ctrl ClusterIP from inside their own pod network namespace, despite correct host-level iptables rules — the same shape as the existing [calico-orphaned-pod-route](../runbooks/calico-orphaned-pod-route.md) runbook. Both affected volumes hold 2/3 quorum; not currently blocking service.
+    - Issue: [pgmac-net/homelabia#173](https://github.com/pgmac-net/homelabia/issues/173)
+
+12. **Document the ArgoCD app-of-apps hierarchy for incident responders** (Medium)
+    - Chain 6. Recovering the fleet-wide RO cascade required discovering two previously-undocumented app-of-apps parents (`bork`, `system`) live, under time pressure, after `selfHeal` reverted three scale-to-zero attempts. Only `media` was documented from incident 1.
+    - Issue: [pgmac-net/pgk8s#748](https://github.com/pgmac-net/pgk8s/issues/748)
 
 ---
 
@@ -429,6 +540,9 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
 | 7 | Raise the NRPE timeout above systemd's 25s D-Bus timeout | Medium | [pgmac-net/ansible#278](https://github.com/pgmac-net/ansible/issues/278) |
 | 8 | Stagger OS upgrades across cluster nodes with a soak period | Medium | [pgmac-net/ansible#279](https://github.com/pgmac-net/ansible/issues/279) |
 | 9 | Add `fsGroup` to calibreweb; make redis-ha bootstrap resilient | Medium | [pgmac-net/pgk8s#746](https://github.com/pgmac-net/pgk8s/issues/746) |
+| 10 | Determine whether the closed dqlite-storm fix (homelabia#139) actually holds | High | [pgmac-net/homelabia#139](https://github.com/pgmac-net/homelabia/issues/139) |
+| 11 | Investigate the Calico per-pod route gap on Jiva replica initiators | Medium | [pgmac-net/homelabia#173](https://github.com/pgmac-net/homelabia/issues/173) |
+| 12 | Document the ArgoCD app-of-apps hierarchy for incident responders | Medium | [pgmac-net/pgk8s#748](https://github.com/pgmac-net/pgk8s/issues/748) |
 
 ---
 
@@ -442,6 +556,9 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
 - **Canarying the fix.** Clearing `mountInfo` on one volume proved that hypothesis wrong before it was applied to nine.
 - **Every destructive step was verified before commitment** — `Emergency Sync complete` and `ro,relatime` confirmed before each `sysrq b`; a read-only `e2fsck -f -n` preview before every repair; device images captured before both filesystem repairs.
 - **Recovery order was re-derived from evidence, not followed by rote.** The documented order would have destroyed the last surviving apiserver.
+- **Incident 2's Mode B diagnosis took minutes, not hours,** because the exact runbook already existed from 2026-08-06 — a direct payoff of writing runbooks during incident 1 rather than treating the write-up as pure paperwork.
+- **A live dqlite lock error during recovery (`try: 500`) was checked against the current rate before reacting,** not treated as a fresh emergency — the rate was near-zero, confirming it was transient, and the retry succeeded seconds later.
+- **Verified RW from inside every pod, not just `Running` status,** which is what caught calibreweb's fsGroup recurrence and confirmed the other 9 workloads before declaring the incident closed.
 
 ### What Didn't Go Well
 
@@ -450,7 +567,9 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
 - **The cluster was patched as one unit,** turning an upstream package defect into a simultaneous three-node failure. It will recur on the same schedule unless the upgrade process changes.
 - **Rebooting all three nodes back to `Ready` re-armed the Jiva guard** against mounts that no longer existed — a foreseeable consequence of a documented failure mode that nobody had connected to multi-node reboots.
 - **sonarr ran for ~4 hours on a corrupt filesystem** and a damaged database, and was found only by a deliberate sweep. Without that sweep it would still be running that way.
-- **ArgoCD `selfHeal` fought the recovery.** Scaling a deployment to zero was reverted within a minute, and patching the child Application's `syncPolicy` was undone by the app-of-apps parent — costing time before the correct two-level suspension was identified.
+- **ArgoCD `selfHeal` fought the recovery.** Scaling a deployment to zero was reverted within a minute, and patching the child Application's `syncPolicy` was undone by the app-of-apps parent — costing time before the correct two-level suspension was identified. **This recurred in incident 2 with two more app-of-apps parents** (`bork`, `system`) that were entirely undocumented, costing several minutes and two failed scale-down attempts before both were found.
+- **A dqlite storm of the exact class a closed issue (homelabia#139) targeted recurred 90 minutes after the first incident closed,** and took ten volumes down at once — the widest blast radius of any occurrence of this failure mode to date.
+- **The snapd security-profile loop from incident 1 remains unfixed** (homelabia#171, paused mid-investigation to handle this second incident) and continues to flood the kernel log, which will make the next kernel-level fault as hard to find as this one nearly was.
 
 ---
 
@@ -458,6 +577,7 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
 
 - [2026-06-05 pvek8s Kernel Update — Simultaneous 3-Node Reboot Cascade](2026-06-05-pvek8s-kernel-reboot-cluster-recovery-failure.md) — the prior instance of fleet-wide simultaneous patching causing a cluster-wide outage; Chain 1 is the same systemic gap, with a different package.
 - [2026-06-17 seerr Jiva CSI Stale Node Attachment](2026-06-17-seerr-jiva-csi-stale-node-attachment.md) — same `nodeID` guard as Chain 3, single-pod scale.
+- [2026-08-06 pvek8s Read-Only Volume Cascade — dqlite Storm, iSCSI Starvation, and a 17-Hour Action Gap](2026-08-06-dqlite-storm-iscsi-ro-volumes-detection-gap.md) — the first occurrence of Chain 6's exact Mode B mechanism (six volumes, two nodes); this incident is its second, wider occurrence (ten volumes, three nodes).
 - [2026-08-15 hal NFS Handle Invalidation](2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md) — SQLite reporting `disk I/O error` for a storage-layer fault, as readarr did here.
 
 ---
@@ -467,3 +587,4 @@ sqlite3 sonarr.db  "PRAGMA integrity_check;"   # → ok
 - [systemd PID 1 segfault — frozen init recovery](../runbooks/systemd-pid1-frozen-init.md) — created by this PIR
 - [Jiva volume ext4 corruption after unclean shutdown](../runbooks/jiva-volume-ext4-corruption.md) — created by this PIR
 - [Jiva CSI stale node attachment](../runbooks/jiva-csi-stale-node-attachment.md) — extended with the multi-node reboot failure mode
+- [Jiva-ctrl eviction → iSCSI → EXT4 read-only](../runbooks/jiva-ctrl-eviction-iscsi-ro-filesystem.md) — Mode B section updated with this incident's ten-volume, three-node occurrence; used directly for incident 2's diagnosis and recovery
