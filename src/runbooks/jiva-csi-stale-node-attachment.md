@@ -32,9 +32,22 @@ Or, if `mountInfo` has already been partially cleared:
 desc = volume {pvc-<id>} is already mounted at more than one place: {{   }}
 ```
 
-This occurs after a pod is **force-deleted** (`--force --grace-period=0`) or its container disappears from containerd before graceful shutdown, and the replacement pod is scheduled to a **different node** than where the original pod ran.
+The Jiva CSI node plugin on the new node checks `JivaVolume.metadata.labels.nodeID` before staging. If `nodeID` points to a different node **and that node is `Ready`**, it rejects the mount regardless of whether actual mounts or iSCSI sessions are still active.
 
-The Jiva CSI node plugin on the new node checks `JivaVolume.metadata.labels.nodeID` before staging. If `nodeID` points to a different node, it rejects the mount regardless of whether actual mounts or iSCSI sessions are still active.
+There are two distinct triggers.
+
+## Quick Reference
+
+| | **Mode 1 — Single pod rescheduled** | **Mode 2 — Multi-node reboot** |
+| --- | --- | --- |
+| **Trigger** | A pod is force-deleted (`--force --grace-period=0`), or its container vanishes from containerd before graceful shutdown, and the replacement lands on a different node | All cluster nodes are rebooted and returned to `Ready` (e.g. after a [frozen-init recovery](systemd-pid1-frozen-init.md)) |
+| **Scale** | One volume | Every volume whose pod moved — nine in the 2026-09-03 incident |
+| **Old node state** | Usually still `Ready`, with live mounts and an iSCSI session | Rebooted: no mounts, no sessions, no staging dirs — nothing to clean up |
+| **Why the guard fires** | Genuine leftover attachment on the old node | Nothing is attached anywhere; restoring the old node to `Ready` re-armed a guard against a mount that no longer exists |
+| **Recovery** | Full cleanup — [Steps 1–6](#recovery) below | Clear the stale labels only — [Failure Mode 2](#failure-mode-2--multi-node-reboot) below |
+| **First observed** | 2026-06-17 | 2026-09-03 |
+
+> **Do not run Mode 1's cleanup for a Mode 2 event.** After a reboot there are no mounts or sessions to unwind, and the CSI node pod is already a fresh process. Only the CRD label is stale.
 
 ---
 
@@ -181,9 +194,81 @@ kubectl get pods -n openebs --context pvek8s | grep $PVC_ID
 
 ---
 
+## Failure Mode 2 — Multi-Node Reboot
+
+### When it occurs
+
+After every node in the cluster has been rebooted and returned to `Ready` — for example following a [systemd frozen-init recovery](systemd-pid1-frozen-init.md) or a full power event. Pods are rescheduled while the cluster is degraded, so many land on a different node than their `nodeID` label records.
+
+The guard's second condition is what bites: it only rejects when the node named in the label is `Ready`. During ordinary single-node maintenance the old node is down and the guard correctly stands aside. Rebooting *all* nodes back to health re-arms it against attachments that no longer exist anywhere.
+
+Because the kubelet was dead when these volumes stopped being used, `NodeUnstageVolume` never ran, so no label was ever cleared. Nothing reconciles `nodeID` against reality afterwards.
+
+### Detection
+
+```bash
+# Every volume's label vs. where its consumer actually is
+kubectl --context pvek8s get jivavolume -n openebs -L nodeID
+kubectl --context pvek8s get pods -A \
+  -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,NODE:.spec.nodeName,PHASE:.status.phase' \
+  --no-headers | awk '$4!="Running"'
+```
+
+Two corroborating signals confirm the label is the cause rather than a real double-mount:
+
+- A volume with **no** `nodeID` label mounts without trouble
+- A volume whose label **matches** its node keeps working throughout
+
+```bash
+# Prove nothing is actually mounted anywhere — required before clearing any label
+for h in k8s01 k8s02 k8s03; do
+  echo -n "$h jiva globalmounts: "
+  ssh $h 'grep -c "jiva.csi.openebs.io.*globalmount" /proc/mounts
+          echo -n "  iscsi sessions: "; sudo iscsiadm -m session 2>&1 | grep -c "^tcp" || echo 0'
+done
+```
+
+> The error message is misleading: it prints `spec.mountInfo` but tests the `nodeID` label. Clearing `mountInfo` changes the text to `{{   }}` and fixes nothing — do not waste time on it.
+
+### Recovery
+
+**Safety gate first.** The label is a genuine RWO double-mount guard. Only clear it for volumes proven unmounted everywhere by the Detection step. Leave alone any volume whose staging hash appears in a live mount.
+
+```bash
+# Back up all CRs first
+kubectl --context pvek8s get jivavolume -n openebs -o json > jivavolumes-prepatch.json
+
+# Canary one volume, confirm its pod starts, then do the rest
+kubectl --context pvek8s -n openebs label jivavolume $PVC_ID nodeID-
+```
+
+Each pod mounts within ~2 minutes (kubelet's retry backoff). Success is visible in the CR itself — the driver re-labels the volume with the **correct** node once staging succeeds:
+
+```bash
+kubectl --context pvek8s get jivavolume -n openebs -L nodeID
+```
+
+### Verification
+
+```bash
+kubectl --context pvek8s get pods -A --no-headers | awk '$4!="Running" && $4!="Completed"'
+# → empty (or only transient CronJob pods)
+
+kubectl --context pvek8s get jivavolume -n openebs \
+  -o custom-columns='PHASE:.status.phase,STATUS:.status.status' --no-headers | sort | uniq -c
+# → all Ready RW
+```
+
+A pod that still fails to mount after its label is cleared has a *different* problem — most likely filesystem damage from the unclean shutdown. See [jiva-volume-ext4-corruption](jiva-volume-ext4-corruption.md).
+
+---
+
 ## References
 
-- PIR: [seerr Jiva CSI Stale Node Attachment](../incidents/2026-06-17-seerr-jiva-csi-stale-node-attachment.md)
+- PIR: [seerr Jiva CSI Stale Node Attachment](../incidents/2026-06-17-seerr-jiva-csi-stale-node-attachment.md) — Failure Mode 1
+- PIR: [pvek8s Total Control Plane Loss — systemd +esm4 PID 1 Segfault](../incidents/2026-09-02-systemd-esm4-pid1-segfault-control-plane-loss.md) — Failure Mode 2
+- Related: [systemd-pid1-frozen-init.md](systemd-pid1-frozen-init.md) — the recovery that triggers Failure Mode 2
+- Related: [jiva-volume-ext4-corruption.md](jiva-volume-ext4-corruption.md) — what to check when clearing the label is not enough
 - Linear: [PGM-254](https://linear.app/pgmac-net-au/issue/PGM-254) — runbook creation ticket
 - Related: [jiva-csi-mount-proliferation.md](jiva-csi-mount-proliferation.md) — same CSI infrastructure, different failure mode (duplicate mounts from kubelite restarts, same node)
 - Related: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — iSCSI session drop from jiva-ctrl eviction
