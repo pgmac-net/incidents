@@ -162,6 +162,8 @@ kubectl exec -n openebs ${CTRL#pod/} -c jiva-controller -- \
 - Alert on prolonged CrashLoopBackOff in the `openebs` namespace — the 2026-07-13 case ran 92 restarts over 14 days unnoticed because the volume kept serving from 2/3 replicas (see PIR action items).
 - Note both jiva pod naming patterns when scoping checks: bare `pvc-<id>-jiva-rep-N` StatefulSet pods **and** `pvc-<id>-rep-N-<hash>` Deployment pods.
 
+**Recurrence — 2026-09-05 (3rd occurrence):** two replicas hit this simultaneously (`pvc-4e42a513-...-jiva-rep-2`, 421 restarts/12d; `pvc-8eccb718-...-jiva-rep-0`, 141 restarts/10h), identical signature, fixed with this runbook's wipe-and-rebuild ([homelabia#174](https://github.com/pgmac-net/homelabia/issues/174)). Detection worked as intended — `microk8s-jiva-pod-health` (added after the 2026-07-13 case) caught both — but detection alone hasn't stopped the underlying corruption trigger from recurring. Root-causing *why* it recurs is tracked separately under the storm-side lineage (#137/#140), not here.
+
 ---
 
 ## References
