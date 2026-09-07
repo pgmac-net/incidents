@@ -12,7 +12,10 @@ permissions:
 
 jobs:
   build:
-    runs-on: self-hosted
+    # GitHub-hosted: mkdocs build and artifact upload only, no homelab dependency.
+    # slim is sufficient — pure Python via uv, and no mkdocs-material social-card plugin
+    # (which would need Cairo and other system libraries).
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       id-token: write
@@ -75,6 +78,8 @@ jobs:
 
   deploy:
     needs: build
+    # self-hosted: scp's the built site to macro.int.pgmac.net, which is only
+    # reachable from the homelab network. See pgmac-net/homelabia#176.
     runs-on: self-hosted
 
     steps:

@@ -7,7 +7,10 @@ on:
 
 jobs:
   validate:
-    runs-on: self-hosted
+    # GitHub-hosted: mkdocs --strict build and markdown lint only, no homelab dependency.
+    # slim is sufficient — pure Python via uv, and no mkdocs-material social-card plugin
+    # (which would need Cairo and other system libraries).
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout code
