@@ -43,12 +43,23 @@ There are **two distinct paths** to the same ext4 read-only outcome. Both end in
 
 | | Mode A: target killed | Mode B: initiator starved |
 | --- | --- | --- |
-| **Trigger** | jiva-ctrl pod evicted/killed | dqlite write storm starves the node |
+| **Trigger** | jiva-ctrl pod evicted/killed | dqlite write storm starves the node; or any hypervisor-side I/O stall (see below) |
 | **First kernel signature** | `conn error (1020)` (TCP RST / refused) | `ping timeout of 5 secs expired` → `conn error (1022)` |
 | **jiva-ctrl state** | Restarted/evicted *before* the remount | Healthy throughout; any restart comes *after* |
 | **JivaVolume CR** | May show stale `mountInfo` | `Ready` / `RW` throughout |
 | **Blast radius** | Volumes served by that one ctrl | Every volume on the affected node(s), often several nodes at once |
 | **First observed** | 2026-05-28 | 2026-08-06 |
+
+**Mode B is not only dqlite** (2026-09-15). Anything that stalls a node's local
+I/O starves the replicas it hosts and produces the identical signature. A
+Proxmox `vzdump` snapshot backup of a node VM issues a guest-agent `fs-freeze`
+that suspends every filesystem in the guest, and took three PVCs read-only
+across two nodes. Backup **read load alone** — no freeze, backing up an
+unrelated VM — was enough to produce `ping timeout` on a k8s node, with pve2's
+average disk latency going from 0.3ms to 28–75ms. Before hunting a dqlite storm,
+check whether a backup or other hypervisor-side job was running in the window
+(`ssh root@pve2 'grep -l "$(date +%Y-%m-%d)" /var/log/vzdump/*.log'`). See
+[PIR 2026-09-15](../incidents/2026-09-15-vzdump-fsfreeze-jiva-replica-triple-fault.md).
 
 **Distinguish them first** — a `ping timeout` line before any `1020` means Mode B, and the entire "find the evicted ctrl" branch below is a dead end:
 

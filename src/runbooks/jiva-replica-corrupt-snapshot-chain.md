@@ -57,6 +57,19 @@ Failed to handle connection, err: EOF, shutdown replica...
 
 The named `volume-snap-*.img` (or the head image) is missing from the replica's data directory.
 
+**Second variant — head file present but non-empty** (2026-09-15):
+
+```
+Error Can't remove head file volume-head-029.img as it contains some data during open
+Error in request: Can't remove head file volume-head-029.img as it contains some data
+...
+Failed to handle connection, err: EOF, shutdown replica...
+```
+
+Same broken chain, opposite presentation: the replica wants to discard and
+re-link a head image it does not consider authoritative, and refuses because the
+file holds data. Recovery is identical (wipe and rebuild).
+
 ### Step 2: Confirm quorum — MANDATORY before any destructive step
 
 The rebuild wipes this replica's data. Only safe when at least 2 other replicas are RW:
@@ -69,6 +82,13 @@ kubectl exec -n openebs ${CTRL#pod/} -c jiva-controller -- \
 ```
 
 **If fewer than 2 replicas are RW: STOP.** Wiping this replica risks data loss — investigate the other replicas first.
+
+**When two replicas of the same volume are broken, the gate sets the repair
+order** (2026-09-15). With one RW replica left, no wipe is permitted at all:
+repair whichever *other* replica has a non-destructive fix first — e.g. a
+[blackholed pod route](calico-orphaned-pod-route.md), fixed by deleting the pod —
+to get back to 2 RW, and only then wipe the corrupt one. Repairing in symptom
+order instead of quorum order can leave the volume with a single copy mid-wipe.
 
 ### Step 3: Identify the backing data directory and node
 
@@ -161,6 +181,16 @@ kubectl exec -n openebs ${CTRL#pod/} -c jiva-controller -- \
 
 - Alert on prolonged CrashLoopBackOff in the `openebs` namespace — the 2026-07-13 case ran 92 restarts over 14 days unnoticed because the volume kept serving from 2/3 replicas (see PIR action items).
 - Note both jiva pod naming patterns when scoping checks: bare `pvc-<id>-jiva-rep-N` StatefulSet pods **and** `pvc-<id>-rep-N-<hash>` Deployment pods.
+
+**Recurrence — 2026-09-15 (4th and 5th occurrences):** two replicas of different
+volumes corrupted in the same window — `pvc-1908508d-...-jiva-rep-2` on k8s03 (14
+orphaned 5 GB images, no head image, ~70 GB) and `pvc-4aea2a19-...-jiva-rep-2` on
+k8s02 (13 orphaned images, no head image). Trigger identified for the first time:
+a Proxmox `vzdump` guest-agent `fs-freeze` suspended the node's filesystems
+mid-snapshot-chain update; both `volume.meta` mtimes fall inside the backup
+window. Do not run snapshot-mode backups of pvek8s node VMs with fs-freeze
+enabled — see [PIR 2026-09-15](../incidents/2026-09-15-vzdump-fsfreeze-jiva-replica-triple-fault.md).
+The orphaned images are also a silent disk-space leak: this pair held ~83 GB.
 
 **Recurrence — 2026-09-05 (3rd occurrence):** two replicas hit this simultaneously (`pvc-4e42a513-...-jiva-rep-2`, 421 restarts/12d; `pvc-8eccb718-...-jiva-rep-0`, 141 restarts/10h), identical signature, fixed with this runbook's wipe-and-rebuild ([homelabia#174](https://github.com/pgmac-net/homelabia/issues/174)). Detection worked as intended — `microk8s-jiva-pod-health` (added after the 2026-07-13 case) caught both — but detection alone hasn't stopped the underlying corruption trigger from recurring. Root-causing *why* it recurs is tracked separately under the storm-side lineage (#137/#140), not here.
 
