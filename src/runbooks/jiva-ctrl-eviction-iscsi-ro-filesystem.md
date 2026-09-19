@@ -61,6 +61,8 @@ check whether a backup or other hypervisor-side job was running in the window
 (`ssh root@pve2 'grep -l "$(date +%Y-%m-%d)" /var/log/vzdump/*.log'`). See
 [PIR 2026-09-15](../incidents/2026-09-15-vzdump-fsfreeze-jiva-replica-triple-fault.md).
 
+**A third door: moving the controller under a live consumer** (2026-09-19). Deleting a healthy `jiva-ctrl` pod on purpose — to empty a node before a reboot — makes the replicas re-register, and the controller (iSCSI target included) does not answer while a replica is being added. Seconds for most volumes, ~19 minutes for one. The initiator sees the Mode B signature (`ping timeout`, then `conn error (1022)`), even though nothing was starved. 1 of the first 3 live moves on 2026-09-19 (sonarr) went read-only this way. Do not do it with the consumer attached; scale it to zero first — see [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md#what-moving-a-controller-actually-does). If the controller stays silent for longer than a re-sync would explain, see [jiva-ctrl-replica-registration-wedge.md](jiva-ctrl-replica-registration-wedge.md).
+
 **Distinguish them first** — a `ping timeout` line before any `1020` means Mode B, and the entire "find the evicted ctrl" branch below is a dead end:
 
 ```bash
@@ -480,7 +482,7 @@ Before applying a `NoExecute` taint to or draining a node:
    done
    ```
 
-3. **If sessions exist on other nodes:** First delete the workload pods that use those PVCs, allow them to reschedule to a node NOT hosting the jiva-ctrl, and verify iSCSI re-attaches to a different controller. Then proceed with the node restart.
+3. **If sessions exist on other nodes:** First delete the workload pods that use those PVCs, allow them to reschedule to a node NOT hosting the jiva-ctrl, and verify iSCSI re-attaches to a different controller. Then proceed with the node restart. (To empty a node of controllers *before a planned reboot*, do not use this route — use the [stop-first procedure](jiva-ctrl-node-rolling-restart.md#preferred-procedure-stop-first-one-volume-at-a-time), which stops each consumer, moves its controller and restarts it once the volume is healthy.)
 
 4. **If no sessions exist:** Safe to proceed directly.
 
@@ -522,6 +524,8 @@ Node-level prevention, since there is no jiva-ctrl to migrate:
 - Linear: [PGM-221](https://linear.app/pgmac-net-au/issue/PGM-221) — log-based alerts (planned)
 - Linear: [PGM-222](https://linear.app/pgmac-net-au/issue/PGM-222) — extended jiva-ctrl tolerations (planned)
 - Runbook: [jiva-ctrl-node-rolling-restart.md](jiva-ctrl-node-rolling-restart.md) — safe pre-restart migration procedure for nodes hosting jiva-ctrl pods (prevents this failure mode)
+- Runbook: [jiva-ctrl-replica-registration-wedge.md](jiva-ctrl-replica-registration-wedge.md) — a moved controller that never reports its replicas (2026-09-19)
+- Issue: [pgmac-net/homelabia#185](https://github.com/pgmac-net/homelabia/issues/185) — source of the controller-move findings
 - Related: [jiva-csi-mount-proliferation.md](jiva-csi-mount-proliferation.md) — duplicate CSI mounts from kubelite restarts (separate but related failure mode affecting same jiva-csi-node DaemonSet)
 - Related: [kubelet-volume-manager-stall.md](kubelet-volume-manager-stall.md) — iSCSI attach failure where pods are stuck ContainerCreating (vs this runbook: pod was already Running then lost storage)
 - Related: [dqlite-write-contention.md](dqlite-write-contention.md) — KCM dqlite reconnect behaviour that causes batched evictions
