@@ -218,6 +218,12 @@ The guard's second condition is what bites: it only rejects when the node named 
 
 Because the kubelet was dead when these volumes stopped being used, `NodeUnstageVolume` never ran, so no label was ever cleared. Nothing reconciles `nodeID` against reality afterwards.
 
+### Variant: a single node reboot (2026-09-17)
+
+Multi-node is not required. After **one** node's power-cycle, `hass` sat in `ContainerCreating` for 80 minutes. Its pod had been evicted from the rebooting node and rescheduled elsewhere; the kubelet there never ran `NodeUnstageVolume` on the old node, so the label kept naming it, and once the old node returned `Ready` the guard re-armed. Any volume whose consumer moved during a node reboot can be left this way.
+
+Expect it as a routine after-reboot check — see [After the Node Returns](jiva-ctrl-node-rolling-restart.md#after-the-node-returns). A volume that was stopped **before** the reboot (stop-first) has its label cleared cleanly and is not affected. The recovery below is unchanged.
+
 ### Detection
 
 ```bash
