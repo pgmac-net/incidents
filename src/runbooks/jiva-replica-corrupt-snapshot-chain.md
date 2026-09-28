@@ -182,6 +182,13 @@ kubectl exec -n openebs ${CTRL#pod/} -c jiva-controller -- \
 - Alert on prolonged CrashLoopBackOff in the `openebs` namespace — the 2026-07-13 case ran 92 restarts over 14 days unnoticed because the volume kept serving from 2/3 replicas (see PIR action items).
 - Note both jiva pod naming patterns when scoping checks: bare `pvc-<id>-jiva-rep-N` StatefulSet pods **and** `pvc-<id>-rep-N-<hash>` Deployment pods.
 
+**When only ONE replica is good (2026-09-26/27):** a wider corruption event (e.g. the pve2 unclean-shutdown cascade — see [pve2-unclean-shutdown-thinpool-fsck-recovery.md](pve2-unclean-shutdown-thinpool-fsck-recovery.md)) can damage **two of three** replicas at once, leaving the standard "≥2 RW before wiping the third" gate impossible to satisfy. In that situation:
+
+1. **Back up the sole good replica's data directory off-host first**, to somewhere not sharing the same array, before touching either damaged replica. Verify every file by checksum, source and destination, **twice** — a `cp --sparse=always` copy of a large text file (a replica's own log, not volume data) produced a silent single-file mismatch on first copy in this incident despite a stable, repeatable-hash source read; re-copying the same file with `--sparse=never` fixed it. Do not trust a first successful-looking copy of anything on a storage stack you are actively recovering.
+2. Wipe **one** of the two damaged replicas (empty its data directory after confirming `volume.meta` is genuinely unreadable/all-NUL, not just crash-looping) and let it rejoin write-only against the sole good replica. The controller reaches quorum with good+fresh (2 members agreeing) even though the third is still damaged.
+3. Once that pair is `RW`, wipe and resync the remaining damaged replica normally.
+4. Only delete the off-host backup once the volume shows all three replicas `RW` and the application has been verified against the live data (not just "pod Running") — this incident recovered `sonarr` and `calibre-web` this way with no data loss, but the backup was the only rollback point for the entire duration of step 2.
+
 **Recurrence — 2026-09-15 (4th and 5th occurrences):** two replicas of different
 volumes corrupted in the same window — `pvc-1908508d-...-jiva-rep-2` on k8s03 (14
 orphaned 5 GB images, no head image, ~70 GB) and `pvc-4aea2a19-...-jiva-rep-2` on
