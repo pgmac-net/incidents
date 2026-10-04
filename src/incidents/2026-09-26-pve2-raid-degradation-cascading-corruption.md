@@ -75,7 +75,7 @@ The trigger for the pve2 host wedge itself — the single event that turned a ro
 | **10:25 AEST 27 Sep** | k8s01–03 started together. Post-boot audit finds further corruption: k8s03's microk8s snap corrupt (repaired by copying a hash-verified identical `.snap` from k8s01); k8s02's `/etc/sudoers` entirely zeroed (kubelite had been dying on every `sudo` call — restored from k8s01/k8s03, md5-verified identical); several k8s01 system binaries (`scp`, `ntfsclone`, `ntfscp`) corrupted (fixed via `apt reinstall`). |
 | **12:15–12:40 AEST 27 Sep** | All 8 damaged Jiva replicas wiped and resynced, including the two single-good-replica cases (wipe one damaged replica at a time to let the controller reach quorum with good+fresh). Root cause of k8s03's stalled replicas found: `calico-node`'s own container image had 51 corrupted files inside its unpacked layer — repaired by copying verified-good files from k8s01 byte-for-byte. Full containerd content-store blob rehash across all three nodes finds and clears further corrupt blobs (an n8n image, the Jiva metrics-exporter sidecar image). |
 | **13:50 AEST 27 Sep** | Staged application restore. Several apps (seerr, sabnzbd, radarr, buildkitd's local build cache) crash-loop on corrupted **unpacked** image layers or a corrupted cache database on k8s03 — a successful image pull does not guarantee an intact unpacked snapshot; fixed via image removal + re-pull (buildkitd's cache was simply wiped, no data loss, cache-only). k8s02's package integrity audit finds ~207 non-config files differing; 7 packages reinstalled. |
-| **15:50 AEST 27 Sep** | Wazuh VMs audited. 111 and 113 clean. **112 (Wazuh-Server) has genuinely zeroed core libraries (`libexpat`, `libcurl`, `libcurl-gnutls`) and a fully zeroed `/var/lib/dpkg/status`** — too broad to hand-repair. Restored wholesale from the 06:10 AEST 26 Sep `vzdump` backup instead; manager state after 07:37 AEST 26 Sep is permanently lost (alert history intact — it lives on the separate indexer VM). |
+| **15:50 AEST 27 Sep** | Wazuh VMs audited. 111 and 113 clean. **112 (Wazuh-Server) has genuinely zeroed core libraries (`libexpat`, `libcurl`, `libcurl-gnutls`) and a fully zeroed `/var/lib/dpkg/status`** — too broad to hand-repair. Restored wholesale from the 26 Sep `vzdump` backup instead (started 06:10:20 AEST); manager state after that snapshot point, **06:10:20 AEST 26 Sep**, is permanently lost (alert history intact — it lives on the separate indexer VM). *Corrected 2026-10-04: this originally read 07:37, which is when the backup finished; a snapshot-mode vzdump captures the disk as of the start of the job.* |
 | **16:30 AEST 27 Sep** | A fresh, brief RO-PVC recurrence (15:16–15:54, 8 more pods) during the vm-112 restore's own array load confirms the array is still the active hazard even with bay 3 replaced. Bay 2 (still climbing uncorrected-error count as a rebuild *survivor*, judged the riskier of the two remaining candidates) replaces bay 4 as the next swap. Full quiesce repeated. |
 | **22:25 AEST 27 Sep** | **Bay 2 rebuild complete** (~5h47m). |
 | **06:33–09:40 AEST 28 Sep** | **Bay 4 rebuild complete** (~3h06m). All 4 bays now hold a drive from this incident's replacement program except bay 1 (kept deliberately — lowest error rate throughout). |
@@ -142,6 +142,8 @@ Above the rolled-back pool, every guest's own filesystem needed its own independ
 It was caught, methodically — a read-only fsck pass before any write, per-guest rollback snapshots before the real repair, a full post-boot containerd blob rehash, and a `dpkg -V` sweep on every node — which is exactly why the incident ended in a clean, fully-verified restore rather than a second undetected corruption surfacing weeks later. The gap is upstream of all of that: nothing prevented the wedge itself, and nothing short of a forced power cycle could have ended it once it happened.
 
 → **Actionable root cause:** the trigger for the pve2 host wedge was never identified — hardware logs show nothing, and the only available recovery path (an unclean power cycle of a hyperconverged hypervisor) is itself the mechanism that caused the data loss and corruption. This is a genuine stopping point in this incident's root-cause analysis, not a gap in the investigation.
+
+> **Update 2026-10-04 — a first lead.** The previous boot's kernel journal, read after the fact, shows the host was already unwell hours before the recorded wedge, in two layers the original investigation did not look at (see the [addendum](#addendum-2-4-october-follow-up-findings)): five `hpsa` logical-volume resets between 01:42 and ~03:xx AEST (the backup run), and from **15:34 AEST** — during the bay 3 rebuild (13:33 to 16:44) — 124 LVM thin-pool metadata read errors (`btree spine: node_check failed: blocknr 0 != wanted 1067399`). The journal itself ends at 17:17:17 AEST, 41 minutes before the 17:58 wedge onset recorded above. This is a correlation, not a proven cause, but it points at the thin-pool metadata path rather than the host userland, which fits the thin-pool rollback seen on boot.
 
 ---
 
@@ -220,7 +222,7 @@ By verifying, before touching anything further, that nothing had actually been d
 | media/calibre-web | `/config` mode-000 recurrence, 3rd occurrence | Fixed live 3×; permanent fix shipped post-incident |
 | All 16 application workloads + 3 Wazuh VMs | Deliberately quiesced (scaled to 0 / stopped) across the drive-replacement program | ~13:35 AEST 26 Sep → 12:35 AEST 28 Sep (~47h, by design) |
 | k8s01, k8s02, k8s03 (guest filesystems, container images/layers, system files) | Corruption from the unclean power cycle; repaired in place | ~08:45 AEST 27 Sep → 13:50 AEST 27 Sep active repair |
-| sec/wazuh-server (VM 112) | Core libraries + `dpkg` database zeroed; restored wholesale from 26 Sep 06:10 backup | Manager state after 07:37 AEST 26 Sep lost permanently |
+| sec/wazuh-server (VM 112) | Core libraries + `dpkg` database zeroed; restored wholesale from the 26 Sep backup (snapshot point 06:10:20 AEST) | Manager state after 06:10:20 AEST 26 Sep lost permanently |
 | pve2 host | Userland wedge (ssh/NRPE/web UI unresponsive), guests unaffected | ~17:58 AEST 26 Sep → ~08:24 AEST 27 Sep (~14h26m) |
 
 ### Duration
@@ -234,7 +236,7 @@ By verifying, before touching anything further, that nothing had actually been d
 ### Scope
 
 - **Nodes/hosts affected:** pve2 (hypervisor — host wedge, RAID array, thin pool), k8s01, k8s02, k8s03 (all three — filesystem and/or container corruption), sec/wazuh-server VM (restored from backup)
-- **Data loss:** ~8GB of committed guest writes rolled back by the thin-pool repair (permanent, undetectable by filesystem check); ~8h of Home Assistant recorder history (permanent); Wazuh manager state after 07:37 AEST 26 Sep (permanent — alert history intact on the separate indexer VM). **No Jiva volume data was lost** — all 8 damaged replicas resynced from a good peer within their own volume's replication factor.
+- **Data loss:** ~8GB of committed guest writes rolled back by the thin-pool repair (permanent, undetectable by filesystem check); ~8h of Home Assistant recorder history (permanent); Wazuh manager state after 06:10:20 AEST 26 Sep (permanent — alert history intact on the separate indexer VM). **No Jiva volume data was lost** — all 8 damaged replicas resynced from a good peer within their own volume's replication factor.
 - **User-visible impact:** 7 services down for up to ~8h on 26 September; all 16 services + Wazuh unavailable by design for ~47h across the drive-replacement program.
 - **Hardware changed:** 3 of 4 RAID5 physical drives replaced (bays 2, 3, 4); bay 1 deliberately kept (lowest error rate throughout).
 
@@ -348,6 +350,56 @@ Already resolved during this incident, no further issue needed:
 
 ---
 
+## Addendum: 2-4 October Follow-up Findings
+
+*Added 2026-10-04. The incident above closed on 28 Sep with the array healthy. Six days later bay 4 failed and the array went degraded again; the follow-up was tracked in [pgmac-net/homelabia#205](https://github.com/pgmac-net/homelabia/issues/205). Everything below was found or done after the original window.*
+
+### Bay 4 failed within four days of replacement
+
+- **2 Oct ~15:45 AEST:** `hpsa` logged bay 4 (`EG0300FCVBF`, fitted 28 Sep as a "clean start" drive) as removed; the logical drive went to **Interim Recovery Mode with no redundancy** and the drive to `Failed` (`Mark bad failed`). Its non-medium error count had climbed from 267 to 974 in the three days since it was fitted.
+- **Detection gap:** the failure produced no notification. `pve2 RAID controller` had been CRITICAL since 19 Sep for a different reason (the standing unrecoverable-media-errors banner, which survives drive replacements) and was **sticky-acknowledged**; a sticky acknowledgement lasts until the service returns to OK, which it never did, so the new `Failed` drive and degraded volume were hidden behind it. `pve2 HDD health` went CRITICAL briefly and fell back to an acknowledged WARNING once the dead drive dropped out of the output.
+- **The weekly backup job was enabled again.** vzdump job `babc03b4` was found enabled with its next run at 01:00 AEST on 3 Oct, against an array with no redundancy. It was disabled by hand at ~22:40 AEST on 2 Oct. What re-enabled it was never established (the Proxmox web/API log was empty by then and local `pvesh` calls are not logged); it is not Terraform-managed.
+
+### Recovery, and what was learned about this controller
+
+New drives were a week or more away, so the array was rebuilt on a used drive removed during the original program (`EB01PC418FM81216`, 96.9k hours, 0 grown defects, a read path with 1632 uncorrected errors but a healthy write path). Things this controller (Smart Array P410i, firmware 6.64) does that the original incident log assumed otherwise:
+
+- **A free drive cage existed.** The server's second cage, port 2I, was empty and visible to the controller. The original log's "no free bay" assumption was wrong, which blocked testing a replacement drive before use. An unassigned drive in a 2I bay can be tested and blanked without touching the array.
+- **No spare can be added to a degraded array.** `ssacli ... array A add spares=...` was refused ("The array status is NOT okay. Cannot perform operation. Spare is not allowed."). The replacement has to be swapped into the failed bay, and the drive then becomes a permanent member, not a revertible spare.
+- **`modify erase` is unsupported** ("does not support any erase patterns"; `Sanitize Erase Supported: False`). A full-surface overwrite was done instead by creating a temporary single-drive RAID0 logical drive with the controller cache disabled, zero-filling it from the OS with a 60 MB/s cap (5024 s for the whole drive), spot-checking the zeros, and deleting the logical drive.
+- **The rebuild ran 08:14 to 11:29 AEST on 3 Oct (~3h15m)** under the same full quiesce as the original program (16 workloads at zero, Wazuh VMs stopped, a deny `SyncWindow`). Workloads were restored in three batches from 14:15, after a ~2h45m settle, with the array and all 11 Jiva volumes checked between each; the deny window was removed at 14:24.
+- **The persistent flags did not clear.** "Unrecoverable Media Errors", "Parity Initialization Failed" and "Last Surface Scan Completed: False" survived a full rebuild (the rebuild overwrote only bay 4). This stays with [homelabia#200](https://github.com/pgmac-net/homelabia/issues/200).
+- **Quiesce still leaves stale mounts.** Scaling the consumers down on k8s01 left terminal pods with pod-level bind mounts that blocked the kubelet from unstaging ten volumes, the known Jiva CSI stuck-unpublish pattern ([homelabia#168](https://github.com/pgmac-net/homelabia/issues/168)). Unmounting only the pod-level paths (no sandbox for the pod, no holders) cleared all ten; no pod was force-deleted.
+
+### The monitoring that should have caught it, and its repairs
+
+All fixed 3-4 Oct:
+
+- **`pve2 RAID array`** (new): a strict service that is OK until a controller, physical drive or logical drive is really not OK, with the banner left out so it never needs acknowledging. The banner stays on `pve2 RAID controller` as a WARNING. Sticky acknowledgements were removed and are not to be used on either service ([ansible#307](https://github.com/pgmac-net/ansible/pull/307)).
+- **All data points on `pve2 RAID drive health` read `-nan`.** nagiosgraph creates RRDs with a 600 s heartbeat and the check ran every 900 s, so every gap was stored as unknown. A `heartbeats` setting plus `RRDs::tune` on the 71 existing RRD files fixed it, and 64 of 550 RRDs had been affected. That check was retired in favour of `pve2 HDD health`.
+- **State files vanished on every NRPE restart.** `nagios-nrpe-server` runs with `PrivateTmp=yes`, so anything an NRPE check keeps in `/tmp` or `/var/tmp` is deleted when the service restarts. This reset the HDD growth baseline and the Jiva crash-loop clocks. All three now keep state under `/var/lib` ([ansible#308](https://github.com/pgmac-net/ansible/pull/308), [#309](https://github.com/pgmac-net/ansible/pull/309)); restarting NRPE on k8s02 left the state files untouched.
+
+### Wazuh: two faults found while checking the restore
+
+The Wazuh VMs were restored and started on 3 Oct, and the first check of them found two independent faults that pre-date the incident:
+
+- **Indexer heap exhaustion.** The indexer ran on a fixed 1 GB heap; its parent circuit breaker rejected the manager's inventory and vulnerability writes with HTTP 429 (`circuit_breaking_exception`, ~800 failures an hour on 3 Oct) while `wazuh-modulesd` burned ~86% CPU retrying. Reading the rotated `ossec.log` files shows isolated blips from 8 Sep, the first sustained run on **24 Sep at 03:28 UTC**, then bursts of hundreds to several thousand every day or two until the heap was raised to 4 GB at 10:02 UTC on 3 Oct. Alert indexing was verified unaffected (indexer hourly counts match the manager's alert files hour for hour, including the planned shutdown gap).
+- **Stale `.restart` marker.** A `wazuh-control reload` on 23 Sep (16:33 UTC) hit systemd's 45 s reload timeout and was killed before it could remove `/var/ossec/var/run/.restart`. The API treats that file as "daemons are restarting" and refuses authenticated requests while it exists, so dashboard-to-API login failed from 23 Sep until the marker was removed by hand on 3 Oct, while `wazuh-manager`, `wazuh-apid` and the systemd check all stayed green.
+- **Both are now in ansible** ([ansible-role-wazuh-config #8/#9](https://github.com/pgmac-net/ansible-role-wazuh-config)): `wazuh_indexer_heap: 4g`, a 180 s manager timeout drop-in, and a pgrep-guarded clear of a stale marker. Two Nagios checks now watch them, `wazuh-indexer-heap` and `wazuh-api` ([ansible#311](https://github.com/pgmac-net/ansible/pull/311), [#312](https://github.com/pgmac-net/ansible/pull/312)), as does `argocd-apps` for Applications stuck Progressing ([ansible#314](https://github.com/pgmac-net/ansible/pull/314)); `coder-server` and `forecastle` had sat Progressing for days on stale health with nothing alerting.
+- **One gap remains:** the manager itself (agent 000) has no vulnerability documents in the indexer despite 520 packages in its inventory. The manager was restarted on 4 Oct to force a resync; the check of the result is pending.
+
+### The vzdump run, re-read with the previous boot's journal
+
+Both backup jobs are disabled and stay so until the array is rebuilt on good drives, the pool metadata is checked offline with `thin_check`, and a supervised, bandwidth-limited single-VM test passes. The last full run (26 Sep 01:00 to 07:56 AEST, all six VMs completed) coincided with the host's first controller resets and, 7.5 hours after it ended, the thin-pool metadata errors above. That backup load caused them is **not proven**: the array was already degraded, and the 12, 15 and 19 Sep runs on the same array produced no resets. The 26 Sep archives for VMs 100, 102, 103, 111, 112 and 113 are the newest on `hal`.
+
+A caution for anyone reading `wazuh-server`'s journal: it ends at 06:10:10 AEST on 26 Sep, ten seconds before the backup began. That is a restore artifact, not an outage start, because VM 112 was restored from that backup's snapshot on 27 Sep. The Wazuh VMs' downtime on 26-28 Sep was the planned quiesce plus the restore.
+
+### Open from this addendum
+
+The array has no clean fallback: bay 4 is a used drive with 1667 uncorrected read errors (35 more during its own rebuild), bay 1 is 73k hours old with 538, and bay 3's non-medium errors were still rising at ~190 a day. Replacing bay 4, then bay 1, waits on new drives. All of it is tracked in [homelabia#205](https://github.com/pgmac-net/homelabia/issues/205) and [#200](https://github.com/pgmac-net/homelabia/issues/200).
+
+---
+
 ## Lessons Learned
 
 ### What Went Well
@@ -385,6 +437,11 @@ Already resolved during this incident, no further issue needed:
 | 4 | Fix/route around the `terraform test` crash on failing assertions with sensitive variables | Low | [pgmac-net/terraform-pvek8s#20](https://github.com/pgmac-net/terraform-pvek8s/issues/20) |
 | 5 | Replace pve2 bay 1; resolve the array's persistent Unrecoverable-Media-Errors flags | Low | [pgmac-net/homelabia#200](https://github.com/pgmac-net/homelabia/issues/200) |
 | 6 | New runbook: pve2 unclean-shutdown thin-pool + guest fsck recovery; extend Jiva replica runbook for single-good-replica quorum wipes | Done | This PR |
+| 7 | Replace temporary bay 4 drive, then bay 1, when new drives arrive; check `array A modify drives=...` on the healthy array first so the free 2I cage can be used without losing redundancy | High | [pgmac-net/homelabia#205](https://github.com/pgmac-net/homelabia/issues/205), [#200](https://github.com/pgmac-net/homelabia/issues/200) |
+| 8 | Run an offline `thin_check` on the pve2 thin-pool metadata before any backup returns; re-enable vzdump only after a supervised, bandwidth-limited single-VM test | High | [pgmac-net/homelabia#205](https://github.com/pgmac-net/homelabia/issues/205) |
+| 9 | Re-check SMART on all four bays (bay 4 uncorrected reads, bay 3 non-medium errors) a few days after the rebuild | Medium | [pgmac-net/homelabia#205](https://github.com/pgmac-net/homelabia/issues/205) |
+| 10 | Confirm agent 000 vulnerability documents reappear after the 4 Oct manager restart | Medium | [pgmac-net/homelabia#205](https://github.com/pgmac-net/homelabia/issues/205) |
+| 11 | Monitoring repairs: `pve2 RAID array`, nagiosgraph heartbeats, `/var/lib` state files, Wazuh heap and API checks, `argocd-apps` | Done | [ansible#307](https://github.com/pgmac-net/ansible/pull/307), [#308](https://github.com/pgmac-net/ansible/pull/308), [#309](https://github.com/pgmac-net/ansible/pull/309), [#311](https://github.com/pgmac-net/ansible/pull/311), [#312](https://github.com/pgmac-net/ansible/pull/312), [#314](https://github.com/pgmac-net/ansible/pull/314) |
 
 ---
 
