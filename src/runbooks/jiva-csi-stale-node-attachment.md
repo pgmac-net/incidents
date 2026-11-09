@@ -299,7 +299,7 @@ The two variants look different from the outside, which is why the second one wa
 Automated, since 2026-09-12: **`microk8s-jiva-unpublish-wedge`**, per node.
 
 - **WARNING** — an orphan pod-dir bind mount has been on that node for over 10 minutes (its pod is gone or carries a `deletionTimestamp`), or a pod on that node was refused `NodeStage` with `already mounted at more than one place`.
-- **CRITICAL** — still wedged after 30 minutes. Remediation ran and did not clear it. **A human is needed** — the event handler deliberately does not fire on CRITICAL.
+- **CRITICAL** — still wedged after 30 minutes. Remediation ran and did not clear it. **A human is needed** — the event handler deliberately does not fire on CRITICAL. The alert text ends with the outcome of the latest remediation run, so you can see why before opening the journal — see [Reading the CRITICAL text](#reading-the-critical-text).
 
 The check never keys on the string `Terminating`. In both incidents the stuck pod displayed as `Completed`: its container exited 0 on SIGTERM, so the phase is `Succeeded` while `deletionTimestamp` is set. Anything grepping `kubectl get pods` output for `Terminating` will miss this failure entirely.
 
@@ -339,10 +339,30 @@ Outcomes other than SUCCESS:
 | --- | --- | --- |
 | `FALSE ALARM` | No orphan mount by the time it ran | Nothing. It cleared itself. |
 | `DEFERRED` | kubelite not stable | Nothing yet. Check why kubelite is restarting. |
-| `REFUSED` | Rate limit hit, or kubectl unavailable, or every candidate failed a guard | Read the journal for which guard. A per-PV refusal means the same volume wedged twice inside an hour — go manual. A `processes still in old pod <uid> cgroup (<pids>)` line means the old pod really is still running something: find out why before unmounting. A refusal exits 0, so `microk8s-jiva-unpublish-remediation-health` does not flag it; the wedge check going CRITICAL is the signal ([ansible#322](https://github.com/pgmac-net/ansible/issues/322)). |
+| `REFUSED` | Rate limit hit, or kubectl unavailable, or every candidate failed a guard | Read the journal for which guard. A per-PV refusal means the same volume wedged twice inside an hour — go manual. A `processes still in old pod <uid> cgroup (<pids>)` line means the old pod really is still running something: find out why before unmounting. A refusal exits 0 on purpose, so `microk8s-jiva-unpublish-remediation-health` does not flag it; the wedge check going CRITICAL is the signal, and its text carries the refusal reason ([ansible#322](https://github.com/pgmac-net/ansible/issues/322)). |
 | `FAILED` | The umount did not clear it, or the pod is still present after 6 minutes | Follow the manual recovery below. Do **not** force-delete. |
 
 `microk8s-jiva-unpublish-remediation-health` reports CRITICAL if the transient unit is left in `failed` state or the handler could not launch it at all.
+
+### Reading the CRITICAL text
+
+Since 2026-11-10 ([ansible#347](https://github.com/pgmac-net/ansible/pull/347)) the wedge CRITICAL ends with the latest remediation run from the node's `jiva-unpublish-remediate` journal tag, looking back 60 minutes:
+
+```text
+... auto-remediation did not clear it, see runbook - last remediation 21:15Z: REFUSED [pvc-1908508d-948: processes still in old pod 25c4174c-... cgroup (1411360 1413420) - refusing]
+```
+
+| Text | Meaning | What to do |
+| --- | --- | --- |
+| `REFUSED [<pv>: processes still in old pod <uid> cgroup (<pids>)]` | The old pod really still has a process | Find out why before unmounting: `cat /proc/<pid>/cgroup`, then deal with that process. |
+| `REFUSED [<reason>]` (rate limit, kubectl unavailable) | A node-wide or per-PV circuit breaker, or no API | Go manual. A rate limit means this node or volume wedged repeatedly. |
+| `FAILED [<pv>: ...]` | The umount ran and the volume did not release | Follow the manual recovery below. Do **not** force-delete. |
+| `DEFERRED [...]` | kubelite was not stable | Check why kubelite is restarting. |
+| `SUCCESS` | The last run worked but the wedge is still reported | Either the check has not re-run since (wait one check interval), or a second wedge appeared after the run. Re-check the mount and kubelet. |
+| `none logged in 60m` | The event handler never fired | Check `microk8s-jiva-unpublish-remediation-health` and the NRPE handler wiring. |
+| `journal unreadable` | The nagios user cannot read the journal | Read it on the node: `journalctl -t jiva-unpublish-remediate`. |
+
+Only the latest run is shown. Earlier runs, and the full guard-by-guard detail, are in `journalctl -u jiva-unpublish-remediate`.
 
 ### Recovery
 
