@@ -329,7 +329,9 @@ On HARD WARNING the event handler runs `event_jiva_unpublish_remediate.sh` on th
 journalctl -u jiva-unpublish-remediate     # what it did, on the node
 ```
 
-Guards, all before any unmount: the orphan mount is re-confirmed, kubelite must have been up at least 120s, per-PV (1h) and per-node (3/hour) rate limits apply, and immediately before each `umount` the pod UID is re-verified as gone-or-terminating against the API and `fuser -m` must show nothing holding the filesystem. It then waits up to 6 minutes for the pod object to disappear and reports SUCCESS or FAILED to Slack.
+Guards, all before any unmount: the orphan mount is re-confirmed, kubelite must have been up at least 120s, per-PV (1h) and per-node (3/hour) rate limits apply, and immediately before each `umount` the pod UID is re-verified as gone-or-terminating against the API and no process may still be in the **old pod's cgroup** (`pod<uid>`, cgroupfs dash form and systemd underscore form). The final per-mount guard is the plain `umount` itself: the kernel returns `EBUSY` if anything holds that specific mount. It then waits up to 6 minutes for the pod object to disappear and reports SUCCESS or FAILED to Slack.
+
+**Same-node replacement.** In the common rolling-update case the replacement pod lands on the same node as the wedged pod. Both pods then bind-mount the same block device, one at the stale pod dir and one at the live pod dir. The guard therefore cannot ask which processes use the *filesystem*: `fuser -m` and `lsof +D` list the live pod's own processes (the Minecraft `mc-server-runner` and `java` on 2026-10-09 and 2026-11-09) and would refuse every time. Until [ansible#346](https://github.com/pgmac-net/ansible/pull/346) (deployed 2026-11-10) the script did exactly that, and a same-node wedge always escalated to CRITICAL for a manual `umount`. If you see `SKIP ...: fuser reports processes holding` in the journal, the node is running the old script.
 
 Outcomes other than SUCCESS:
 
@@ -337,7 +339,7 @@ Outcomes other than SUCCESS:
 | --- | --- | --- |
 | `FALSE ALARM` | No orphan mount by the time it ran | Nothing. It cleared itself. |
 | `DEFERRED` | kubelite not stable | Nothing yet. Check why kubelite is restarting. |
-| `REFUSED` | Rate limit hit, or kubectl unavailable, or every candidate failed a guard | Read the journal for which guard. A per-PV refusal means the same volume wedged twice inside an hour — go manual. |
+| `REFUSED` | Rate limit hit, or kubectl unavailable, or every candidate failed a guard | Read the journal for which guard. A per-PV refusal means the same volume wedged twice inside an hour — go manual. A `processes still in old pod <uid> cgroup (<pids>)` line means the old pod really is still running something: find out why before unmounting. A refusal exits 0, so `microk8s-jiva-unpublish-remediation-health` does not flag it; the wedge check going CRITICAL is the signal ([ansible#322](https://github.com/pgmac-net/ansible/issues/322)). |
 | `FAILED` | The umount did not clear it, or the pod is still present after 6 minutes | Follow the manual recovery below. Do **not** force-delete. |
 
 `microk8s-jiva-unpublish-remediation-health` reports CRITICAL if the transient unit is left in `failed` state or the handler could not launch it at all.
@@ -388,5 +390,6 @@ kubectl --context pvek8s get pods -n <namespace> -o wide
 - Related: [jiva-ctrl-eviction-iscsi-ro-filesystem.md](jiva-ctrl-eviction-iscsi-ro-filesystem.md) — iSCSI session drop from jiva-ctrl eviction
 - [homelabia#168](https://github.com/pgmac-net/homelabia/issues/168) — Failure Mode 3, first occurrence (StatefulSet, silent)
 - [homelabia#181](https://github.com/pgmac-net/homelabia/issues/181) — Failure Mode 3, second occurrence and the detection plus auto-remediation above
+- [ansible#322](https://github.com/pgmac-net/ansible/issues/322) / [ansible#346](https://github.com/pgmac-net/ansible/pull/346) — same-node replacement: `fuser -m` guard replaced by an old-pod cgroup check (first seen in [incidents#93](https://github.com/pgmac-net/incidents/issues/93), again 2026-11-09 on minecraft)
 - [homelabia#183](https://github.com/pgmac-net/homelabia/issues/183) — upstream tracking for the `NodeUnpublishVolume` false success
 - [homelabia#182](https://github.com/pgmac-net/homelabia/issues/182) — `check-jiva-volumes.py`, the manual fallback when the automation cannot fix it
