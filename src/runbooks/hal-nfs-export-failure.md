@@ -11,9 +11,10 @@ tags:
 # hal NFS Failure — Export Loss and Handle Invalidation
 
 **Service:** `hal.int.pgmac.net` (172.22.22.2, QNAP NAS) — NFS backend for `pvek8s`
-**First observed:** 2026-08-01 (Mode 1), 2026-08-15 (Mode 2)
+**First observed:** 2026-08-01 (Mode 1), 2026-08-15 (Mode 2), 2026-11-15 (Mode 3)
 **PIR:** [hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap](../incidents/2026-08-01-hal-nfs-export-failure-stale-mounts.md)
 **PIR:** [hal NFS Handle Invalidation — Silent SQLite Failures Across Three Services and a 2.7-Day Detection Gap](../incidents/2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md)
+**PIR:** [hal rpc.mountd OOM Kill — Cluster-Wide Stale NFS Mounts and a 4-Hour Overnight Gap](../incidents/2026-11-15-hal-mountd-oom-kill-stale-mounts.md)
 
 ---
 
@@ -32,9 +33,26 @@ In Mode 1 the applications also hang: they accept TCP connections and never resp
 !!! warning "Probes cannot see this"
     TCP and HTTP probes against a long-running process never touch the filesystem. A pod with completely dead storage will report `Ready` indefinitely. During the 2026-08-01 incident, 12 pods reported healthy for eight hours; during 2026-08-15, Home Assistant reported healthy while recording no history for 2.7 days.
 
-## 2 Distinct Root Causes
+## 3 Distinct Root Causes
 
-Both modes start the same way — hal invalidates previously-issued NFS file handles — but they differ in whether the RPC layer survives, and that changes the entire recovery path. **Check `rpcinfo` first:** if the RPC layer is healthy, you are in Mode 2 and there is nothing to fix on hal.
+Modes 1 and 2 start the same way: hal invalidates previously issued NFS file handles. They differ in whether the RPC layer survives, and that changes the whole recovery path. Mode 3 is different again: `nfsd` keeps running, but `rpc.mountd` dies, and mounts go stale about 25 minutes later when nfsd's export caches expire.
+
+**Check all three of these first, not `rpcinfo` alone:**
+
+```bash
+rpcinfo -t hal.int.pgmac.net nfs 3          # nfsd
+timeout 10 showmount -e hal.int.pgmac.net   # mountd actually answering
+for p in 111 2049 30000; do timeout 4 bash -c "echo >/dev/tcp/172.22.22.2/$p" 2>/dev/null && echo "$p OPEN" || echo "$p refused"; done
+```
+
+| `rpcinfo nfs 3` | `showmount -e` | 111 / 30000 | Mode |
+| --- | --- | --- | --- |
+| error | error | refused / refused | 1: export loss |
+| ready | exports listed | open / open | 2: handle invalidation (nothing to fix on hal) |
+| ready | `RPC: Unable to receive; errno = Connection refused` | open / **refused** | 3: mountd killed |
+
+!!! warning "`rpcinfo` alone misreads Mode 3 as Mode 2"
+    In Mode 3, `rpcinfo -t … nfs 3` succeeds and `rpcinfo -p` still lists `mountd` (a dead process's stale portmapper registration). Only `showmount -e` and port 30000 show that mountd is gone.
 
 ---
 
@@ -310,20 +328,105 @@ A related but **separate** problem surfaces once the stale descriptors are clear
 
 ---
 
+## Failure Mode 3 — mountd Killed (nfsd Alive)
+
+### When it occurs
+
+`rpc.mountd` on hal dies, most likely killed by the OOM killer, and nothing restarts it. `nfsd` and the portmapper keep running. On 2026-11-15 the OOM killer took mountd at `total-vm:520116kB` after about 106 days of uptime on a 256 MB appliance.
+
+### Context
+
+The kernel `nfsd` validates client file handles against export and auth caches that it fills by upcall to `rpc.mountd`. Cached entries keep working until they expire. After that, nfsd cannot revalidate a handle and clients get `ESTALE`. So mounts stay healthy for a while after mountd dies (25 minutes on 2026-11-15), then go stale node by node. No remount is possible, because remounting needs mountd. Unlike Mode 1, the handles themselves were never invalidated: once mountd is back, **every mount revalidates by itself**.
+
+Nagios fires `nfs-mountd` (port 30000 refused) within one check interval, long before any mount goes stale. If that alert is the first one, you are looking at Mode 3 and have about 25 minutes to fix it before clients notice.
+
+### Detection
+
+```bash
+# From any k8s node. nfsd alive, mountd not:
+rpcinfo -t hal.int.pgmac.net nfs 3
+# → program 100003 version 3 ready and waiting
+timeout 10 showmount -e hal.int.pgmac.net
+# → rpc mount export: RPC: Unable to receive; errno = Connection refused
+for p in 111 2049 30000; do timeout 4 bash -c "echo >/dev/tcp/172.22.22.2/$p" 2>/dev/null && echo "$p OPEN" || echo "$p refused"; done
+# → 111 OPEN / 2049 OPEN / 30000 refused
+
+# On hal: is mountd running, and was it OOM-killed? (capture dmesg early: the ring buffer wraps within hours)
+ssh hal 'ps | grep -c "[r]pc.mountd"; dmesg | grep -E "Out of memory|Killed process"'
+# → 0
+# → Killed process NNNNN (rpc.mountd) total-vm:520116kB, anon-rss:31852kB, ...
+```
+
+Blast radius: use the privileged stat sweep from Mode 1. Expect **all** hal mounts stale once the cache has expired, including `/mnt/backups` on every node.
+
+### Recovery
+
+1. **Restart NFS on hal** from the shell (the QNAP UI toggle from Mode 1 also works):
+
+    ```bash
+    ssh hal '/etc/init.d/nfs restart'
+    ```
+
+    This also restarts nfsd and starts a 90-second NFSv4 grace period. It did not disrupt v3 clients on 2026-11-15.
+
+2. **Verify mountd** from a k8s node, then prove a fresh mount:
+
+    ```bash
+    timeout 10 showmount -e hal.int.pgmac.net | grep -E "Qmultimedia|Qdownload|k8s-pvc|backups"
+    # → all four exports listed
+    sudo mkdir -p /tmp/nfsprobe && sudo timeout 20 mount -t nfs -o vers=3,ro hal.int.pgmac.net:/Qmultimedia /tmp/nfsprobe && sudo ls /tmp/nfsprobe | head -3; sudo umount /tmp/nfsprobe; sudo rmdir /tmp/nfsprobe
+    ```
+
+3. **Re-run the privileged stat sweep.** Mounts should all be OK without a remount. Only if one is still stale, follow Mode 1 steps 3–4.
+
+4. **Find processes still holding dead descriptors.** Do not restart everything: on 2026-11-15 only 1 of 9 workloads needed it. Open each NFS-path descriptor in each affected pod:
+
+    ```bash
+    kubectl --context pvek8s -n <ns> exec <pod> -- sh -c 'for p in $(ls /proc | grep -E "^[0-9]+$"); do for f in /proc/$p/fd/*; do t=$(readlink $f 2>/dev/null); case "$t" in /config*|/downloads*|/media*|/books*|/data*|/home/scanner*) dd if=$f bs=1 count=0 2>&1 | grep -qi stale && echo "STALE pid=$p $t";; esac; done; done; echo probe-done'
+    # → probe-done                                   (clean)
+    # → STALE pid=1 /home/scanner/.cache/trivy/...   (restart this one)
+    ```
+
+    Add each app's own mount prefix to the `case` pattern if it differs.
+
+5. **Restart only the pods the probe flags**, after the SQLite integrity check from Mode 1 step 5 for any that write SQLite.
+
+    !!! warning "trivy-server: cold start can crash-loop"
+        If trivy's DB aged during the outage, a restart triggers a full ~1.7 GB DB download that outlasts its liveness probe (no startupProbe in chart 0.7.0; pgmac-net/pgk8s#1108). If it crash-loops on `[vulndb] Downloading vulnerability DB...`, raise the liveness delay temporarily using [ArgoCD App-of-Apps Temporary Override](argocd-app-of-apps-temporary-override.md).
+
+### Verification
+
+```bash
+# Nagios nfs-mountd back to OK (and every node's microk8s-nfs-stale-mounts)
+ssh macro 'docker exec nagios4 /opt/nagios/libexec/check_tcp -H 172.22.22.2 -p 30000'
+# → TCP OK - 0.000 second response time on 172.22.22.2 port 30000
+
+# No stale mounts anywhere
+for n in k8s01 k8s02 k8s03; do ssh $n 'mount -t nfs,nfs4 | awk "{print \$3}" | while read m; do timeout 6 sudo -n stat "$m" >/dev/null 2>&1 || echo STALE; done | grep -c STALE'; done
+# → 0 / 0 / 0
+
+# calibre recreated itself (it cannot start while its mount is stale)
+kubectl --context pvek8s -n media get pods | grep calibre
+# → 1/1 Running
+```
+
+---
+
 ## Quick Reference
 
-| Signal | Mode 1 (Export Loss) | Mode 2 (Handle Invalidation) |
-| ------ | -------------------- | ---------------------------- |
-| `rpcinfo -t hal.int.pgmac.net nfs 3` | RPC: Remote system error | ready and waiting |
-| Ports 111 / 30000 | refused | open |
-| `showmount -e` | `clnt_create: RPC: Unable to receive` | exports listed normally |
-| `stat` on the mountpoint | Stale file handle | succeeds |
-| `df` / `touch` inside the pod | fail or hang | succeed |
-| Fresh SQLite connection to the DB | fails | succeeds, `quick_check` = `ok` |
-| App still serving traffic | No — hangs, ingress DOWN | Yes — looks completely normal |
-| Typical time to notice | hours (a user notices an outage) | days (nothing to notice) |
-| Fix | Restore NFS on hal, remount, then restart workloads | Restart the affected workloads only |
-| Data at risk? | Yes — mid-write SQLite; integrity-check before restart | No — writes fail cleanly, but unwritten data is lost for good |
+| Signal | Mode 1 (Export Loss) | Mode 2 (Handle Invalidation) | Mode 3 (mountd Killed) |
+| ------ | -------------------- | ---------------------------- | ---------------------- |
+| `rpcinfo -t hal.int.pgmac.net nfs 3` | RPC: Remote system error | ready and waiting | ready and waiting |
+| Ports 111 / 30000 | refused | open | open / **refused** |
+| `showmount -e` | `clnt_create: RPC: Unable to receive` | exports listed normally | `RPC: Unable to receive; errno = Connection refused` |
+| First Nagios alert | stale mounts / ingress DOWN | none | `nfs-mountd` CRITICAL, ~25 min before stale mounts |
+| `stat` on the mountpoint | Stale file handle | succeeds | Stale file handle (after cache expiry) |
+| `df` / `touch` inside the pod | fail or hang | succeed | fail |
+| Fresh SQLite connection to the DB | fails | succeeds, `quick_check` = `ok` | fails |
+| App still serving traffic | No — hangs, ingress DOWN | Yes — looks completely normal | Mostly; apps that restart cannot start (calibre) |
+| Typical time to notice | hours (a user notices an outage) | days (nothing to notice) | minutes if alerts are read, hours overnight |
+| Fix | Restore NFS on hal, remount, then restart workloads | Restart the affected workloads only | Restart NFS on hal; mounts self-heal; restart only fd-probe-flagged pods |
+| Data at risk? | Yes — mid-write SQLite; integrity-check before restart | No — writes fail cleanly, but unwritten data is lost for good | Low — writes fail cleanly; integrity-check SQLite before restart |
 
 ---
 
@@ -333,7 +436,7 @@ A related but **separate** problem surfaces once the stale descriptors are clear
 - **Do not restart kubelite or dqlite for this.** The control plane is not involved. Verify it is healthy and leave it alone — restarting it adds risk for no benefit.
 - **Do not trust a TCP check on 2049.** It reports healthy through this entire failure mode.
 - **Do not trust `microk8s-nfs-stale-mounts` to clear Mode 2.** That check runs `stat` against the mountpoint, which is a fresh lookup and succeeds by definition when only descriptors are stale. It passes throughout Mode 2 (see pgmac-net/ansible#263).
-- **Do not restore NFS on hal for Mode 2.** Check `rpcinfo` first. If the RPC layer is up there is nothing wrong on hal, and toggling NFS off/on invalidates handles for every *other* client that is currently fine.
+- **Do not restore NFS on hal for Mode 2.** Check `rpcinfo`, `showmount -e` and port 30000 first (see the table at the top). If the RPC layer is up there is nothing wrong on hal, and toggling NFS off/on invalidates handles for every *other* client that is currently fine.
 
 ---
 
@@ -341,6 +444,9 @@ A related but **separate** problem surfaces once the stale descriptors are clear
 
 - PIR: [hal NFS Export Failure — Cluster-Wide Stale Mounts and a 7h Detection Gap](../incidents/2026-08-01-hal-nfs-export-failure-stale-mounts.md) — Mode 1
 - PIR: [hal NFS Handle Invalidation — Silent SQLite Failures Across Three Services and a 2.7-Day Detection Gap](../incidents/2026-08-15-hal-nfs-handle-invalidation-silent-sqlite-failures.md) — Mode 2
+- PIR: [hal rpc.mountd OOM Kill — Cluster-Wide Stale NFS Mounts and a 4-Hour Overnight Gap](../incidents/2026-11-15-hal-mountd-oom-kill-stale-mounts.md) — Mode 3
+- Issue: [pgmac-net/nagios-config#68](https://github.com/pgmac-net/nagios-config/issues/68) — auto-restart mountd (Mode 3)
+- Issue: [pgmac-net/nagios-config#70](https://github.com/pgmac-net/nagios-config/issues/70) — hal memory monitoring
 - Issue: [pgmac-net/incidents#67](https://github.com/pgmac-net/incidents/issues/67) — this runbook
 - Issue: [pgmac-net/ansible#263](https://github.com/pgmac-net/ansible/issues/263) — fd-level stale handle detection (Mode 2 is invisible to current checks)
 - Issue: [pgmac-net/pgk8s#675](https://github.com/pgmac-net/pgk8s/issues/675) — move remaining SQLite configs off `nfs-csi`
