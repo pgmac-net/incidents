@@ -2,6 +2,7 @@
 title: "2026-08-01 hal NFS export failure"
 date: 2026-08-01
 severity: P2
+services: [nfs-storage, monitoring]
 resolution: "Resolved"
 duration: "~8h 5m total (~02:59 AEST → ~11:04 AEST); ~7h 17m undetected, ~48m active remediation"
 impact: >-

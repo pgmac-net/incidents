@@ -2,6 +2,7 @@
 title: "2026-08-06 Read-only volume cascade"
 date: 2026-08-06
 severity: P2
+services: [cluster-storage, cluster-control-plane, monitoring]
 resolution: "Resolved"
 duration: "~17h 57m (~03:03 AEST → ~21:00 AEST)"
 impact: >-

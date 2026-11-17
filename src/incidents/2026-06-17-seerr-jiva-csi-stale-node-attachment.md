@@ -2,6 +2,7 @@
 title: "2026-06-17 seerr Jiva CSI stale attachment"
 date: 2026-06-17
 severity: P3
+services: [cluster-storage]
 resolution: "Resolved"
 duration: "~31m active (~21:02 AEST → ~21:33 AEST)"
 impact: >-

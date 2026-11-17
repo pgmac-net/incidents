@@ -2,6 +2,7 @@
 title: "2026-04-12 dqlite quorum loss — full cluster outage"
 date: 2026-04-12
 severity: P1
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "7 days degraded (2/3 nodes) + ~1h 12m complete outage (2026-04-12 09:27–10:39 AEST)"
 impact: >-

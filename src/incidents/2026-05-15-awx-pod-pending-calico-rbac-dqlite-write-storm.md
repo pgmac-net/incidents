@@ -2,6 +2,7 @@
 title: "2026-05-15 AWX pod pending — Calico RBAC gap"
 date: 2026-05-15
 severity: P3
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~13 min silent (pod never scheduled) + ~8 min to fix + ~1.5h total including maintenance"
 impact: >-

@@ -2,6 +2,7 @@
 title: 2026-08-15 hal NFS handle invalidation
 date: 2026-08-15
 severity: P2
+services: [nfs-storage, monitoring]
 resolution: Resolved
 duration: ~2d 16h 38m (03:12 AEST 16 Aug → 19:50 AEST 18 Aug); undetected throughout, ~17m active remediation
 impact: >-

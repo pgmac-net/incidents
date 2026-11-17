@@ -2,6 +2,7 @@
 title: "2026-07-11 Watch-cache freeze — watchdog lockout"
 date: 2026-07-11
 severity: P2
+services: [cluster-control-plane, cluster-storage, monitoring]
 resolution: "Resolved"
 duration: "~3h 0m scheduling outage (~02:32 AEST → ~05:32 AEST); ~5h 40m total including storage collateral (~02:15 → ~07:55)"
 impact: >-

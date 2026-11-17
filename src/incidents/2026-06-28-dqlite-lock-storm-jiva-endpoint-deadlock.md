@@ -2,6 +2,7 @@
 title: "2026-06-28 dqlite lock storm — jiva deadlock"
 date: 2026-06-28
 severity: P2
+services: [cluster-control-plane, cluster-storage]
 resolution: "Resolved"
 duration: "~11h 11m total degradation (~12:46 AEST → ~23:57 AEST); ~52m active recovery (~23:05 AEST → ~23:57 AEST)"
 impact: >-

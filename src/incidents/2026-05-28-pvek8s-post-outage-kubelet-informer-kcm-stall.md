@@ -2,6 +2,7 @@
 title: "2026-05-28 Post-outage kubelet + KCM stall"
 date: 2026-05-28
 severity: P2
+services: [cluster-control-plane, cluster-storage]
 resolution: "Resolved"
 duration: "~5h 20m active (~20:55 AEST 2026-05-28 → ~02:15 AEST 2026-05-29) — reconstructed from session notes"
 impact: >-

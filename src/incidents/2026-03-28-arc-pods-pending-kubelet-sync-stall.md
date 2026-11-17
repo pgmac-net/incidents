@@ -2,6 +2,7 @@
 title: "2026-03-28 ARC pods pending — kubelet sync stall"
 date: 2026-03-28
 severity: P2
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~7h40m (07:07 AEST → 14:47 AEST)"
 impact: >-
