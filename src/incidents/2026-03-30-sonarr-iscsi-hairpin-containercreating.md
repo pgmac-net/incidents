@@ -2,6 +2,7 @@
 title: "2026-03-30 Sonarr iSCSI hairpin NAT"
 date: 2026-03-30
 severity: P2
+services: [cluster-storage]
 resolution: "Resolved"
 duration: "Unknown silent failure period + ~45m active investigation and recovery"
 impact: >-

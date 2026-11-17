@@ -2,6 +2,7 @@
 title: 2026-09-15 vzdump fs-freeze Jiva triple fault
 date: 2026-09-15
 severity: P2
+services: [cluster-storage, virtualisation-host]
 resolution: Resolved
 duration: ~23h 0m (~21:23 AEST 2026-09-15 → ~20:23 AEST 2026-09-16); ~17m active remediation
 impact: >-

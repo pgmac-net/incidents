@@ -2,6 +2,7 @@
 title: 2026-09-02 systemd segfault & jiva RO cascade
 date: 2026-09-02
 severity: P1
+services: [cluster-control-plane, cluster-storage, monitoring]
 resolution: Resolved
 duration: ~33h across two linked incidents (22:42 AEST 2 Sep → ~07:41 AEST 4 Sep); incident 1 ~23h 4m (~18h undetected, ~69m control-plane loss, ~3h30m recovery), incident 2 ~8h 44m (~7h45m undetected, ~35m active recovery)
 impact: >-

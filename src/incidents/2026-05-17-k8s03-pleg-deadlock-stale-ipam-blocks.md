@@ -2,6 +2,7 @@
 title: "2026-05-17 k8s03 PLEG deadlock"
 date: 2026-05-17
 severity: P2
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~9 hours active (23:30 AEST 2026-05-17 → 08:45 AEST 2026-05-18)"
 impact: >-

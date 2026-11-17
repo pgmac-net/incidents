@@ -2,6 +2,7 @@
 title: "2026-05-18 k8s03 kine watch + VXLAN corruption"
 date: 2026-05-18
 severity: P2
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~2h10m active (~14:00 AEST → ~16:10 AEST)"
 impact: >-

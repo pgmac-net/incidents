@@ -2,6 +2,7 @@
 title: "2026-07-13 ArgoCD sync burst — jiva read-only"
 date: 2026-07-13
 severity: P3
+services: [cluster-control-plane, cluster-storage, deployment]
 resolution: "Resolved"
 duration: "~1h 8m active (~20:17 AEST → ~21:25 AEST); one contributing failure (corrupt jiva replica) pre-existed undetected for 14 days"
 impact: >-

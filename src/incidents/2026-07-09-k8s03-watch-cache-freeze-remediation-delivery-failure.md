@@ -2,6 +2,7 @@
 title: "2026-07-09 Watch-cache freeze — remediation gap"
 date: 2026-07-09
 severity: P2
+services: [cluster-control-plane, monitoring]
 resolution: "Resolved"
 duration: "~5h 19m active (~02:03 AEST → ~07:22 AEST)"
 impact: >-

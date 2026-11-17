@@ -40,6 +40,7 @@ the header block below the title is generated.
 title: 2026-08-15 hal NFS handle invalidation
 date: 2026-08-15
 severity: P2
+services: [nfs-storage, monitoring]
 resolution: Resolved
 duration: ~2d 16h 38m; undetected throughout, ~17m active remediation
 impact: >-
@@ -57,6 +58,7 @@ tags:
 | `title`      | yes      | The **navigation label**, not the heading. Short and date-prefixed.                     |
 | `date`       | yes      | `YYYY-MM-DD`. Must match the date in the filename, which is what orders the nav.        |
 | `severity`   | yes      | One of `P1` `P2` `P3` `P4`. Anything else fails the build.                              |
+| `services`   | no       | Catalog service names the incident affected. The reliability backlog counts PIRs by it. |
 | `resolution` | no       | `Resolved` / `Partially Resolved` / `Monitoring`. **Not `status`** — see below.         |
 | `duration`   | yes      | Free text. Lead with the headline figure; the index table truncates at the first `;`.   |
 | `impact`     | no       | One or two sentences on what the incident actually cost. Rendered under the badge.      |
@@ -186,7 +188,39 @@ Target **4–7 "how" levels** per chain. Stopping at 2–3 levels usually means 
 
 ---
 
-### Impact
+### CAST Analysis (optional)
+
+**Why:** Infinite How's drills one chain down to a root cause. CAST (Causal Analysis based on System Theory) looks across every controller involved (people, self-heal scripts, watchdogs, ArgoCD, Kubernetes controllers) and asks why each action made sense to it at the time. It is most useful when automation acted, or failed to act, during the incident.
+
+**When:** Only on request, or when the `create-pir` skill offers it because an automated controller was involved and the offer is accepted. Leave the section out otherwise.
+
+**What to include:** the proximate events and the hazard reached; then, per controller, its responsibilities, unsafe control actions, process-model flaws, feedback it had or lacked, and context; coordination problems between controllers; and what the control structure needs. Reuse the ids from the service's STPA analysis in the site catalog where one exists, and propose anything new back to it.
+
+---
+
+### CAST Analysis (optional: delete unless requested)
+
+**Proximate events:** [What physically happened, and the hazard state reached]
+
+### [Controller name] ([human / automated / software])
+
+- **Responsibilities:** [What it was meant to keep true]
+- **Unsafe control actions:** [What it did or did not do, in which context]
+- **Process model flaws:** [What it believed that was not true, and why that was reasonable]
+- **Feedback:** [What it was told, what it was not, how late]
+- **Context:** [Pressures, defaults, timing that made the action seem right]
+
+### Coordination
+
+[Where controllers acted on the same thing, or assumed another would]
+
+### What the control structure needs
+
+[Changes to controls or feedback, each an action item. Proposals to the STPA analysis: UCA / scenario / feedback / controller]
+
+---
+
+## Impact
 
 **Why:** Impact quantifies what actually broke and for how long. It answers "should I care about this?" for future readers, and provides the data needed to evaluate whether action items are worth the effort. A 5-minute impact and a 5-hour impact warrant different levels of remediation.
 
@@ -317,6 +351,7 @@ Copy this template to start a new PIR. Replace all `[...]` placeholders with act
 title: YYYY-MM-DD [short nav label]
 date: YYYY-MM-DD
 severity: [P1 / P2 / P3 / P4]
+services: [catalog service names, e.g. cluster-storage, monitoring]
 resolution: [Resolved / Partially Resolved / Monitoring]
 duration: ~Xh Ym active (~HH:MM AEST → ~HH:MM AEST)
 impact: >-

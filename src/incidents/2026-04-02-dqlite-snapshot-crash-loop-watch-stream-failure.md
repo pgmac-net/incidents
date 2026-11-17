@@ -2,6 +2,7 @@
 title: "2026-04-02 dqlite snapshot bloat — crash-loop cascade"
 date: 2026-04-02
 severity: P2
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~36h (discovery 2026-04-01 ~09:00 AEST → full resolution 2026-04-02 ~18:00 AEST)"
 impact: >-

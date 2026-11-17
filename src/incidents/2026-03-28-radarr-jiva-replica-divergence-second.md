@@ -2,6 +2,7 @@
 title: "2026-03-28 Radarr jiva replica divergence (2nd)"
 date: 2026-03-28
 severity: P2
+services: [cluster-storage]
 resolution: "Resolved"
 duration: "~30h silent failure + ~50m active recovery"
 impact: >-

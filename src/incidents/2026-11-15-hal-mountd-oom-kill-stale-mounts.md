@@ -2,6 +2,7 @@
 title: 2026-11-15 hal mountd OOM kill
 date: 2026-11-15
 severity: P2
+services: [nfs-storage, monitoring]
 resolution: Resolved
 duration: ~4h 34m; NFS down ~4h 04m (02:31 → 06:34 AEST), undetected by a person for ~3h 53m, trivy follow-on outage 19m
 impact: >-

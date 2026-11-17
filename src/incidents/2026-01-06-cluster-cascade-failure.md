@@ -2,6 +2,7 @@
 title: "2026-01-06 Cluster cascade failure"
 date: 2026-01-06
 severity: P1
+services: [cluster-control-plane, cluster-storage]
 resolution: "Resolved"
 duration: "~8 hours (estimated 09:00 - 17:00 AEST)"
 impact: >-

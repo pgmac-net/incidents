@@ -2,6 +2,7 @@
 title: "2026-05-23 k8s01 Calico CNI unauthorized"
 date: 2026-05-23
 severity: P3
+services: [cluster-control-plane, cluster-storage]
 resolution: "Resolved"
 duration: "~1h active (~12:01 AEST → ~13:01 AEST)"
 impact: >-

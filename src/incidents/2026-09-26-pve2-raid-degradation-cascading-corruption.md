@@ -2,6 +2,7 @@
 title: 2026-09-26 pve2 RAID degradation, host wedge, cascading corruption
 date: 2026-09-26
 severity: P1
+services: [virtualisation-host, cluster-storage, cluster-control-plane, wazuh, home-assistant]
 resolution: Resolved
 duration: ~2d 10h 34m total (~02:01 AEST 26 Sep → 12:35 AEST 28 Sep); includes a ~14h30m unexplained host wedge and ~47h of deliberate full-cluster quiesce across three drive rebuilds
 impact: >-

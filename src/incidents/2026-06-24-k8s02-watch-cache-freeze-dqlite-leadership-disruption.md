@@ -2,6 +2,7 @@
 title: "2026-06-24 k8s02 watch-cache freeze"
 date: 2026-06-24
 severity: P2
+services: [cluster-control-plane]
 resolution: "Resolved"
 duration: "~4h active (Nagios alert ~20:20 UTC → recovery ~00:20 UTC 2026-06-25); underlying dqlite disruption at 16:16 UTC"
 impact: >-

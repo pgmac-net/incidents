@@ -2,6 +2,7 @@
 title: "2026-06-05 Kernel reboot cascade"
 date: 2026-06-05
 severity: P1
+services: [cluster-control-plane, cluster-storage]
 resolution: "Resolved"
 duration: "~6h 58m (~06:27 AEST → ~13:25 AEST)"
 impact: >-
