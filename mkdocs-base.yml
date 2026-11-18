@@ -18,6 +18,9 @@ repo_url: https://github.com/pgmac-net/incidents/
 theme:
   name: material
   custom_dir: overrides
+  # The SRE harness icon (homelabia#255), which is what drives the incidents recorded here.
+  logo: assets/images/sre-harness-icon-128.png
+  favicon: assets/images/sre-harness-icon-64.png
   features:
     # Neither navigation.sections nor navigation.expand: sections must stay
     # collapsible so only the section you are in opens, and the other section
