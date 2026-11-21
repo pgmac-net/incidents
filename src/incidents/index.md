@@ -4,6 +4,7 @@ Post-incident reviews documenting what went wrong, why, and how we fixed it.
 
 | Date | Sev | Title | Duration |
 |------|-----|-------|----------|
+| 2026-11-21 | <span class="sev sev--p3">P3</span> | [pvek8s Rolling Kernel Reboot — Jiva Stop-First Moves, Post-Reboot Stale Sandboxes and AWX Credential Loss](2026-11-21-pvek8s-rolling-reboot-jiva-moves-awx-secret-loss.md) | ~7h 15m |
 | 2026-11-15 | <span class="sev sev--p2">P2</span> | [hal rpc.mountd OOM Kill — Cluster-Wide Stale NFS Mounts and a 4-Hour Overnight Gap](2026-11-15-hal-mountd-oom-kill-stale-mounts.md) | ~4h 34m |
 | 2026-09-26 | <span class="sev sev--p1">P1</span> | [pve2 RAID5 Degradation, Host Wedge, and Cascading Filesystem Corruption](2026-09-26-pve2-raid-degradation-cascading-corruption.md) | ~2d 10h 34m |
 | 2026-09-15 | <span class="sev sev--p2">P2</span> | [pvek8s Triple Replica Fault — Proxmox Backup fs-freeze, Corrupt Snapshot Chains, and an Orphaned Pod Route](2026-09-15-vzdump-fsfreeze-jiva-replica-triple-fault.md) | ~23h 0m |

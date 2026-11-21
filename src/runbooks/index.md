@@ -29,6 +29,7 @@ Operational runbooks for diagnosing and recovering from known failure patterns o
 | [dqlite Write Contention](dqlite-write-contention.md) | microk8s/dqlite | `database is locked (try:500)` under kubelite restart storms — prevention, recovery, phantom RS fix |
 | [dqlite Datastore Vacuum](dqlite-datastore-vacuum.md) | microk8s/dqlite | Freelist bloat makes every raft snapshot a 200MB+ fsync burst feeding lock storms — full export/rebuild/rejoin procedure; `dbctl backup` silently broken on 1.35 |
 | [k8s Upgrade Post-Upgrade Validation](k8s-upgrade-validation.md) | microk8s | Post-rolling-upgrade checks for stale EndpointSlice IPs and stale Calico IPAM blocks that silently cause service disruptions |
+| [Rolling Kernel Reboot of pvek8s](k8s-rolling-reboot.md) | microk8s | Nagios `reboot-required` on all nodes — leader-aware node order, ArgoCD deny window, gates between nodes (dqlite quiet, Jiva 3/3 RW, no stuck Pending), post-reboot sandbox loop fix; links the Jiva stop-first procedure |
 
 ## Scripts
 
