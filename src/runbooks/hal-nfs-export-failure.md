@@ -359,6 +359,28 @@ ssh hal 'ps | grep -c "[r]pc.mountd"; dmesg | grep -E "Out of memory|Killed proc
 
 Blast radius: use the privileged stat sweep from Mode 1. Expect **all** hal mounts stale once the cache has expired, including `/mnt/backups` on every node.
 
+### Automatic recovery (since nagios-config#68)
+
+Mode 3 now fixes itself. When `nfs-mountd` goes HARD CRITICAL, Nagios asks macro to run `remediate_hal_mountd.sh` (hal has no NRPE). It checks the signature from outside first and declines, leaving hal alone, if any of these hold:
+
+- port 30000 is open again
+- nfsd (2049 or `rpcinfo nfs 3`) or portmap (111) is down: that is Mode 1, not this
+- `showmount -e` answers
+- it already ran in the last hour, or three times in the last day
+- hal cannot be reached over SSH
+
+Otherwise it restarts mountd on hal through a key that can do nothing else: QNAP's own `/etc/init.d/nfs remountd` first (mountd only, no grace period), then `/etc/init.d/nfs restart` if no new mountd appears. It succeeds only when port 30000 answers and `showmount -e` lists the exports from outside.
+
+**Read what it did** in any of three places:
+
+- the `nfs-mountd` CRITICAL text, which ends with `auto-remediation N min ago: <outcome>`
+- Slack #home-status (AUTO-REMEDIATION TRIGGERED / SUCCESS / FAILED / REFUSED)
+- `journalctl -u hal-mountd-remediate` on macro
+
+If it says **SUCCESS**, go straight to step 3 below (stat sweep), then step 4. If it says **REFUSED** or **FAILED**, the reason is in the text: follow the manual recovery below, or Mode 1 if nfsd or portmap is down.
+
+**Turn it off** by setting `event_handler_enabled 0` on `nfs-mountd` in nagios-config, or from the Nagios UI (Disable event handler for this service).
+
 ### Recovery
 
 1. **Restart NFS on hal** from the shell (the QNAP UI toggle from Mode 1 also works):
